@@ -12,22 +12,28 @@
 
             <flux:sidebar.nav>
                 <flux:sidebar.group :heading="__('Platform')" class="grid">
-                    <flux:sidebar.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>
+                    <flux:sidebar.item icon="circle-gauge" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>
                         {{ __('Dashboard') }}
                     </flux:sidebar.item>
+                    @if (auth()->user()->isAdmin())
+                        <flux:sidebar.item icon="users" :href="route('users.index')" :current="request()->routeIs('users.*')" wire:navigate>
+                            {{ __('Users') }}
+                        </flux:sidebar.item>
+                    @endif
                 </flux:sidebar.group>
             </flux:sidebar.nav>
 
             <flux:spacer />
 
             <flux:sidebar.nav>
-                <flux:sidebar.item icon="folder-git-2" href="https://github.com/laravel/livewire-starter-kit" target="_blank">
-                    {{ __('Repository') }}
-                </flux:sidebar.item>
-
-                <flux:sidebar.item icon="book-open-text" href="https://laravel.com/docs/starter-kits#livewire" target="_blank">
-                    {{ __('Documentation') }}
-                </flux:sidebar.item>
+                <flux:sidebar.group :heading="__('Dig Deeper')" class="grid">
+                    <flux:sidebar.item icon="square-library" href="https://laravel.com/docs/starter-kits#livewire" target="_blank">
+                        {{ __('User Guide') }}
+                    </flux:sidebar.item>
+                    <flux:sidebar.item icon="square-code" href="https://laravel.com/docs/starter-kits#livewire" target="_blank">
+                        {{ __('API Documentation') }}
+                    </flux:sidebar.item>
+                </flux:sidebar.group>
             </flux:sidebar.nav>
 
             <x-desktop-user-menu class="hidden lg:block" :name="auth()->user()->name" />
@@ -65,6 +71,11 @@
                     <flux:menu.separator />
 
                     <flux:menu.radio.group>
+                        @if (auth()->user()->isAdmin())
+                            <flux:menu.item :href="route('users.index')" icon="users" wire:navigate>
+                                {{ __('Users') }}
+                            </flux:menu.item>
+                        @endif
                         <flux:menu.item :href="route('profile.edit')" icon="cog" wire:navigate>
                             {{ __('Settings') }}
                         </flux:menu.item>

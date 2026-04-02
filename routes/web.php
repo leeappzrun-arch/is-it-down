@@ -1,11 +1,16 @@
 <?php
 
+use App\Models\User;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome')->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::view('dashboard', 'dashboard')->name('dashboard');
+});
+
+Route::middleware(['auth', 'verified', 'role:'.User::ROLE_ADMIN])->group(function () {
+    Route::livewire('users', 'pages::users.index')->name('users.index');
 });
 
 require __DIR__.'/settings.php';
