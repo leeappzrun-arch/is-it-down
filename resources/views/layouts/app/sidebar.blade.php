@@ -16,6 +16,9 @@
                         {{ __('Dashboard') }}
                     </flux:sidebar.item>
                     @if (auth()->user()->isAdmin())
+                        <flux:sidebar.item icon="folder" :href="route('recipients.index')" :current="request()->routeIs('recipients.*')" wire:navigate>
+                            {{ __('Recipients') }}
+                        </flux:sidebar.item>
                         <flux:sidebar.item icon="users" :href="route('users.index')" :current="request()->routeIs('users.*')" wire:navigate>
                             {{ __('Users') }}
                         </flux:sidebar.item>
@@ -72,6 +75,9 @@
 
                     <flux:menu.radio.group>
                         @if (auth()->user()->isAdmin())
+                            <flux:menu.item :href="route('recipients.index')" icon="folder" wire:navigate>
+                                {{ __('Recipients') }}
+                            </flux:menu.item>
                             <flux:menu.item :href="route('users.index')" icon="users" wire:navigate>
                                 {{ __('Users') }}
                             </flux:menu.item>

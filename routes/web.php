@@ -10,6 +10,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 Route::middleware(['auth', 'verified', 'role:'.User::ROLE_ADMIN])->group(function () {
+    Route::livewire('recipients', 'pages::recipients.index')->name('recipients.index');
     Route::livewire('users', 'pages::users.index')->name('users.index');
 });
 
