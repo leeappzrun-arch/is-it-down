@@ -24,6 +24,8 @@ class DashboardTest extends TestCase
         $response = $this->get(route('dashboard'));
         $response->assertOk();
         $response->assertSeeText('Dashboard');
+        $response->assertDontSee(route('users.index'), false);
+        $response->assertDontSee(route('api-keys.index'), false);
     }
 
     public function test_admin_users_see_monitoring_and_access_navigation_groups(): void
@@ -34,5 +36,7 @@ class DashboardTest extends TestCase
         $response->assertOk();
         $response->assertSeeTextInOrder(['Monitoring', 'Dashboard', 'Recipients', 'Access', 'Users', 'API Keys']);
         $response->assertDontSeeText('Platform');
+        $response->assertSee(route('users.index'), false);
+        $response->assertSee(route('api-keys.index'), false);
     }
 }

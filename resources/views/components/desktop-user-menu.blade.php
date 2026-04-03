@@ -23,6 +23,9 @@
                 <flux:menu.item :href="route('users.index')" icon="users" wire:navigate>
                     {{ __('Users') }}
                 </flux:menu.item>
+                <flux:menu.item :href="route('api-keys.index')" icon="key" wire:navigate>
+                    {{ __('API Keys') }}
+                </flux:menu.item>
             @endif
             <flux:menu.item :href="route('profile.edit')" icon="cog" wire:navigate>
                 {{ __('Settings') }}
