@@ -46,4 +46,24 @@ class ApiKeyFactory extends Factory
             'service_name' => 'Status page worker',
         ]);
     }
+
+    /**
+     * Indicate that the API key does not expire.
+     */
+    public function neverExpires(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'expires_at' => null,
+        ]);
+    }
+
+    /**
+     * Indicate that the API key has been revoked.
+     */
+    public function revoked(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'revoked_at' => now(),
+        ]);
+    }
 }

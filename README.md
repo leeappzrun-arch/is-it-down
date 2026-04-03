@@ -83,12 +83,21 @@ This repository includes `.ddev` and should be worked on through DDEV whenever D
 ```bash
 ddev start
 ddev composer install --no-interaction --prefer-dist
-ddev exec php artisan migrate
+ddev exec php artisan migrate --seed
 ddev exec php artisan test --compact
 ddev npm run dev
 ```
 
 If DDEV is unavailable, host-side Artisan and test commands may still work, but DDEV remains the preferred workflow for this project.
+
+### Seeded access
+
+Running the database seeder provisions two verified accounts for local development:
+
+- `admin@example.com` / `password`
+- `user@example.com` / `password`
+
+The seeder also creates sample recipient groups, recipients, and API keys so the dashboard and management screens have representative data immediately.
 
 ## Testing
 

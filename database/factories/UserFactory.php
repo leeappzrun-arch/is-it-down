@@ -68,4 +68,14 @@ class UserFactory extends Factory
             'role' => User::ROLE_ADMIN,
         ]);
     }
+
+    /**
+     * Indicate that the user is a standard application user.
+     */
+    public function standard(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => User::ROLE_USER,
+        ]);
+    }
 }
