@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\ApiKey;
 use App\Models\Recipient;
 use App\Models\RecipientGroup;
+use App\Models\Service;
+use App\Models\ServiceGroup;
 use App\Models\User;
 use App\Support\ApiKeyPermissions;
 use Database\Seeders\DatabaseSeeder;
@@ -33,29 +35,41 @@ class DatabaseSeederTest extends TestCase
         $this->assertDatabaseCount('users', 2);
         $this->assertDatabaseCount('recipient_groups', 3);
         $this->assertDatabaseCount('recipients', 3);
+        $this->assertDatabaseCount('service_groups', 2);
+        $this->assertDatabaseCount('services', 2);
         $this->assertDatabaseCount('api_keys', 3);
 
         $operationsInbox = Recipient::query()->where('name', 'Operations Inbox')->first();
         $operationsGroup = RecipientGroup::query()->where('name', 'Operations')->first();
         $leadershipGroup = RecipientGroup::query()->where('name', 'Leadership')->first();
+        $productionGroup = ServiceGroup::query()->where('name', 'Production')->first();
+        $marketingSite = Service::query()->where('name', 'Marketing Site')->first();
         $serviceKey = ApiKey::query()->where('name', 'Status Page Worker Key')->first();
 
         $this->assertNotNull($operationsInbox);
         $this->assertNotNull($operationsGroup);
         $this->assertNotNull($leadershipGroup);
+        $this->assertNotNull($productionGroup);
+        $this->assertNotNull($marketingSite);
         $this->assertNotNull($serviceKey);
         $this->assertSame(
             [$leadershipGroup->id, $operationsGroup->id],
             $operationsInbox->groups()->orderBy('recipient_groups.name')->pluck('recipient_groups.id')->all(),
         );
+        $this->assertSame([$productionGroup->id], $marketingSite->groups()->where('service_groups.name', 'Production')->pluck('service_groups.id')->all());
+        $this->assertSame(Service::EXPECT_TEXT, $marketingSite->expect_type);
         $this->assertNull($serviceKey->user_id);
         $this->assertSame(ApiKey::OWNER_SERVICE, $serviceKey->owner_type);
         $this->assertSame(
             [
                 ApiKeyPermissions::permission('recipients', 'read'),
                 ApiKeyPermissions::permission('recipients', 'write'),
+                ApiKeyPermissions::permission('services', 'read'),
+                ApiKeyPermissions::permission('services', 'write'),
             ],
             $serviceKey->permissions,
         );
+        $this->assertContains(ApiKeyPermissions::permission('services', 'read'), ApiKeyPermissions::all());
+        $this->assertContains(ApiKeyPermissions::permission('services', 'write'), ApiKeyPermissions::all());
     }
 }

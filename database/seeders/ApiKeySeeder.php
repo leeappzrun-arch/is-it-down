@@ -45,6 +45,8 @@ class ApiKeySeeder extends Seeder
             permissions: ApiKeyPermissions::normalize([
                 ApiKeyPermissions::permission('recipients', 'read'),
                 ApiKeyPermissions::permission('recipients', 'write'),
+                ApiKeyPermissions::permission('services', 'read'),
+                ApiKeyPermissions::permission('services', 'write'),
             ]),
             plainTextToken: 'iid_seed_status_page_worker_000003',
         );

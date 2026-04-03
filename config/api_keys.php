@@ -15,6 +15,7 @@ return [
 
     'resources' => [
         'recipients' => 'Recipients',
+        'services' => 'Services',
         'users' => 'Users',
     ],
 

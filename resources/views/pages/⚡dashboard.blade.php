@@ -3,6 +3,8 @@
 use App\Models\ApiKey;
 use App\Models\Recipient;
 use App\Models\RecipientGroup;
+use App\Models\Service;
+use App\Models\ServiceGroup;
 use App\Models\User;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
@@ -33,6 +35,18 @@ new #[Title('Dashboard')] class extends Component {
                 'href' => $isAdmin ? route('recipients.index') : null,
             ],
             [
+                'label' => 'Services',
+                'value' => Service::query()->count(),
+                'description' => 'Monitored service endpoints',
+                'href' => $isAdmin ? route('services.index') : null,
+            ],
+            [
+                'label' => 'Service groups',
+                'value' => ServiceGroup::query()->count(),
+                'description' => 'Reusable service routing bundles',
+                'href' => $isAdmin ? route('services.index') : null,
+            ],
+            [
                 'label' => 'Users',
                 'value' => User::query()->count(),
                 'description' => 'Authenticated application accounts',
@@ -57,7 +71,7 @@ new #[Title('Dashboard')] class extends Component {
         <flux:separator variant="subtle" />
     </div>
 
-    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         @foreach ($this->statCards as $stat)
             @php($formattedValue = number_format($stat['value']))
 

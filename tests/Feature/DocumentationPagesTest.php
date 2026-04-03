@@ -22,6 +22,7 @@ class DocumentationPagesTest extends TestCase
         $response->assertOk();
         $response->assertSeeText('User Guide');
         $response->assertSeeText('Recipient management');
+        $response->assertSeeText('Service management');
     }
 
     public function test_authenticated_users_can_visit_the_api_documentation_page(): void

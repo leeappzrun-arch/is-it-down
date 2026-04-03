@@ -21,4 +21,20 @@ class RecipientGroup extends Model
     {
         return $this->belongsToMany(Recipient::class, 'recipient_group_recipient');
     }
+
+    /**
+     * Get the services assigned directly to the group.
+     */
+    public function services(): BelongsToMany
+    {
+        return $this->belongsToMany(Service::class, 'recipient_group_service');
+    }
+
+    /**
+     * Get the service groups assigned directly to the group.
+     */
+    public function serviceGroups(): BelongsToMany
+    {
+        return $this->belongsToMany(ServiceGroup::class, 'recipient_group_service_group');
+    }
 }

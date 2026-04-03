@@ -60,6 +60,22 @@ class Recipient extends Model
     }
 
     /**
+     * Get the services assigned directly to the recipient.
+     */
+    public function services(): BelongsToMany
+    {
+        return $this->belongsToMany(Service::class, 'recipient_service');
+    }
+
+    /**
+     * Get the service groups assigned directly to the recipient.
+     */
+    public function serviceGroups(): BelongsToMany
+    {
+        return $this->belongsToMany(ServiceGroup::class, 'recipient_service_group');
+    }
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>

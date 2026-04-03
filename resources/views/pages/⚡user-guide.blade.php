@@ -23,14 +23,14 @@ new #[Title('User guide')] class extends Component {
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
                     <p>{{ __('Sign in with your account to access the application. Verified users are taken to the dashboard after login.') }}</p>
                     <p>{{ __('If you are a standard user, your day-to-day actions are currently centered around your account settings and reviewing the in-app guidance pages.') }}</p>
-                    <p>{{ __('If you are an admin, the main navigation will show Monitoring for Dashboard and Recipients, plus Access for Users and API Keys.') }}</p>
+                    <p>{{ __('If you are an admin, the main navigation will show Monitoring for Dashboard, Recipients, and Services, plus Access for Users and API Keys.') }}</p>
                 </div>
             </div>
 
             <div class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
                 <flux:heading size="lg">{{ __('Dashboard') }}</flux:heading>
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
-                    <p>{{ __('The dashboard is the default landing page after authentication and shows headline totals for recipients, recipient groups, users, and API keys.') }}</p>
+                    <p>{{ __('The dashboard is the default landing page after authentication and shows headline totals for recipients, recipient groups, services, service groups, users, and API keys.') }}</p>
                     <p>{{ __('Admins can select those dashboard cards to move directly into the matching management page. Standard users can review the totals but cannot click through to admin-only tools.') }}</p>
                     <p>{{ __('Use the sidebar to move into administration screens, account settings, and supporting documentation.') }}</p>
                 </div>
@@ -63,6 +63,27 @@ new #[Title('User guide')] class extends Component {
             </div>
 
             <div class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+                <flux:heading size="lg">{{ __('Service management') }}</flux:heading>
+                <flux:subheading class="mt-2">{{ __('Admin only') }}</flux:subheading>
+                <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+                    <p>{{ __('Services represent the URLs you want to monitor. Each service includes a name, URL, polling interval, and an optional expectation that can be plain text or a regex pattern.') }}</p>
+                    <p>{{ __('A service can have direct recipients, direct recipient groups, and one or more service groups attached at the same time.') }}</p>
+                    <p>{{ __('The Services page shows an effective recipient breakdown for every service so you can immediately tell whether someone is attached directly, through a recipient group, or through a service group.') }}</p>
+                    <p>{{ __('Editing a service scrolls the form back into view, and deleting a service asks for confirmation before it is removed.') }}</p>
+                </div>
+            </div>
+
+            <div class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+                <flux:heading size="lg">{{ __('Service group management') }}</flux:heading>
+                <flux:subheading class="mt-2">{{ __('Admin only') }}</flux:subheading>
+                <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+                    <p>{{ __('Service groups are reusable routing bundles. They can contain both direct recipients and recipient groups, then be attached to multiple services.') }}</p>
+                    <p>{{ __('Use service groups when several monitored services should share the same escalation or stakeholder routing setup.') }}</p>
+                    <p>{{ __('Like the other management screens, editing scrolls you to the form and deletion is protected behind a confirmation modal.') }}</p>
+                </div>
+            </div>
+
+            <div class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
                 <flux:heading size="lg">{{ __('User management') }}</flux:heading>
                 <flux:subheading class="mt-2">{{ __('Admin only') }}</flux:subheading>
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
@@ -78,7 +99,7 @@ new #[Title('User guide')] class extends Component {
                 <flux:subheading class="mt-2">{{ __('Admin only') }}</flux:subheading>
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
                     <p>{{ __('Admins can create API keys for their own account or for a named service from the API Keys page.') }}</p>
-                    <p>{{ __('Every key can be given read and write access for each supported application area, including Users and Recipients.') }}</p>
+                    <p>{{ __('Every key can be given read and write access for each supported application area, including Services, Users, and Recipients.') }}</p>
                     <p>{{ __('Expiration can be set to 6 months, 1 year, 2 years, or never. The plain-text key is only shown once in a confirmation modal when it is created, so it should be copied immediately.') }}</p>
                     <p>{{ __('Keys can be revoked later without deleting the audit trail of who created them and what access they were given.') }}</p>
                 </div>

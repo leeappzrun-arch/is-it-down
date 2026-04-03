@@ -2,7 +2,7 @@
 
 ## Overview
 
-Is It Down is a Laravel 13 and Livewire 4 application for managing who receives notifications or delivery events. The project currently focuses on authenticated access, role-based administration, recipient management, grouped routing targets, user/account management, and pre-provisioned API keys for future integrations.
+Is It Down is a Laravel 13 and Livewire 4 application for managing monitored services and the recipients who should be notified about them. The project currently focuses on authenticated access, role-based administration, recipient management, service management, grouped routing targets, user/account management, and pre-provisioned API keys for future integrations.
 
 ## Current Features
 
@@ -10,7 +10,7 @@ Is It Down is a Laravel 13 and Livewire 4 application for managing who receives 
 
 - Users sign in through Laravel Fortify.
 - Verified users are routed to the dashboard.
-- The dashboard shows high-level totals for recipients, recipient groups, users, and API keys.
+- The dashboard shows high-level totals for recipients, recipient groups, services, service groups, users, and API keys.
 - Admins can open those dashboard stats to jump straight into the matching management screens.
 - Authenticated users can access profile, appearance, and security settings.
 
@@ -38,6 +38,21 @@ Is It Down is a Laravel 13 and Livewire 4 application for managing who receives 
 - Use groups to organise related recipients for future routing use cases.
 - Confirm group deletion before it is applied.
 
+### Service management
+
+- Create, edit, and delete services.
+- Configure a service name, URL, polling interval, and optional expectation using either plain text or a regular expression.
+- Assign services to one or more service groups.
+- Assign recipients and recipient groups directly to a service.
+- Review the effective recipients for a service, including whether each route is direct, comes from a recipient group, or is inherited through a service group.
+
+### Service group management
+
+- Create, rename, and delete service groups.
+- Assign direct recipients and recipient groups to a service group.
+- Reuse those service groups across multiple monitored services.
+- Confirm service and service group deletion before it is applied.
+
 ### User management
 
 - Admins can create users.
@@ -49,7 +64,7 @@ Is It Down is a Laravel 13 and Livewire 4 application for managing who receives 
 
 - Admins can create API keys for their own account or for named services.
 - Keys support expiration presets of 6 months, 1 year, 2 years, or never.
-- Keys support per-section `read` and `write` permissions.
+- Keys support per-section `read` and `write` permissions, including the new `services` area.
 - API keys are stored securely as hashes and the plain-text token is only shown once in a post-create modal.
 - Keys can be revoked without removing the database record.
 
@@ -64,6 +79,7 @@ Is It Down is a Laravel 13 and Livewire 4 application for managing who receives 
 - `/` redirects authenticated users to the dashboard and guests to the login page.
 - `/dashboard` is the main post-login landing page and shows the current system totals.
 - `/recipients` is the admin recipient and group management page.
+- `/services` is the admin service and service group management page.
 - `/users` is the admin user management page.
 - `/api-keys` is the admin API key management page.
 - `/settings/profile`, `/settings/appearance`, and `/settings/security` manage account preferences.
@@ -101,6 +117,7 @@ Running the database seeder provisions two verified accounts for local developme
 - `user@example.com` / `password`
 
 The seeder also creates sample recipient groups, recipients, and API keys so the dashboard and management screens have representative data immediately.
+It also seeds service groups and services so the new routing views have meaningful examples on a fresh install.
 
 ## Testing
 

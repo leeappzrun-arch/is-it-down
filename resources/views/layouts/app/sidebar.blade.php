@@ -19,6 +19,9 @@
                         <flux:sidebar.item icon="folder" :href="route('recipients.index')" :current="request()->routeIs('recipients.*')" wire:navigate>
                             {{ __('Recipients') }}
                         </flux:sidebar.item>
+                        <flux:sidebar.item icon="cpu-chip" :href="route('services.index')" :current="request()->routeIs('services.*')" wire:navigate>
+                            {{ __('Services') }}
+                        </flux:sidebar.item>
                     @endif
                 </flux:sidebar.group>
             </flux:sidebar.nav>
@@ -90,6 +93,9 @@
                         @if (auth()->user()->isAdmin())
                             <flux:menu.item :href="route('recipients.index')" icon="folder" wire:navigate>
                                 {{ __('Recipients') }}
+                            </flux:menu.item>
+                            <flux:menu.item :href="route('services.index')" icon="cpu-chip" wire:navigate>
+                                {{ __('Services') }}
                             </flux:menu.item>
                             <flux:menu.separator />
                             <flux:menu.item :href="route('users.index')" icon="users" wire:navigate>

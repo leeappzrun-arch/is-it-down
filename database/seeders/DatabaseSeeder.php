@@ -15,6 +15,8 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
             RecipientGroupSeeder::class,
             RecipientSeeder::class,
+            ServiceGroupSeeder::class,
+            ServiceSeeder::class,
             ApiKeySeeder::class,
         ]);
     }
