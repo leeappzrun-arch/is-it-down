@@ -11,7 +11,7 @@
             </flux:sidebar.header>
 
             <flux:sidebar.nav>
-                <flux:sidebar.group :heading="__('Platform')" class="grid">
+                <flux:sidebar.group :heading="__('Monitoring')" class="grid">
                     <flux:sidebar.item icon="circle-gauge" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>
                         {{ __('Dashboard') }}
                     </flux:sidebar.item>
@@ -19,16 +19,22 @@
                         <flux:sidebar.item icon="folder" :href="route('recipients.index')" :current="request()->routeIs('recipients.*')" wire:navigate>
                             {{ __('Recipients') }}
                         </flux:sidebar.item>
-                        <flux:separator variant="subtle" class="mt-6 mb-2" />
+                    @endif
+                </flux:sidebar.group>
+            </flux:sidebar.nav>
+
+            @if (auth()->user()->isAdmin())
+                <flux:sidebar.nav>
+                    <flux:sidebar.group :heading="__('Access')" class="grid">
                         <flux:sidebar.item icon="users" :href="route('users.index')" :current="request()->routeIs('users.*')" wire:navigate>
                             {{ __('Users') }}
                         </flux:sidebar.item>
                         <flux:sidebar.item icon="key" :href="route('api-keys.index')" :current="request()->routeIs('api-keys.*')" wire:navigate>
                             {{ __('API Keys') }}
                         </flux:sidebar.item>
-                    @endif
-                </flux:sidebar.group>
-            </flux:sidebar.nav>
+                    </flux:sidebar.group>
+                </flux:sidebar.nav>
+            @endif
 
             <flux:spacer />
 

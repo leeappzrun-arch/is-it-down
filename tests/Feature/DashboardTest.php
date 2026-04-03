@@ -25,4 +25,14 @@ class DashboardTest extends TestCase
         $response->assertOk();
         $response->assertSeeText('Dashboard');
     }
+
+    public function test_admin_users_see_monitoring_and_access_navigation_groups(): void
+    {
+        $response = $this->actingAs(User::factory()->admin()->create())
+            ->get(route('dashboard'));
+
+        $response->assertOk();
+        $response->assertSeeTextInOrder(['Monitoring', 'Dashboard', 'Recipients', 'Access', 'Users', 'API Keys']);
+        $response->assertDontSeeText('Platform');
+    }
 }

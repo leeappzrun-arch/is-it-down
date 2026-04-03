@@ -23,7 +23,7 @@ new #[Title('User guide')] class extends Component {
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
                     <p>{{ __('Sign in with your account to access the application. Verified users are taken to the dashboard after login.') }}</p>
                     <p>{{ __('If you are a standard user, your day-to-day actions are currently centered around your account settings and reviewing the in-app guidance pages.') }}</p>
-                    <p>{{ __('If you are an admin, you will also see the Recipients, Users, and API Keys areas in the main navigation.') }}</p>
+                    <p>{{ __('If you are an admin, the main navigation will show Monitoring for Dashboard and Recipients, plus Access for Users and API Keys.') }}</p>
                 </div>
             </div>
 
