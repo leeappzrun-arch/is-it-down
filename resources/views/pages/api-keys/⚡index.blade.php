@@ -32,6 +32,18 @@ new #[Title('API key management')] class extends Component {
     }
 
     /**
+     * Update the form when the owner type changes.
+     */
+    public function updatedOwnerType(string $ownerType): void
+    {
+        if ($ownerType !== ApiKey::OWNER_SERVICE) {
+            $this->serviceName = '';
+        }
+
+        $this->resetValidation();
+    }
+
+    /**
      * Get the available owner types.
      *
      * @return array<string, string>
@@ -160,7 +172,7 @@ new #[Title('API key management')] class extends Component {
     /**
      * Resolve an expiration preset to a concrete timestamp.
      */
-    private function resolveExpirationDate(string $expirationOption): ?\Illuminate\Support\Carbon
+    private function resolveExpirationDate(string $expirationOption): ?\Carbon\CarbonInterface
     {
         return match ($expirationOption) {
             '6_months' => now()->addMonthsNoOverflow(6),
@@ -197,7 +209,7 @@ new #[Title('API key management')] class extends Component {
                         <label for="ownerType" class="mb-2 block text-sm font-medium text-zinc-800 dark:text-zinc-100">{{ __('Owner') }}</label>
                         <select
                             id="ownerType"
-                            wire:model="ownerType"
+                            wire:model.live="ownerType"
                             class="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm text-zinc-900 outline-none transition focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
                         >
                             @foreach ($this->ownerOptions as $value => $label)

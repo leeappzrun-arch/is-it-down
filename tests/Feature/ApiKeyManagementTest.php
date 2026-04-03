@@ -95,6 +95,21 @@ class ApiKeyManagementTest extends TestCase
             ->assertHasErrors(['serviceName']);
     }
 
+    public function test_service_api_key_selection_hides_the_user_assignment_helper(): void
+    {
+        $admin = User::factory()->admin()->create([
+            'email' => 'leetcaine@proton.me',
+        ]);
+
+        $this->actingAs($admin);
+
+        Livewire::test('pages::api-keys.index')
+            ->assertSee('This key will be assigned to leetcaine@proton.me.')
+            ->set('ownerType', ApiKey::OWNER_SERVICE)
+            ->assertDontSee('This key will be assigned to leetcaine@proton.me.')
+            ->assertSee('Service name');
+    }
+
     public function test_admin_users_can_revoke_an_api_key(): void
     {
         $admin = User::factory()->admin()->create();
