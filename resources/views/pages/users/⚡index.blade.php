@@ -21,6 +21,12 @@ new #[Title('User management')] class extends Component {
     /** @var array<int, string> */
     public array $editingRoles = [];
 
+    public bool $showDeleteConfirmationModal = false;
+
+    public ?int $deleteConfirmationUserId = null;
+
+    public string $deleteConfirmationUserName = '';
+
     /**
      * Mount the component.
      */
@@ -107,6 +113,57 @@ new #[Title('User management')] class extends Component {
     }
 
     /**
+     * Prompt to delete a standard user.
+     */
+    public function confirmUserDeletion(int $userId): void
+    {
+        $user = User::query()->findOrFail($userId);
+
+        if ($user->isAdmin()) {
+            return;
+        }
+
+        $this->deleteConfirmationUserId = $user->id;
+        $this->deleteConfirmationUserName = $user->name;
+        $this->showDeleteConfirmationModal = true;
+    }
+
+    /**
+     * Delete the selected standard user.
+     */
+    public function deleteConfirmedUser(): void
+    {
+        if ($this->deleteConfirmationUserId === null) {
+            return;
+        }
+
+        $user = User::query()->findOrFail($this->deleteConfirmationUserId);
+
+        if ($user->isAdmin()) {
+            $this->closeDeleteConfirmation();
+
+            return;
+        }
+
+        $user->delete();
+
+        unset($this->editingRoles[$user->id]);
+
+        $this->syncEditingRoles();
+        $this->closeDeleteConfirmation();
+
+        $this->dispatch('user-deleted');
+    }
+
+    /**
+     * Close the delete confirmation modal.
+     */
+    public function cancelDeleteConfirmation(): void
+    {
+        $this->closeDeleteConfirmation();
+    }
+
+    /**
      * Synchronize editable roles with the current user list.
      */
     private function syncEditingRoles(): void
@@ -117,6 +174,16 @@ new #[Title('User management')] class extends Component {
             ->pluck('role', 'id')
             ->map(fn ($role) => (string) $role)
             ->all();
+    }
+
+    /**
+     * Close and reset the delete confirmation modal state.
+     */
+    private function closeDeleteConfirmation(): void
+    {
+        $this->showDeleteConfirmationModal = false;
+        $this->deleteConfirmationUserId = null;
+        $this->deleteConfirmationUserName = '';
     }
 }; ?>
 
@@ -165,9 +232,12 @@ new #[Title('User management')] class extends Component {
             <div class="flex items-start justify-between gap-4">
                 <div>
                     <flux:heading size="lg">{{ __('Manage users') }}</flux:heading>
-                    <flux:subheading class="mt-2">{{ __('Review users and update their roles.') }}</flux:subheading>
+                    <flux:subheading class="mt-2">{{ __('Review users, update their roles, and remove standard accounts when needed.') }}</flux:subheading>
                 </div>
-                <x-action-message on="role-updated">{{ __('Role updated.') }}</x-action-message>
+                <div class="flex items-center gap-4">
+                    <x-action-message on="role-updated">{{ __('Role updated.') }}</x-action-message>
+                    <x-action-message on="user-deleted">{{ __('User deleted.') }}</x-action-message>
+                </div>
             </div>
 
             <div class="mt-6 overflow-x-auto">
@@ -182,7 +252,7 @@ new #[Title('User management')] class extends Component {
                     </thead>
                     <tbody class="divide-y divide-zinc-200 dark:divide-zinc-800">
                         @foreach ($this->users as $user)
-                            <tr class="align-top">
+                            <tr wire:key="user-row-{{ $user->id }}" class="align-top">
                                 <td class="py-4 pe-4">
                                     <div class="font-medium text-zinc-900 dark:text-zinc-100">{{ $user->name }}</div>
                                     @if ($user->id === auth()->id())
@@ -204,9 +274,17 @@ new #[Title('User management')] class extends Component {
                                     @enderror
                                 </td>
                                 <td class="py-4">
-                                    <flux:button wire:click="updateRole({{ $user->id }})" variant="ghost">
-                                        {{ __('Save role') }}
-                                    </flux:button>
+                                    <div class="flex flex-wrap gap-2">
+                                        <flux:button wire:click="updateRole({{ $user->id }})" variant="ghost">
+                                            {{ __('Save role') }}
+                                        </flux:button>
+
+                                        @if (! $user->isAdmin())
+                                            <flux:button type="button" variant="danger" wire:click="confirmUserDeletion({{ $user->id }})">
+                                                {{ __('Delete') }}
+                                            </flux:button>
+                                        @endif
+                                    </div>
                                 </td>
                             </tr>
                         @endforeach
@@ -215,4 +293,25 @@ new #[Title('User management')] class extends Component {
             </div>
         </div>
     </div>
+
+    <flux:modal wire:model="showDeleteConfirmationModal" class="max-w-md">
+        <div class="space-y-6">
+            <div>
+                <flux:heading size="lg">{{ __('Are you sure you want to delete this user?') }}</flux:heading>
+                <flux:subheading class="mt-2">
+                    {{ __('This will permanently delete the standard user ":name". Admin accounts cannot be deleted from this page.', ['name' => $deleteConfirmationUserName]) }}
+                </flux:subheading>
+            </div>
+
+            <div class="flex justify-end gap-3">
+                <flux:button type="button" variant="ghost" wire:click="cancelDeleteConfirmation">
+                    {{ __('Cancel') }}
+                </flux:button>
+
+                <flux:button type="button" variant="danger" wire:click="deleteConfirmedUser">
+                    {{ __('Delete user') }}
+                </flux:button>
+            </div>
+        </div>
+    </flux:modal>
 </section>

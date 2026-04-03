@@ -42,6 +42,8 @@ Is It Down is a Laravel 13 and Livewire 4 application for managing who receives 
 
 - Admins can create users.
 - Admins can assign and update roles.
+- Admins can delete standard users after confirming the action.
+- Admin accounts cannot be deleted from the Users page.
 
 ### API key management
 
