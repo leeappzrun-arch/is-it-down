@@ -44,6 +44,7 @@ This project has domain-specific skills available. You MUST activate the relevan
 - For destructive actions on management pages, prefer a confirmation modal over immediate deletion from a table row or card action.
 - Keep new and updated pages responsive by default. Prefer layouts that stack cleanly on smaller screens, avoid cramped multi-column forms before there is enough width, and make primary actions easy to reach on mobile.
 - API key permissions are registered in `config/api_keys.php`. Whenever a new app section, management area, or API capability is added, update that permission registry in the same change so new read/write permissions are available immediately.
+- Treat the dashboard stats as part of the product surface. When a new top-level management area or important application feature is added, decide whether it needs a dashboard stat card and update the dashboard in the same change when appropriate.
 
 ## Verification Scripts
 
@@ -66,6 +67,7 @@ This project has domain-specific skills available. You MUST activate the relevan
 - Keep `README.md` focused on project overview, setup, routes, and developer workflow.
 - Keep `resources/views/pages/⚡user-guide.blade.php` focused on user-facing guidance for the features currently shipped.
 - Keep `resources/views/pages/⚡api-documentation.blade.php` focused on current API behavior. Until APIs exist, keep its placeholder status accurate.
+- Keep dashboard documentation accurate too: if the visible dashboard stats or their click-through behavior change, update the relevant docs and AI guidance in the same change.
 
 ## Replies
 

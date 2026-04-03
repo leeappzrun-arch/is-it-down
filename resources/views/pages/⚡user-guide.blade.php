@@ -30,7 +30,8 @@ new #[Title('User guide')] class extends Component {
             <div class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
                 <flux:heading size="lg">{{ __('Dashboard') }}</flux:heading>
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
-                    <p>{{ __('The dashboard is the default landing page after authentication. It is currently a placeholder workspace and acts as the entry point into the rest of the system.') }}</p>
+                    <p>{{ __('The dashboard is the default landing page after authentication and shows headline totals for recipients, recipient groups, users, and API keys.') }}</p>
+                    <p>{{ __('Admins can select those dashboard cards to move directly into the matching management page. Standard users can review the totals but cannot click through to admin-only tools.') }}</p>
                     <p>{{ __('Use the sidebar to move into administration screens, account settings, and supporting documentation.') }}</p>
                 </div>
             </div>

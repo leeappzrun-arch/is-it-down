@@ -24,6 +24,7 @@ Use this skill whenever a change affects how the project is installed, navigated
 4. Update the API documentation page when endpoints, authentication, request or response shapes, error handling, or integration steps change.
 5. If no API exists yet, keep the API documentation page honest and explicitly marked as pending.
 6. When a new app section or API surface is added, update `config/api_keys.php` so fresh read and write permissions become available for API keys in the same change.
+7. When a new top-level app feature or management area should be reflected in the dashboard, update the dashboard stats and the related documentation in the same change.
 
 ## Expected Workflow
 

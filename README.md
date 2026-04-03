@@ -10,6 +10,8 @@ Is It Down is a Laravel 13 and Livewire 4 application for managing who receives 
 
 - Users sign in through Laravel Fortify.
 - Verified users are routed to the dashboard.
+- The dashboard shows high-level totals for recipients, recipient groups, users, and API keys.
+- Admins can open those dashboard stats to jump straight into the matching management screens.
 - Authenticated users can access profile, appearance, and security settings.
 
 ### Role-based access
@@ -57,7 +59,7 @@ Is It Down is a Laravel 13 and Livewire 4 application for managing who receives 
 ## Main Routes
 
 - `/` redirects authenticated users to the dashboard and guests to the login page.
-- `/dashboard` is the main post-login landing page.
+- `/dashboard` is the main post-login landing page and shows the current system totals.
 - `/recipients` is the admin recipient and group management page.
 - `/users` is the admin user management page.
 - `/api-keys` is the admin API key management page.
@@ -112,3 +114,4 @@ The following files are part of the project’s living documentation and should 
 - `config/api_keys.php` for the API key permission registry used by the admin UI and future API authorization
 
 If a feature, route, role, workflow, UI label, setup step, or API behavior changes, update the relevant documentation files in the same change.
+If a new management area or top-level app feature is added, update the dashboard stats as part of the same change when it should be surfaced there.
