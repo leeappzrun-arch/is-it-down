@@ -2,7 +2,7 @@
 
 ## Overview
 
-Is It Down is a Laravel 13 and Livewire 4 application for managing who receives notifications or delivery events. The project currently focuses on authenticated access, role-based administration, recipient management, grouped routing targets, and user/account management.
+Is It Down is a Laravel 13 and Livewire 4 application for managing who receives notifications or delivery events. The project currently focuses on authenticated access, role-based administration, recipient management, grouped routing targets, user/account management, and pre-provisioned API keys for future integrations.
 
 ## Current Features
 
@@ -40,10 +40,18 @@ Is It Down is a Laravel 13 and Livewire 4 application for managing who receives 
 - Admins can create users.
 - Admins can assign and update roles.
 
+### API key management
+
+- Admins can create API keys for their own account or for named services.
+- Keys support expiration presets of 6 months, 1 year, 2 years, or never.
+- Keys support per-section `read` and `write` permissions.
+- API keys are stored securely as hashes and the plain-text token is only shown once.
+- Keys can be revoked without removing the database record.
+
 ### In-app documentation
 
 - `/user-guide` contains user-facing guidance for the features currently available.
-- `/api-documentation` is reserved for API documentation and currently shows a placeholder until API work begins.
+- `/api-documentation` explains the current pre-API state and notes that full endpoint documentation will be added once the API exists.
 
 ## Main Routes
 
@@ -51,8 +59,17 @@ Is It Down is a Laravel 13 and Livewire 4 application for managing who receives 
 - `/dashboard` is the main post-login landing page.
 - `/recipients` is the admin recipient and group management page.
 - `/users` is the admin user management page.
+- `/api-keys` is the admin API key management page.
 - `/settings/profile`, `/settings/appearance`, and `/settings/security` manage account preferences.
 - `/user-guide` and `/api-documentation` provide internal documentation pages.
+
+## API Key Permissions
+
+Available API key permissions are defined in `config/api_keys.php`.
+
+- Add each new app section to the `resources` array.
+- Every listed resource automatically receives `read` and `write` permissions.
+- When new sections or API capabilities ship, update this config, the relevant tests, and the documentation in the same change.
 
 ## Local Development
 
@@ -91,5 +108,6 @@ The following files are part of the project’s living documentation and should 
 - `README.md` for setup, architecture, feature summaries, routes, and developer workflow
 - `resources/views/pages/⚡user-guide.blade.php` for user-facing workflow instructions
 - `resources/views/pages/⚡api-documentation.blade.php` for API capabilities, contracts, authentication, and examples
+- `config/api_keys.php` for the API key permission registry used by the admin UI and future API authorization
 
 If a feature, route, role, workflow, UI label, setup step, or API behavior changes, update the relevant documentation files in the same change.

@@ -23,7 +23,7 @@ new #[Title('User guide')] class extends Component {
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
                     <p>{{ __('Sign in with your account to access the application. Verified users are taken to the dashboard after login.') }}</p>
                     <p>{{ __('If you are a standard user, your day-to-day actions are currently centered around your account settings and reviewing the in-app guidance pages.') }}</p>
-                    <p>{{ __('If you are an admin, you will also see the Recipients and Users areas in the main navigation.') }}</p>
+                    <p>{{ __('If you are an admin, you will also see the Recipients, Users, and API Keys areas in the main navigation.') }}</p>
                 </div>
             </div>
 
@@ -67,6 +67,17 @@ new #[Title('User guide')] class extends Component {
                     <p>{{ __('Admins can create new users, assign roles, and update existing user roles from the Users page.') }}</p>
                     <p>{{ __('Two roles currently exist: `admin` and `user`. Admins can access management screens, while standard users have a more limited experience.') }}</p>
                     <p>{{ __('The system protects the final admin account from being downgraded, which prevents accidental lockout from admin-only tools.') }}</p>
+                </div>
+            </div>
+
+            <div class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+                <flux:heading size="lg">{{ __('API key management') }}</flux:heading>
+                <flux:subheading class="mt-2">{{ __('Admin only') }}</flux:subheading>
+                <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+                    <p>{{ __('Admins can create API keys for their own account or for a named service from the API Keys page.') }}</p>
+                    <p>{{ __('Every key can be given read and write access for each supported application area, including Users and Recipients.') }}</p>
+                    <p>{{ __('Expiration can be set to 6 months, 1 year, 2 years, or never. The plain-text key is only shown once when it is created, so it should be copied immediately.') }}</p>
+                    <p>{{ __('Keys can be revoked later without deleting the audit trail of who created them and what access they were given.') }}</p>
                 </div>
             </div>
 

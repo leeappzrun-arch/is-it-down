@@ -39,6 +39,7 @@ This project has domain-specific skills available. You MUST activate the relevan
 - You must follow all existing code conventions used in this application. When creating or editing a file, check sibling files for the correct structure, approach, and naming.
 - Use descriptive names for variables and methods. For example, `isRegisteredForDiscounts`, not `discount()`.
 - Check for existing components to reuse before writing a new one.
+- API key permissions are registered in `config/api_keys.php`. Whenever a new app section, management area, or API capability is added, update that permission registry in the same change so new read/write permissions are available immediately.
 
 ## Verification Scripts
 
@@ -57,7 +58,7 @@ This project has domain-specific skills available. You MUST activate the relevan
 
 - You must only create documentation files if explicitly requested by the user.
 - The user has explicitly requested project documentation in this repository. Treat `README.md`, `resources/views/pages/⚡user-guide.blade.php`, and `resources/views/pages/⚡api-documentation.blade.php` as living documentation files.
-- Whenever a change affects setup steps, routes, navigation, roles, permissions, UI workflows, recipient handling, user management, or API behavior, update the relevant documentation files in the same change.
+- Whenever a change affects setup steps, routes, navigation, roles, permissions, UI workflows, recipient handling, user management, API key permissions, or API behavior, update the relevant documentation files in the same change.
 - Keep `README.md` focused on project overview, setup, routes, and developer workflow.
 - Keep `resources/views/pages/⚡user-guide.blade.php` focused on user-facing guidance for the features currently shipped.
 - Keep `resources/views/pages/⚡api-documentation.blade.php` focused on current API behavior. Until APIs exist, keep its placeholder status accurate.

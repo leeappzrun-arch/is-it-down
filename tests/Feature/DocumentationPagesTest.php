@@ -30,7 +30,7 @@ class DocumentationPagesTest extends TestCase
 
         $response->assertOk();
         $response->assertSeeText('API Documentation');
-        $response->assertSeeText('Coming soon.');
+        $response->assertSeeText('API key preparation');
     }
 
     public function test_authenticated_users_see_documentation_links_in_the_sidebar_layout(): void

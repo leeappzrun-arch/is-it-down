@@ -23,6 +23,9 @@
                         <flux:sidebar.item icon="users" :href="route('users.index')" :current="request()->routeIs('users.*')" wire:navigate>
                             {{ __('Users') }}
                         </flux:sidebar.item>
+                        <flux:sidebar.item icon="key" :href="route('api-keys.index')" :current="request()->routeIs('api-keys.*')" wire:navigate>
+                            {{ __('API Keys') }}
+                        </flux:sidebar.item>
                     @endif
                 </flux:sidebar.group>
             </flux:sidebar.nav>
@@ -82,6 +85,9 @@
                             <flux:menu.separator />
                             <flux:menu.item :href="route('users.index')" icon="users" wire:navigate>
                                 {{ __('Users') }}
+                            </flux:menu.item>
+                            <flux:menu.item :href="route('api-keys.index')" icon="key" wire:navigate>
+                                {{ __('API Keys') }}
                             </flux:menu.item>
                         @endif
                         <flux:menu.item :href="route('profile.edit')" icon="cog" wire:navigate>
