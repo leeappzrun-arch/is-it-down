@@ -11,6 +11,7 @@
         "laravel-best-practices",
         "fluxui-development",
         "livewire-development",
-        "tailwindcss-development"
+        "tailwindcss-development",
+        "ddev-development"
     ]
 }
