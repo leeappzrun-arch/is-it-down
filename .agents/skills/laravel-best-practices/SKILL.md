@@ -88,6 +88,7 @@ Check sibling files, related controllers, models, or tests for established patte
 - `LazilyRefreshDatabase` over `RefreshDatabase` for speed
 - `assertModelExists()` over raw `assertDatabaseHas()`
 - Factory states and sequences over manual overrides
+- When shipping a new feature or management area, add or update factories and seeders so fresh local environments have representative records for that feature
 - Use fakes (`Event::fake()`, `Exceptions::fake()`, etc.) — but always after factory setup, not before
 - `recycle()` to share relationship instances across factories
 

@@ -45,6 +45,7 @@ This project has domain-specific skills available. You MUST activate the relevan
 - Keep new and updated pages responsive by default. Prefer layouts that stack cleanly on smaller screens, avoid cramped multi-column forms before there is enough width, and make primary actions easy to reach on mobile.
 - API key permissions are registered in `config/api_keys.php`. Whenever a new app section, management area, or API capability is added, update that permission registry in the same change so new read/write permissions are available immediately.
 - Treat the dashboard stats as part of the product surface. When a new top-level management area or important application feature is added, decide whether it needs a dashboard stat card and update the dashboard in the same change when appropriate.
+- When a new feature, management area, or model is introduced, add or update factories and seeders in the same change so local development and tests have representative data available immediately.
 
 ## Verification Scripts
 
@@ -142,6 +143,7 @@ This project has domain-specific skills available. You MUST activate the relevan
 ### Model Creation
 
 - When creating new models, create useful factories and seeders for them too. Ask the user if they need any other things, using `ddev exec php artisan make:model --help` when `.ddev` exists.
+- When creating a new feature that depends on new domain records, update the relevant seeders even if no new model is introduced so the feature is visible in fresh local installs after seeding.
 
 ## APIs & Eloquent Resources
 
