@@ -12,6 +12,7 @@
         "fluxui-development",
         "livewire-development",
         "tailwindcss-development",
-        "ddev-development"
+        "ddev-development",
+        "documentation-maintenance"
     ]
 }

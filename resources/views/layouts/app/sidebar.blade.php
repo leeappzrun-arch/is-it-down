@@ -31,10 +31,10 @@
 
             <flux:sidebar.nav>
                 <flux:sidebar.group :heading="__('Dig Deeper')" class="grid">
-                    <flux:sidebar.item icon="square-library" href="https://laravel.com/docs/starter-kits#livewire" target="_blank">
+                    <flux:sidebar.item icon="square-library" :href="route('user-guide')" :current="request()->routeIs('user-guide')" wire:navigate>
                         {{ __('User Guide') }}
                     </flux:sidebar.item>
-                    <flux:sidebar.item icon="square-code" href="https://laravel.com/docs/starter-kits#livewire" target="_blank">
+                    <flux:sidebar.item icon="square-code" :href="route('api-documentation')" :current="request()->routeIs('api-documentation')" wire:navigate>
                         {{ __('API Documentation') }}
                     </flux:sidebar.item>
                 </flux:sidebar.group>

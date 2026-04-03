@@ -1,31 +1,95 @@
-# Laravel + Livewire Starter Kit
+# Is It Down
 
-## Introduction
+## Overview
 
-Our Laravel + [Livewire](https://livewire.laravel.com) starter kit provides a robust, modern starting point for building Laravel applications with a Livewire frontend.
+Is It Down is a Laravel 13 and Livewire 4 application for managing who receives notifications or delivery events. The project currently focuses on authenticated access, role-based administration, recipient management, grouped routing targets, and user/account management.
 
-Livewire is a powerful way of building dynamic, reactive, frontend UIs using just PHP. It's a great fit for teams that primarily use Blade templates and are looking for a simpler alternative to JavaScript-driven SPA frameworks like React and Vue.
+## Current Features
 
-This Livewire starter kit utilizes Livewire 4, TypeScript, Tailwind, and the [Flux UI](https://fluxui.dev) component library.
+### Authenticated application shell
 
-If you are looking for the alternate configurations of this starter kit, they can be found in the following branches:
+- Users sign in through Laravel Fortify.
+- Verified users are routed to the dashboard.
+- Authenticated users can access profile, appearance, and security settings.
 
-- [workos](https://github.com/laravel/livewire-starter-kit/tree/workos) - if WorkOS is selected for authentication
+### Role-based access
 
-## Official Documentation
+- `admin` users can manage recipients and users.
+- `user` accounts can access the authenticated application and their own settings.
+- The system prevents the last remaining admin from being downgraded.
 
-Documentation for all Laravel starter kits can be found on the [Laravel website](https://laravel.com/docs/starter-kits).
+### Recipient management
 
-## Contributing
+- Create, edit, and delete recipients.
+- Support `mailto://` endpoints for email destinations.
+- Support `webhook://` endpoints for webhook destinations.
+- Configure webhook authentication as:
+  - none
+  - bearer token
+  - basic auth
+  - custom header
+- Assign recipients to one or more groups.
 
-Thank you for considering contributing to our starter kit! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+### Group management
 
-All contributions to the Starter Kits from now on should be made through [Maestro](https://github.com/laravel/maestro).
+- Create, rename, and delete recipient groups.
+- Use groups to organise related recipients for future routing use cases.
 
-## Code of Conduct
+### User management
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+- Admins can create users.
+- Admins can assign and update roles.
 
-## License
+### In-app documentation
 
-The Laravel + Livewire starter kit is open-sourced software licensed under the MIT license.
+- `/user-guide` contains user-facing guidance for the features currently available.
+- `/api-documentation` is reserved for API documentation and currently shows a placeholder until API work begins.
+
+## Main Routes
+
+- `/` redirects authenticated users to the dashboard and guests to the login page.
+- `/dashboard` is the main post-login landing page.
+- `/recipients` is the admin recipient and group management page.
+- `/users` is the admin user management page.
+- `/settings/profile`, `/settings/appearance`, and `/settings/security` manage account preferences.
+- `/user-guide` and `/api-documentation` provide internal documentation pages.
+
+## Local Development
+
+This repository includes `.ddev` and should be worked on through DDEV whenever Docker is available.
+
+### Common commands
+
+```bash
+ddev start
+ddev composer install --no-interaction --prefer-dist
+ddev exec php artisan migrate
+ddev exec php artisan test --compact
+ddev npm run dev
+```
+
+If DDEV is unavailable, host-side Artisan and test commands may still work, but DDEV remains the preferred workflow for this project.
+
+## Testing
+
+Run focused tests while developing:
+
+```bash
+ddev exec php artisan test --compact tests/Feature/DocumentationPagesTest.php
+```
+
+Run the full test suite when needed:
+
+```bash
+ddev exec php artisan test --compact
+```
+
+## Documentation Maintenance
+
+The following files are part of the project’s living documentation and should be updated whenever related behavior changes:
+
+- `README.md` for setup, architecture, feature summaries, routes, and developer workflow
+- `resources/views/pages/⚡user-guide.blade.php` for user-facing workflow instructions
+- `resources/views/pages/⚡api-documentation.blade.php` for API capabilities, contracts, authentication, and examples
+
+If a feature, route, role, workflow, UI label, setup step, or API behavior changes, update the relevant documentation files in the same change.

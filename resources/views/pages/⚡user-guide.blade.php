@@ -1,0 +1,90 @@
+<?php
+
+use Livewire\Attributes\Title;
+use Livewire\Component;
+
+new #[Title('User guide')] class extends Component {
+    //
+}; ?>
+
+<section class="w-full">
+    <div class="relative mb-6 w-full">
+        <flux:heading size="xl" level="1">{{ __('User Guide') }}</flux:heading>
+        <flux:subheading size="lg" class="mb-6">
+            {{ __('A practical walkthrough of the features currently available in Is It Down.') }}
+        </flux:subheading>
+        <flux:separator variant="subtle" />
+    </div>
+
+    <div class="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+        <div class="space-y-6">
+            <div class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+                <flux:heading size="lg">{{ __('Getting started') }}</flux:heading>
+                <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+                    <p>{{ __('Sign in with your account to access the application. Verified users are taken to the dashboard after login.') }}</p>
+                    <p>{{ __('If you are a standard user, your day-to-day actions are currently centered around your account settings and reviewing the in-app guidance pages.') }}</p>
+                    <p>{{ __('If you are an admin, you will also see the Recipients and Users areas in the main navigation.') }}</p>
+                </div>
+            </div>
+
+            <div class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+                <flux:heading size="lg">{{ __('Dashboard') }}</flux:heading>
+                <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+                    <p>{{ __('The dashboard is the default landing page after authentication. It is currently a placeholder workspace and acts as the entry point into the rest of the system.') }}</p>
+                    <p>{{ __('Use the sidebar to move into administration screens, account settings, and supporting documentation.') }}</p>
+                </div>
+            </div>
+
+            <div class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+                <flux:heading size="lg">{{ __('Recipient management') }}</flux:heading>
+                <flux:subheading class="mt-2">{{ __('Admin only') }}</flux:subheading>
+                <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+                    <p>{{ __('Recipients are delivery targets for notifications or outbound events. Each recipient must have a name and an endpoint.') }}</p>
+                    <p>{{ __('Use `mailto://name@example.com` for email-style destinations.') }}</p>
+                    <p>{{ __('Use `webhook://example.com/path` or `webhook://https://example.com/path` for webhook destinations.') }}</p>
+                    <p>{{ __('Webhook recipients can be configured with no authentication, bearer token authentication, basic authentication, or a custom header.') }}</p>
+                    <p>{{ __('Recipients can belong to multiple groups, which makes it easier to organise related delivery targets together.') }}</p>
+                    <p>{{ __('Existing recipients can be edited or deleted from the management table once they have been created.') }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="space-y-6">
+            <div class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+                <flux:heading size="lg">{{ __('Group management') }}</flux:heading>
+                <flux:subheading class="mt-2">{{ __('Admin only') }}</flux:subheading>
+                <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+                    <p>{{ __('Groups let you organise recipients into reusable collections such as Operations, Finance, or On-call.') }}</p>
+                    <p>{{ __('Create groups from the side panel on the Recipients page, then assign one or more groups while creating or editing a recipient.') }}</p>
+                    <p>{{ __('Groups can be renamed or deleted later as your routing structure evolves.') }}</p>
+                </div>
+            </div>
+
+            <div class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+                <flux:heading size="lg">{{ __('User management') }}</flux:heading>
+                <flux:subheading class="mt-2">{{ __('Admin only') }}</flux:subheading>
+                <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+                    <p>{{ __('Admins can create new users, assign roles, and update existing user roles from the Users page.') }}</p>
+                    <p>{{ __('Two roles currently exist: `admin` and `user`. Admins can access management screens, while standard users have a more limited experience.') }}</p>
+                    <p>{{ __('The system protects the final admin account from being downgraded, which prevents accidental lockout from admin-only tools.') }}</p>
+                </div>
+            </div>
+
+            <div class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+                <flux:heading size="lg">{{ __('Account settings') }}</flux:heading>
+                <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+                    <p>{{ __('All authenticated users can manage their profile details from Settings.') }}</p>
+                    <p>{{ __('Appearance settings are available for adjusting the way the app is presented.') }}</p>
+                    <p>{{ __('Security settings include password confirmation flows and support for two-factor authentication when enabled.') }}</p>
+                </div>
+            </div>
+
+            <div class="rounded-xl border border-dashed border-zinc-300 bg-zinc-50 p-6 dark:border-zinc-700 dark:bg-zinc-950/40">
+                <flux:heading size="lg">{{ __('Need a quick reference?') }}</flux:heading>
+                <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+                    <p>{{ __('Use this page for user-facing workflow guidance, the API Documentation page for integration notes, and the project README for setup and technical reference.') }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
