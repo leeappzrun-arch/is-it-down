@@ -45,7 +45,12 @@ class ApiKeyManagementTest extends TestCase
             ->call('createApiKey');
 
         $response->assertHasNoErrors();
+        $response->assertSet('showNewApiKeyModal', true);
         $response->assertSet('newlyCreatedToken', fn (string $value): bool => str_starts_with($value, 'iid_'));
+        $response->assertSee('This API key will not be shown again after you close this modal.');
+
+        $response->set('showNewApiKeyModal', false)
+            ->assertSet('newlyCreatedToken', null);
 
         $apiKey = ApiKey::query()->where('name', 'Primary admin key')->first();
 

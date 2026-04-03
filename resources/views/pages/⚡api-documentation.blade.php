@@ -14,7 +14,7 @@ new #[Title('API documentation')] class extends Component {
 
         <div class="mt-6 space-y-4 rounded-xl border border-dashed border-zinc-300 bg-zinc-50 p-5 text-sm leading-6 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950/40 dark:text-zinc-300">
             <p>{{ __('Public or internal API endpoints have not been introduced yet, so there are no live base URLs, request schemas, or response examples to document today.') }}</p>
-            <p>{{ __('Admins can already create API keys ahead of that work from the API Keys page. Keys can belong to the current admin account or to a named service integration, and they support per-section read and write permissions plus optional expiration dates.') }}</p>
+            <p>{{ __('Admins can already create API keys ahead of that work from the API Keys page. Keys can belong to the current admin account or to a named service integration, they support per-section read and write permissions plus optional expiration dates, and the plain-text key is only revealed once in a confirmation modal.') }}</p>
             <p>{{ __('When the API is added, this page should be updated with authentication headers, endpoint contracts, example payloads, and the permission requirements for each route.') }}</p>
         </div>
     </div>

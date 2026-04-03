@@ -21,6 +21,8 @@ new #[Title('API key management')] class extends Component {
 
     public ?string $newlyCreatedToken = null;
 
+    public bool $showNewApiKeyModal = false;
+
     /**
      * Mount the component.
      */
@@ -41,6 +43,16 @@ new #[Title('API key management')] class extends Component {
         }
 
         $this->resetValidation();
+    }
+
+    /**
+     * Clear the plain-text token once the confirmation modal closes.
+     */
+    public function updatedShowNewApiKeyModal(bool $showModal): void
+    {
+        if (! $showModal) {
+            $this->newlyCreatedToken = null;
+        }
     }
 
     /**
@@ -120,6 +132,7 @@ new #[Title('API key management')] class extends Component {
         ]);
 
         $this->newlyCreatedToken = $plainTextToken;
+        $this->showNewApiKeyModal = true;
         $this->reset(['name', 'serviceName']);
         $this->ownerType = ApiKey::OWNER_USER;
         $this->expirationOption = '1_year';
@@ -285,16 +298,6 @@ new #[Title('API key management')] class extends Component {
                 </form>
             </div>
 
-            @if ($newlyCreatedToken)
-                <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-6 shadow-sm dark:border-emerald-500/30 dark:bg-emerald-500/10">
-                    <flux:heading size="lg">{{ __('Copy this key now') }}</flux:heading>
-                    <flux:subheading class="mt-2">{{ __('For security, the plain-text token is only shown once.') }}</flux:subheading>
-
-                    <div class="mt-4 rounded-lg border border-emerald-200 bg-white px-4 py-3 font-mono text-sm text-emerald-900 dark:border-emerald-500/30 dark:bg-zinc-950 dark:text-emerald-200">
-                        {{ $newlyCreatedToken }}
-                    </div>
-                </div>
-            @endif
         </div>
 
         <div class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
@@ -387,4 +390,32 @@ new #[Title('API key management')] class extends Component {
             @endif
         </div>
     </div>
+
+    <flux:modal wire:model="showNewApiKeyModal" class="max-w-xl">
+        <div class="space-y-6">
+            <div>
+                <flux:heading size="lg">{{ __('Copy this API key now') }}</flux:heading>
+                <flux:subheading class="mt-2">
+                    {{ __('This API key will not be shown again after you close this modal.') }}
+                </flux:subheading>
+            </div>
+
+            @if ($newlyCreatedToken)
+                <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-500/30 dark:bg-emerald-500/10">
+                    <p class="text-sm text-emerald-900 dark:text-emerald-200">
+                        {{ __('Store it somewhere secure before continuing.') }}
+                    </p>
+                    <div class="mt-3 overflow-x-auto rounded-lg border border-emerald-200 bg-white px-4 py-3 font-mono text-sm text-emerald-900 dark:border-emerald-500/30 dark:bg-zinc-950 dark:text-emerald-200">
+                        {{ $newlyCreatedToken }}
+                    </div>
+                </div>
+            @endif
+
+            <div class="flex justify-end">
+                <flux:button type="button" variant="primary" wire:click="$set('showNewApiKeyModal', false)">
+                    {{ __('I have copied this key') }}
+                </flux:button>
+            </div>
+        </div>
+    </flux:modal>
 </section>

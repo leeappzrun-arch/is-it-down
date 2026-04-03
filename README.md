@@ -50,7 +50,7 @@ Is It Down is a Laravel 13 and Livewire 4 application for managing who receives 
 - Admins can create API keys for their own account or for named services.
 - Keys support expiration presets of 6 months, 1 year, 2 years, or never.
 - Keys support per-section `read` and `write` permissions.
-- API keys are stored securely as hashes and the plain-text token is only shown once.
+- API keys are stored securely as hashes and the plain-text token is only shown once in a post-create modal.
 - Keys can be revoked without removing the database record.
 
 ### In-app documentation

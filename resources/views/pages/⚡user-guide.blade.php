@@ -78,7 +78,7 @@ new #[Title('User guide')] class extends Component {
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
                     <p>{{ __('Admins can create API keys for their own account or for a named service from the API Keys page.') }}</p>
                     <p>{{ __('Every key can be given read and write access for each supported application area, including Users and Recipients.') }}</p>
-                    <p>{{ __('Expiration can be set to 6 months, 1 year, 2 years, or never. The plain-text key is only shown once when it is created, so it should be copied immediately.') }}</p>
+                    <p>{{ __('Expiration can be set to 6 months, 1 year, 2 years, or never. The plain-text key is only shown once in a confirmation modal when it is created, so it should be copied immediately.') }}</p>
                     <p>{{ __('Keys can be revoked later without deleting the audit trail of who created them and what access they were given.') }}</p>
                 </div>
             </div>
