@@ -1,20 +1,21 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
-    <rect width="256" height="256" rx="56" fill="#0f172a"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+    <rect width="64" height="64" rx="14" fill="#ffffff"/>
+    <rect x="0.75" y="0.75" width="62.5" height="62.5" rx="13.25" fill="none" stroke="#0f172a" stroke-opacity="0.12" stroke-width="1.5"/>
     <path
-        d="M179 75A80 80 0 1 0 208 128"
+        d="M47.3 18.7A20 20 0 1 0 52 32"
         fill="none"
-        stroke="#34d399"
+        stroke="#0f172a"
+        stroke-width="5"
         stroke-linecap="round"
         stroke-linejoin="round"
-        stroke-width="26"
     />
     <path
-        d="M80 134L112 166L176 94"
+        d="M20 33.5L28 41.5L44 23.5"
         fill="none"
-        stroke="#34d399"
+        stroke="#0f172a"
+        stroke-width="5"
         stroke-linecap="round"
         stroke-linejoin="round"
-        stroke-width="26"
     />
-    <circle cx="198" cy="72" r="16" fill="#22d3ee"/>
+    <circle cx="49.5" cy="18" r="3.5" fill="#0f172a" />
 </svg>

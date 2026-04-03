@@ -12,7 +12,7 @@ Route::get('/', function () {
 })->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::view('dashboard', 'dashboard')->name('dashboard');
+    Route::livewire('dashboard', 'pages::dashboard')->name('dashboard');
 });
 
 Route::middleware(['auth', 'verified', 'role:'.User::ROLE_ADMIN])->group(function () {
