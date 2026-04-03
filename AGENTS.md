@@ -32,7 +32,7 @@ This project has domain-specific skills available. You MUST activate the relevan
 - `livewire-development` — Use for any task or question involving Livewire. Activate if user mentions Livewire, wire: directives, or Livewire-specific concepts like wire:model, wire:click, wire:sort, or islands, invoke this skill. Covers building new components, debugging reactivity issues, real-time form validation, drag-and-drop, loading states, migrating from Livewire 3 to 4, converting component formats (SFC/MFC/class-based), and performance optimization. Do not use for non-Livewire reactive UI (React, Vue, Alpine-only, Inertia.js) or standard Laravel forms without Livewire.
 - `tailwindcss-development` — Always invoke when the user's message includes 'tailwind' in any form. Also invoke for: building responsive grid layouts (multi-column card grids, product grids), flex/grid page structures (dashboards with sidebars, fixed topbars, mobile-toggle navs), styling UI components (cards, tables, navbars, pricing sections, forms, inputs, badges), adding dark mode variants, fixing spacing or typography, and Tailwind v3/v4 work. The core use case: writing or fixing Tailwind utility classes in HTML templates (Blade, JSX, Vue). Skip for backend PHP logic, database queries, API routes, JavaScript with no HTML/CSS component, CSS file audits, build tool configuration, and vanilla CSS.
 - `ddev-development` — Use this skill whenever a `.ddev` folder is present in the project. When `.ddev` exists, ALWAYS run Composer, Artisan, PHPUnit, npm, and other local PHP/Node project commands through DDEV unless the task is explicitly about the host machine. Prefer `ddev composer ...`, `ddev exec php artisan ...`, `ddev exec php artisan test ...`, and `ddev npm ...` or `ddev exec npm ...`. If DDEV or Docker access is blocked by sandbox or session permissions, request DDEV/Docker access for the session and retry before falling back or giving up. Also use this skill for DDEV configuration, troubleshooting, and environment alignment.
-- `documentation-maintenance` — Use whenever a change affects setup, routes, navigation, roles, permissions, user workflows, or API capabilities. Keep `README.md`, `resources/views/pages/⚡user-guide.blade.php`, and `resources/views/pages/⚡api-documentation.blade.php` aligned with the current state of the system.
+- `documentation-maintenance` — Use whenever a change affects setup, routes, navigation, roles, permissions, user workflows, API capabilities, or webhook behavior. Keep `README.md`, `resources/views/pages/⚡user-guide.blade.php`, `resources/views/pages/⚡api-documentation.blade.php`, and `resources/views/pages/⚡webhook-documentation.blade.php` aligned with the current state of the system.
 
 ## Conventions
 
@@ -63,11 +63,12 @@ This project has domain-specific skills available. You MUST activate the relevan
 ## Documentation Files
 
 - You must only create documentation files if explicitly requested by the user.
-- The user has explicitly requested project documentation in this repository. Treat `README.md`, `resources/views/pages/⚡user-guide.blade.php`, and `resources/views/pages/⚡api-documentation.blade.php` as living documentation files.
-- Whenever a change affects setup steps, routes, navigation, roles, permissions, UI workflows, recipient handling, user management, API key permissions, or API behavior, update the relevant documentation files in the same change.
+- The user has explicitly requested project documentation in this repository. Treat `README.md`, `resources/views/pages/⚡user-guide.blade.php`, `resources/views/pages/⚡api-documentation.blade.php`, and `resources/views/pages/⚡webhook-documentation.blade.php` as living documentation files.
+- Whenever a change affects setup steps, routes, navigation, roles, permissions, UI workflows, recipient handling, webhook behavior, user management, API key permissions, or API behavior, update the relevant documentation files in the same change.
 - Keep `README.md` focused on project overview, setup, routes, and developer workflow.
 - Keep `resources/views/pages/⚡user-guide.blade.php` focused on user-facing guidance for the features currently shipped.
 - Keep `resources/views/pages/⚡api-documentation.blade.php` focused on current API behavior. Until APIs exist, keep its placeholder status accurate.
+- Keep `resources/views/pages/⚡webhook-documentation.blade.php` focused on current webhook recipient behavior, delivery expectations, authentication, and examples.
 - Keep dashboard documentation accurate too: if the visible dashboard stats or their click-through behavior change, update the relevant docs and AI guidance in the same change.
 
 ## Replies

@@ -15,6 +15,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::livewire('dashboard', 'pages::dashboard')->name('dashboard');
     Route::livewire('user-guide', 'pages::user-guide')->name('user-guide');
     Route::livewire('api-documentation', 'pages::api-documentation')->name('api-documentation');
+    Route::livewire('webhook-documentation', 'pages::webhook-documentation')->name('webhook-documentation');
 });
 
 Route::middleware(['auth', 'verified', 'role:'.User::ROLE_ADMIN])->group(function () {

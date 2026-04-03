@@ -57,6 +57,7 @@ Is It Down is a Laravel 13 and Livewire 4 application for managing who receives 
 
 - `/user-guide` contains user-facing guidance for the features currently available.
 - `/api-documentation` explains the current pre-API state and notes that full endpoint documentation will be added once the API exists.
+- `/webhook-documentation` documents the current webhook recipient setup, supported authentication modes, and the details that should stay aligned with future webhook delivery changes.
 
 ## Main Routes
 
@@ -66,7 +67,7 @@ Is It Down is a Laravel 13 and Livewire 4 application for managing who receives 
 - `/users` is the admin user management page.
 - `/api-keys` is the admin API key management page.
 - `/settings/profile`, `/settings/appearance`, and `/settings/security` manage account preferences.
-- `/user-guide` and `/api-documentation` provide internal documentation pages.
+- `/user-guide`, `/api-documentation`, and `/webhook-documentation` provide internal documentation pages.
 
 ## API Key Permissions
 
@@ -122,7 +123,9 @@ The following files are part of the project’s living documentation and should 
 - `README.md` for setup, architecture, feature summaries, routes, and developer workflow
 - `resources/views/pages/⚡user-guide.blade.php` for user-facing workflow instructions
 - `resources/views/pages/⚡api-documentation.blade.php` for API capabilities, contracts, authentication, and examples
+- `resources/views/pages/⚡webhook-documentation.blade.php` for webhook recipient setup, authentication, payload expectations, and delivery guidance
 - `config/api_keys.php` for the API key permission registry used by the admin UI and future API authorization
 
 If a feature, route, role, workflow, UI label, setup step, or API behavior changes, update the relevant documentation files in the same change.
+If webhook configuration, authentication, payload shape, retry behavior, or delivery semantics change, update the webhook documentation page in the same change.
 If a new management area or top-level app feature is added, update the dashboard stats as part of the same change when it should be surfaced there.

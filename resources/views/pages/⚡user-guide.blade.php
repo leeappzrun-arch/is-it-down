@@ -44,6 +44,7 @@ new #[Title('User guide')] class extends Component {
                     <p>{{ __('Choose `Email` or `Webhook` from the protocol selector, then enter the address or target without the internal prefix.') }}</p>
                     <p>{{ __('Email destinations are stored internally as `mailto://name@example.com`, while webhooks are stored as `webhook://example.com/path` or `webhook://https://example.com/path`.') }}</p>
                     <p>{{ __('Webhook recipients can be configured with no authentication, bearer token authentication, basic authentication, or a custom header, and the matching fields appear as soon as you choose the authentication type.') }}</p>
+                    <p>{{ __('Use the Webhook Documentation page for a dedicated reference on supported destination formats, authentication options, and the details that should stay aligned with future webhook delivery work.') }}</p>
                     <p>{{ __('Recipients can belong to multiple groups, which makes it easier to organise related delivery targets together.') }}</p>
                     <p>{{ __('Existing recipients can be edited or deleted from the management table once they have been created. Editing scrolls you to the form automatically, and deletes ask for confirmation before anything is removed.') }}</p>
                 </div>
@@ -95,7 +96,7 @@ new #[Title('User guide')] class extends Component {
             <div class="rounded-xl border border-dashed border-zinc-300 bg-zinc-50 p-6 dark:border-zinc-700 dark:bg-zinc-950/40">
                 <flux:heading size="lg">{{ __('Need a quick reference?') }}</flux:heading>
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
-                    <p>{{ __('Use this page for user-facing workflow guidance, the API Documentation page for integration notes, and the project README for setup and technical reference.') }}</p>
+                    <p>{{ __('Use this page for user-facing workflow guidance, the API Documentation page for current API status, the Webhook Documentation page for recipient delivery setup notes, and the project README for setup and technical reference.') }}</p>
                 </div>
             </div>
         </div>

@@ -642,12 +642,12 @@ new #[Title('Recipient management')] class extends Component {
                                 <span class="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
                                     {{ __('Email recipient') }}
                                 </span>
-                                <p class="text-sm text-zinc-600 dark:text-zinc-300">{{ __('Enter an email address. Email recipients only receive Down events.') }}</p>
+                                <p class="text-sm text-zinc-600 dark:text-zinc-300">{{ __('Enter an email address.') }}</p>
                             @elseif ($this->formEndpointType === \App\Models\Recipient::TYPE_WEBHOOK)
                                 <span class="inline-flex rounded-full bg-sky-100 px-3 py-1 text-xs font-medium text-sky-700 dark:bg-sky-500/15 dark:text-sky-300">
                                     {{ __('Webhook recipient') }}
                                 </span>
-                                <p class="text-sm text-zinc-600 dark:text-zinc-300">{{ __('Enter a full http:// or https:// URL. Webhooks will receive POST requests for all events (Up or Down).') }}</p>
+                                <p class="text-sm text-zinc-600 dark:text-zinc-300">{{ __('Enter a full http:// or https:// URL.') }}</p>
                             @else
                                 <span class="inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
                                     {{ __('Choose a protocol') }}
