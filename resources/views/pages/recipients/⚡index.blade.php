@@ -15,7 +15,9 @@ new #[Title('Recipient management')] class extends Component {
 
     public string $name = '';
 
-    public string $endpoint = '';
+    public string $endpointType = Recipient::TYPE_MAIL;
+
+    public string $endpointTarget = '';
 
     public string $webhookAuthType = Recipient::WEBHOOK_AUTH_NONE;
 
@@ -33,6 +35,14 @@ new #[Title('Recipient management')] class extends Component {
     public array $selectedGroupIds = [];
 
     public string $groupName = '';
+
+    public bool $showDeleteConfirmationModal = false;
+
+    public ?string $deleteConfirmationType = null;
+
+    public ?int $deleteConfirmationId = null;
+
+    public string $deleteConfirmationName = '';
 
     /**
      * Mount the component.
@@ -68,6 +78,20 @@ new #[Title('Recipient management')] class extends Component {
     }
 
     /**
+     * Get the supported endpoint types.
+     *
+     * @return array<string, string>
+     */
+    #[Computed]
+    public function endpointTypeOptions(): array
+    {
+        return [
+            Recipient::TYPE_MAIL => 'Email',
+            Recipient::TYPE_WEBHOOK => 'Webhook',
+        ];
+    }
+
+    /**
      * Get the supported webhook authentication types.
      *
      * @return array<string, string>
@@ -87,9 +111,9 @@ new #[Title('Recipient management')] class extends Component {
      * Get the current form endpoint type.
      */
     #[Computed]
-    public function formEndpointType(): ?string
+    public function formEndpointType(): string
     {
-        return $this->detectEndpointType($this->endpoint);
+        return $this->endpointType;
     }
 
     /**
@@ -119,9 +143,12 @@ new #[Title('Recipient management')] class extends Component {
             ->with('groups:id')
             ->findOrFail($recipientId);
 
+        ['type' => $endpointType, 'target' => $endpointTarget] = $this->parseEndpoint($recipient->endpoint);
+
         $this->editingRecipientId = $recipient->id;
         $this->name = $recipient->name;
-        $this->endpoint = $recipient->endpoint;
+        $this->endpointType = $endpointType;
+        $this->endpointTarget = $endpointTarget;
         $this->webhookAuthType = $recipient->webhook_auth_type;
         $this->webhookAuthUsername = $recipient->webhook_auth_username ?? '';
         $this->webhookAuthPassword = $recipient->webhook_auth_password ?? '';
@@ -134,20 +161,17 @@ new #[Title('Recipient management')] class extends Component {
             ->all();
 
         $this->resetValidation();
+        $this->dispatch('focus-form', form: 'recipient');
     }
 
     /**
-     * Delete a recipient.
+     * Prompt to delete a recipient.
      */
-    public function deleteRecipient(int $recipientId): void
+    public function confirmRecipientDeletion(int $recipientId): void
     {
-        Recipient::query()->findOrFail($recipientId)->delete();
+        $recipient = Recipient::query()->findOrFail($recipientId);
 
-        if ($this->editingRecipientId === $recipientId) {
-            $this->resetRecipientForm();
-        }
-
-        $this->dispatch('recipient-deleted');
+        $this->promptDeleteConfirmation('recipient', $recipient->id, $recipient->name);
     }
 
     /**
@@ -185,25 +209,17 @@ new #[Title('Recipient management')] class extends Component {
         $this->groupName = $group->name;
 
         $this->resetValidation();
+        $this->dispatch('focus-form', form: 'group');
     }
 
     /**
-     * Delete a group.
+     * Prompt to delete a group.
      */
-    public function deleteGroup(int $groupId): void
+    public function confirmGroupDeletion(int $groupId): void
     {
-        RecipientGroup::query()->findOrFail($groupId)->delete();
+        $group = RecipientGroup::query()->findOrFail($groupId);
 
-        $this->selectedGroupIds = array_values(array_filter(
-            $this->selectedGroupIds,
-            fn (string $selectedGroupId): bool => (int) $selectedGroupId !== $groupId
-        ));
-
-        if ($this->editingGroupId === $groupId) {
-            $this->resetGroupForm();
-        }
-
-        $this->dispatch('group-deleted');
+        $this->promptDeleteConfirmation('group', $group->id, $group->name);
     }
 
     /**
@@ -215,6 +231,40 @@ new #[Title('Recipient management')] class extends Component {
     }
 
     /**
+     * Update the form when the endpoint type changes.
+     */
+    public function updatedEndpointType(string $endpointType): void
+    {
+        if ($endpointType !== Recipient::TYPE_WEBHOOK) {
+            $this->resetWebhookAuthentication();
+        }
+
+        $this->resetValidation();
+    }
+
+    /**
+     * Delete the record selected in the confirmation modal.
+     */
+    public function deleteConfirmedItem(): void
+    {
+        match ($this->deleteConfirmationType) {
+            'recipient' => $this->deleteRecipient($this->deleteConfirmationId),
+            'group' => $this->deleteGroup($this->deleteConfirmationId),
+            default => null,
+        };
+
+        $this->closeDeleteConfirmation();
+    }
+
+    /**
+     * Close the delete confirmation modal.
+     */
+    public function cancelDeleteConfirmation(): void
+    {
+        $this->closeDeleteConfirmation();
+    }
+
+    /**
      * Get the validation rules for recipients.
      *
      * @return array<string, array<int, mixed>>
@@ -223,75 +273,75 @@ new #[Title('Recipient management')] class extends Component {
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'endpoint' => [
+            'endpointType' => ['required', 'string', Rule::in(array_keys($this->endpointTypeOptions()))],
+            'endpointTarget' => [
                 'required',
                 'string',
                 'max:2048',
                 function (string $attribute, mixed $value, \Closure $fail): void {
                     if (! is_string($value)) {
-                        $fail(__('The endpoint must be a string.'));
+                        $fail(__('The destination must be a string.'));
 
                         return;
                     }
 
-                    if (Str::startsWith($value, 'mailto://')) {
-                        $email = trim(Str::after($value, 'mailto://'));
+                    $target = $this->normalizeEndpointTarget($value, $this->endpointType);
 
-                        if ($email === '' || ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                            $fail(__('Mail endpoints must use the format mailto://name@example.com.'));
+                    if ($this->endpointType === Recipient::TYPE_MAIL) {
+                        if ($target === '' || ! filter_var($target, FILTER_VALIDATE_EMAIL)) {
+                            $fail(__('Email destinations must use the format name@example.com.'));
                         }
 
                         return;
                     }
 
-                    if (Str::startsWith($value, 'webhook://')) {
-                        $target = trim(Str::after($value, 'webhook://'));
+                    if ($this->endpointType === Recipient::TYPE_WEBHOOK) {
                         $normalizedTarget = Str::startsWith($target, ['http://', 'https://'])
                             ? $target
                             : 'https://'.ltrim($target, '/');
 
                         if ($target === '' || ! filter_var($normalizedTarget, FILTER_VALIDATE_URL)) {
-                            $fail(__('Webhook endpoints must use the format webhook://example.com/path or webhook://https://example.com/path.'));
+                            $fail(__('Webhook destinations must use the format example.com/path or https://example.com/path.'));
                         }
 
                         return;
                     }
 
-                    $fail(__('Endpoints must start with mailto:// or webhook://.'));
+                    $fail(__('Choose whether this destination is an email address or a webhook.'));
                 },
             ],
             'selectedGroupIds' => ['array'],
             'selectedGroupIds.*' => ['integer', Rule::exists('recipient_groups', 'id')],
             'webhookAuthType' => [
-                Rule::requiredIf(fn (): bool => $this->isWebhookEndpoint($this->endpoint)),
+                Rule::requiredIf(fn (): bool => $this->isWebhookEndpoint()),
                 Rule::in(Recipient::webhookAuthTypes()),
             ],
             'webhookAuthUsername' => [
-                Rule::requiredIf(fn (): bool => $this->isWebhookEndpoint($this->endpoint) && $this->webhookAuthType === Recipient::WEBHOOK_AUTH_BASIC),
+                Rule::requiredIf(fn (): bool => $this->isWebhookEndpoint() && $this->webhookAuthType === Recipient::WEBHOOK_AUTH_BASIC),
                 'nullable',
                 'string',
                 'max:255',
             ],
             'webhookAuthPassword' => [
-                Rule::requiredIf(fn (): bool => $this->isWebhookEndpoint($this->endpoint) && $this->webhookAuthType === Recipient::WEBHOOK_AUTH_BASIC),
+                Rule::requiredIf(fn (): bool => $this->isWebhookEndpoint() && $this->webhookAuthType === Recipient::WEBHOOK_AUTH_BASIC),
                 'nullable',
                 'string',
                 'max:255',
             ],
             'webhookAuthToken' => [
-                Rule::requiredIf(fn (): bool => $this->isWebhookEndpoint($this->endpoint) && $this->webhookAuthType === Recipient::WEBHOOK_AUTH_BEARER),
+                Rule::requiredIf(fn (): bool => $this->isWebhookEndpoint() && $this->webhookAuthType === Recipient::WEBHOOK_AUTH_BEARER),
                 'nullable',
                 'string',
                 'max:2048',
             ],
             'webhookAuthHeaderName' => [
-                Rule::requiredIf(fn (): bool => $this->isWebhookEndpoint($this->endpoint) && $this->webhookAuthType === Recipient::WEBHOOK_AUTH_HEADER),
+                Rule::requiredIf(fn (): bool => $this->isWebhookEndpoint() && $this->webhookAuthType === Recipient::WEBHOOK_AUTH_HEADER),
                 'nullable',
                 'string',
                 'max:255',
             ],
             'webhookAuthHeaderValue' => [
-                Rule::requiredIf(fn (): bool => $this->isWebhookEndpoint($this->endpoint) && $this->webhookAuthType === Recipient::WEBHOOK_AUTH_HEADER),
+                Rule::requiredIf(fn (): bool => $this->isWebhookEndpoint() && $this->webhookAuthType === Recipient::WEBHOOK_AUTH_HEADER),
                 'nullable',
                 'string',
                 'max:2048',
@@ -324,14 +374,16 @@ new #[Title('Recipient management')] class extends Component {
      */
     private function recipientPayload(array $validated): array
     {
-        $isWebhookEndpoint = $this->isWebhookEndpoint($validated['endpoint']);
+        $endpointType = (string) $validated['endpointType'];
+        $endpointTarget = $this->normalizeEndpointTarget((string) $validated['endpointTarget'], $endpointType);
+        $isWebhookEndpoint = $endpointType === Recipient::TYPE_WEBHOOK;
         $webhookAuthType = $isWebhookEndpoint
-            ? $validated['webhookAuthType']
+            ? (string) $validated['webhookAuthType']
             : Recipient::WEBHOOK_AUTH_NONE;
 
         return [
             'name' => trim($validated['name']),
-            'endpoint' => trim($validated['endpoint']),
+            'endpoint' => $this->buildEndpoint($endpointType, $endpointTarget),
             'webhook_auth_type' => $webhookAuthType,
             'webhook_auth_username' => $isWebhookEndpoint && $webhookAuthType === Recipient::WEBHOOK_AUTH_BASIC
                 ? trim((string) $validated['webhookAuthUsername'])
@@ -359,7 +411,7 @@ new #[Title('Recipient management')] class extends Component {
         $this->reset([
             'editingRecipientId',
             'name',
-            'endpoint',
+            'endpointTarget',
             'webhookAuthUsername',
             'webhookAuthPassword',
             'webhookAuthToken',
@@ -368,6 +420,7 @@ new #[Title('Recipient management')] class extends Component {
             'selectedGroupIds',
         ]);
 
+        $this->endpointType = Recipient::TYPE_MAIL;
         $this->webhookAuthType = Recipient::WEBHOOK_AUTH_NONE;
 
         $this->resetValidation();
@@ -383,27 +436,139 @@ new #[Title('Recipient management')] class extends Component {
     }
 
     /**
-     * Determine the type of endpoint being edited.
+     * Prompt the shared delete confirmation modal.
      */
-    private function detectEndpointType(string $endpoint): ?string
+    private function promptDeleteConfirmation(string $type, int $id, string $name): void
     {
-        if (Str::startsWith($endpoint, 'mailto://')) {
-            return Recipient::TYPE_MAIL;
-        }
-
-        if (Str::startsWith($endpoint, 'webhook://')) {
-            return Recipient::TYPE_WEBHOOK;
-        }
-
-        return null;
+        $this->deleteConfirmationType = $type;
+        $this->deleteConfirmationId = $id;
+        $this->deleteConfirmationName = $name;
+        $this->showDeleteConfirmationModal = true;
     }
 
     /**
-     * Determine whether the given endpoint is a webhook.
+     * Delete a recipient record.
      */
-    private function isWebhookEndpoint(string $endpoint): bool
+    private function deleteRecipient(?int $recipientId): void
     {
-        return $this->detectEndpointType($endpoint) === Recipient::TYPE_WEBHOOK;
+        if ($recipientId === null) {
+            return;
+        }
+
+        Recipient::query()->findOrFail($recipientId)->delete();
+
+        if ($this->editingRecipientId === $recipientId) {
+            $this->resetRecipientForm();
+        }
+
+        $this->dispatch('recipient-deleted');
+    }
+
+    /**
+     * Delete a group record.
+     */
+    private function deleteGroup(?int $groupId): void
+    {
+        if ($groupId === null) {
+            return;
+        }
+
+        RecipientGroup::query()->findOrFail($groupId)->delete();
+
+        $this->selectedGroupIds = array_values(array_filter(
+            $this->selectedGroupIds,
+            fn (string $selectedGroupId): bool => (int) $selectedGroupId !== $groupId
+        ));
+
+        if ($this->editingGroupId === $groupId) {
+            $this->resetGroupForm();
+        }
+
+        $this->dispatch('group-deleted');
+    }
+
+    /**
+     * Reset webhook authentication inputs.
+     */
+    private function resetWebhookAuthentication(): void
+    {
+        $this->webhookAuthType = Recipient::WEBHOOK_AUTH_NONE;
+        $this->webhookAuthUsername = '';
+        $this->webhookAuthPassword = '';
+        $this->webhookAuthToken = '';
+        $this->webhookAuthHeaderName = '';
+        $this->webhookAuthHeaderValue = '';
+    }
+
+    /**
+     * Close and reset the delete confirmation modal state.
+     */
+    private function closeDeleteConfirmation(): void
+    {
+        $this->showDeleteConfirmationModal = false;
+        $this->deleteConfirmationType = null;
+        $this->deleteConfirmationId = null;
+        $this->deleteConfirmationName = '';
+    }
+
+    /**
+     * Normalize a user-provided endpoint target.
+     */
+    private function normalizeEndpointTarget(string $target, string $endpointType): string
+    {
+        $normalizedTarget = trim($target);
+
+        if ($endpointType === Recipient::TYPE_MAIL) {
+            return trim(Str::after($normalizedTarget, 'mailto://'));
+        }
+
+        return trim(Str::after($normalizedTarget, 'webhook://'));
+    }
+
+    /**
+     * Build the stored endpoint value.
+     */
+    private function buildEndpoint(string $endpointType, string $endpointTarget): string
+    {
+        return match ($endpointType) {
+            Recipient::TYPE_MAIL => 'mailto://'.$endpointTarget,
+            Recipient::TYPE_WEBHOOK => 'webhook://'.$endpointTarget,
+        };
+    }
+
+    /**
+     * Parse a stored endpoint into editable form fields.
+     *
+     * @return array{type: string, target: string}
+     */
+    private function parseEndpoint(string $endpoint): array
+    {
+        if (Str::startsWith($endpoint, 'mailto://')) {
+            return [
+                'type' => Recipient::TYPE_MAIL,
+                'target' => trim(Str::after($endpoint, 'mailto://')),
+            ];
+        }
+
+        if (Str::startsWith($endpoint, 'webhook://')) {
+            return [
+                'type' => Recipient::TYPE_WEBHOOK,
+                'target' => trim(Str::after($endpoint, 'webhook://')),
+            ];
+        }
+
+        return [
+            'type' => Recipient::TYPE_MAIL,
+            'target' => trim($endpoint),
+        ];
+    }
+
+    /**
+     * Determine whether the current endpoint is a webhook.
+     */
+    private function isWebhookEndpoint(): bool
+    {
+        return $this->endpointType === Recipient::TYPE_WEBHOOK;
     }
 }; ?>
 
@@ -415,50 +580,85 @@ new #[Title('Recipient management')] class extends Component {
     </div>
 
     <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
-        <div class="space-y-6">
-            <div class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+        <div class="min-w-0 space-y-6">
+            <div
+                x-data="{ highlight: false, timeout: null, focusForm() { this.$el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' }); this.$nextTick(() => this.$el.querySelector('input, select, textarea, button')?.focus({ preventScroll: true })); this.highlight = true; if (this.timeout) { clearTimeout(this.timeout); } this.timeout = setTimeout(() => { this.highlight = false }, 2200); } }"
+                x-on:focus-form.window="if ($event.detail.form === 'recipient') { focusForm() }"
+                :class="{ 'ring-2 ring-sky-400/70 ring-offset-2 ring-offset-white shadow-lg shadow-sky-500/10 animate-pulse dark:ring-sky-300/60 dark:ring-offset-zinc-900': highlight }"
+                class="min-w-0 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm transition-all duration-300 sm:p-6 dark:border-zinc-700 dark:bg-zinc-900"
+            >
                 <div class="flex flex-wrap items-start justify-between gap-4">
                     <div>
                         <flux:heading size="lg">
                             {{ $editingRecipientId ? __('Edit recipient') : __('Create recipient') }}
                         </flux:heading>
                         <flux:subheading class="mt-2">
-                            {{ __('Recipients accept mailto:// addresses or webhook:// endpoints, and webhook recipients can carry their own authentication settings.') }}
+                            {{ __('Choose how the destination should be contacted, then enter the mailbox or webhook target without the internal storage prefix.') }}
                         </flux:subheading>
                     </div>
 
                     <x-action-message on="recipient-saved">{{ __('Recipient saved.') }}</x-action-message>
                 </div>
 
-                <form wire:submit="saveRecipient" class="mt-6 space-y-6">
+                <form wire:submit="saveRecipient" class="mt-6 min-w-0 space-y-6">
                     <div class="grid gap-4 md:grid-cols-2">
-                        <flux:input wire:model="name" :label="__('Name')" type="text" required />
-                        <flux:input wire:model="endpoint" :label="__('Endpoint')" type="text" required placeholder="mailto://alerts@example.com" />
+                        <div class="min-w-0">
+                            <flux:input wire:model="name" :label="__('Name')" type="text" required />
+                        </div>
+
+                        <div class="min-w-0">
+                            <label for="endpointType" class="mb-2 block text-sm font-medium text-zinc-800 dark:text-zinc-100">{{ __('Protocol') }}</label>
+                            <select
+                                id="endpointType"
+                                wire:model.live="endpointType"
+                                class="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm text-zinc-900 outline-none transition focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                            >
+                                @foreach ($this->endpointTypeOptions as $value => $label)
+                                    <option value="{{ $value }}">{{ __($label) }}</option>
+                                @endforeach
+                            </select>
+                            @error('endpointType')
+                                <p class="mt-2 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                            @enderror
+                        </div>
                     </div>
 
-                    <div class="rounded-xl border border-dashed border-zinc-300 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-950/40">
+                    <div class="min-w-0">
+                        <flux:input
+                            wire:model="endpointTarget"
+                            :label="__($this->formEndpointType === \App\Models\Recipient::TYPE_MAIL ? 'Email address' : 'Webhook destination')"
+                            type="text"
+                            required
+                            :placeholder="$this->formEndpointType === \App\Models\Recipient::TYPE_MAIL ? 'alerts@example.com' : 'hooks.example.com/services/pager-duty'"
+                        />
+                        @error('endpointTarget')
+                            <p class="mt-2 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div class="min-w-0 rounded-xl border border-dashed border-zinc-300 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-950/40">
                         <div class="flex flex-wrap items-center gap-3">
                             @if ($this->formEndpointType === \App\Models\Recipient::TYPE_MAIL)
                                 <span class="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
                                     {{ __('Email recipient') }}
                                 </span>
-                                <p class="text-sm text-zinc-600 dark:text-zinc-300">{{ __('Use mailto://name@example.com for mailbox-style recipients.') }}</p>
+                                <p class="text-sm text-zinc-600 dark:text-zinc-300">{{ __('Choose Email and enter the mailbox only. It will be stored internally as mailto://name@example.com.') }}</p>
                             @elseif ($this->formEndpointType === \App\Models\Recipient::TYPE_WEBHOOK)
                                 <span class="inline-flex rounded-full bg-sky-100 px-3 py-1 text-xs font-medium text-sky-700 dark:bg-sky-500/15 dark:text-sky-300">
                                     {{ __('Webhook recipient') }}
                                 </span>
-                                <p class="text-sm text-zinc-600 dark:text-zinc-300">{{ __('Use webhook://example.com/path or webhook://https://example.com/path.') }}</p>
+                                <p class="text-sm text-zinc-600 dark:text-zinc-300">{{ __('Choose Webhook and enter example.com/path or a full http:// or https:// URL. It will be stored internally with the webhook:// prefix.') }}</p>
                             @else
                                 <span class="inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
-                                    {{ __('Choose a prefix') }}
+                                    {{ __('Choose a protocol') }}
                                 </span>
-                                <p class="text-sm text-zinc-600 dark:text-zinc-300">{{ __('Start the endpoint with mailto:// or webhook:// so the destination can be validated and styled correctly.') }}</p>
+                                <p class="text-sm text-zinc-600 dark:text-zinc-300">{{ __('Choose a protocol first, then enter the destination without the internal prefix.') }}</p>
                             @endif
                         </div>
                     </div>
 
                     @if ($this->formEndpointType === \App\Models\Recipient::TYPE_WEBHOOK)
-                        <div class="space-y-4 rounded-xl border border-zinc-200 bg-zinc-50 p-5 dark:border-zinc-700 dark:bg-zinc-950/40">
+                        <div class="min-w-0 space-y-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4 sm:p-5 dark:border-zinc-700 dark:bg-zinc-950/40">
                             <div>
                                 <flux:heading>{{ __('Webhook authentication') }}</flux:heading>
                                 <flux:subheading class="mt-1">{{ __('Choose how this webhook should authenticate when it is called.') }}</flux:subheading>
@@ -468,7 +668,7 @@ new #[Title('Recipient management')] class extends Component {
                                 <label for="webhookAuthType" class="mb-2 block text-sm font-medium text-zinc-800 dark:text-zinc-100">{{ __('Authentication type') }}</label>
                                 <select
                                     id="webhookAuthType"
-                                    wire:model="webhookAuthType"
+                                    wire:model.live="webhookAuthType"
                                     class="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm text-zinc-900 outline-none transition focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
                                 >
                                     @foreach ($this->webhookAuthenticationOptions as $value => $label)
@@ -484,13 +684,21 @@ new #[Title('Recipient management')] class extends Component {
                                 <flux:input wire:model="webhookAuthToken" :label="__('Bearer token')" type="password" autocomplete="off" viewable />
                             @elseif ($webhookAuthType === \App\Models\Recipient::WEBHOOK_AUTH_BASIC)
                                 <div class="grid gap-4 md:grid-cols-2">
-                                    <flux:input wire:model="webhookAuthUsername" :label="__('Username')" type="text" autocomplete="off" />
-                                    <flux:input wire:model="webhookAuthPassword" :label="__('Password')" type="password" autocomplete="off" viewable />
+                                    <div class="min-w-0">
+                                        <flux:input wire:model="webhookAuthUsername" :label="__('Username')" type="text" autocomplete="off" />
+                                    </div>
+                                    <div class="min-w-0">
+                                        <flux:input wire:model="webhookAuthPassword" :label="__('Password')" type="password" autocomplete="off" viewable />
+                                    </div>
                                 </div>
                             @elseif ($webhookAuthType === \App\Models\Recipient::WEBHOOK_AUTH_HEADER)
                                 <div class="grid gap-4 md:grid-cols-2">
-                                    <flux:input wire:model="webhookAuthHeaderName" :label="__('Header name')" type="text" placeholder="X-Webhook-Token" autocomplete="off" />
-                                    <flux:input wire:model="webhookAuthHeaderValue" :label="__('Header value')" type="password" autocomplete="off" viewable />
+                                    <div class="min-w-0">
+                                        <flux:input wire:model="webhookAuthHeaderName" :label="__('Header name')" type="text" placeholder="X-Webhook-Token" autocomplete="off" />
+                                    </div>
+                                    <div class="min-w-0">
+                                        <flux:input wire:model="webhookAuthHeaderValue" :label="__('Header value')" type="password" autocomplete="off" viewable />
+                                    </div>
                                 </div>
                             @endif
                         </div>
@@ -509,8 +717,8 @@ new #[Title('Recipient management')] class extends Component {
                         @else
                             <div class="grid gap-3 md:grid-cols-2">
                                 @foreach ($this->groups as $group)
-                                    <label wire:key="group-option-{{ $group->id }}" class="flex items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-800 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100">
-                                        <span>
+                                    <label wire:key="group-option-{{ $group->id }}" class="flex min-w-0 items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-800 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100">
+                                        <span class="min-w-0">
                                             <span class="block font-medium">{{ $group->name }}</span>
                                             <span class="mt-1 block text-xs text-zinc-500 dark:text-zinc-400">
                                                 {{ trans_choice('{0} No recipients|{1} :count recipient|[2,*] :count recipients', $group->recipients_count, ['count' => $group->recipients_count]) }}
@@ -531,13 +739,13 @@ new #[Title('Recipient management')] class extends Component {
                         @endif
                     </div>
 
-                    <div class="flex flex-wrap items-center gap-4">
-                        <flux:button variant="primary" type="submit">
+                    <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
+                        <flux:button variant="primary" type="submit" class="w-full sm:w-auto">
                             {{ $editingRecipientId ? __('Save recipient') : __('Create recipient') }}
                         </flux:button>
 
                         @if ($editingRecipientId)
-                            <flux:button type="button" variant="ghost" wire:click="cancelRecipientEditing">
+                            <flux:button type="button" variant="ghost" wire:click="cancelRecipientEditing" class="w-full sm:w-auto">
                                 {{ __('Cancel') }}
                             </flux:button>
                         @endif
@@ -545,7 +753,7 @@ new #[Title('Recipient management')] class extends Component {
                 </form>
             </div>
 
-            <div class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+            <div class="min-w-0 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-6 dark:border-zinc-700 dark:bg-zinc-900">
                 <div class="flex flex-wrap items-start justify-between gap-4">
                     <div>
                         <flux:heading size="lg">{{ __('Manage recipients') }}</flux:heading>
@@ -562,7 +770,7 @@ new #[Title('Recipient management')] class extends Component {
                         {{ __('No recipients have been created yet.') }}
                     </p>
                 @else
-                    <div class="mt-6 overflow-x-auto">
+                    <div class="mt-6 max-w-full overflow-x-auto">
                         <table class="min-w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-700">
                             <thead>
                                 <tr class="text-left text-zinc-500 dark:text-zinc-400">
@@ -611,7 +819,7 @@ new #[Title('Recipient management')] class extends Component {
                                                 <flux:button type="button" variant="ghost" wire:click="editRecipient({{ $recipient->id }})">
                                                     {{ __('Edit') }}
                                                 </flux:button>
-                                                <flux:button type="button" variant="danger" wire:click="deleteRecipient({{ $recipient->id }})">
+                                                <flux:button type="button" variant="danger" wire:click="confirmRecipientDeletion({{ $recipient->id }})">
                                                     {{ __('Delete') }}
                                                 </flux:button>
                                             </div>
@@ -625,8 +833,13 @@ new #[Title('Recipient management')] class extends Component {
             </div>
         </div>
 
-        <aside class="space-y-6">
-            <div class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+        <aside class="min-w-0 space-y-6">
+            <div
+                x-data="{ highlight: false, timeout: null, focusForm() { this.$el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' }); this.$nextTick(() => this.$el.querySelector('input, select, textarea, button')?.focus({ preventScroll: true })); this.highlight = true; if (this.timeout) { clearTimeout(this.timeout); } this.timeout = setTimeout(() => { this.highlight = false }, 2200); } }"
+                x-on:focus-form.window="if ($event.detail.form === 'group') { focusForm() }"
+                :class="{ 'ring-2 ring-sky-400/70 ring-offset-2 ring-offset-white shadow-lg shadow-sky-500/10 animate-pulse dark:ring-sky-300/60 dark:ring-offset-zinc-900': highlight }"
+                class="min-w-0 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm transition-all duration-300 sm:p-6 dark:border-zinc-700 dark:bg-zinc-900"
+            >
                 <div class="flex flex-wrap items-start justify-between gap-4">
                     <div>
                         <flux:heading size="lg">
@@ -641,13 +854,13 @@ new #[Title('Recipient management')] class extends Component {
                 <form wire:submit="saveGroup" class="mt-6 space-y-4">
                     <flux:input wire:model="groupName" :label="__('Group name')" type="text" required placeholder="Operations" />
 
-                    <div class="flex flex-wrap items-center gap-4">
-                        <flux:button variant="primary" type="submit">
+                    <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
+                        <flux:button variant="primary" type="submit" class="w-full sm:w-auto">
                             {{ $editingGroupId ? __('Save group') : __('Create group') }}
                         </flux:button>
 
                         @if ($editingGroupId)
-                            <flux:button type="button" variant="ghost" wire:click="cancelGroupEditing">
+                            <flux:button type="button" variant="ghost" wire:click="cancelGroupEditing" class="w-full sm:w-auto">
                                 {{ __('Cancel') }}
                             </flux:button>
                         @endif
@@ -655,7 +868,7 @@ new #[Title('Recipient management')] class extends Component {
                 </form>
             </div>
 
-            <div class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+            <div class="min-w-0 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-6 dark:border-zinc-700 dark:bg-zinc-900">
                 <div class="flex flex-wrap items-start justify-between gap-4">
                     <div>
                         <flux:heading size="lg">{{ __('Existing groups') }}</flux:heading>
@@ -685,7 +898,7 @@ new #[Title('Recipient management')] class extends Component {
                                         <flux:button type="button" variant="ghost" wire:click="editGroup({{ $group->id }})">
                                             {{ __('Edit') }}
                                         </flux:button>
-                                        <flux:button type="button" variant="danger" wire:click="deleteGroup({{ $group->id }})">
+                                        <flux:button type="button" variant="danger" wire:click="confirmGroupDeletion({{ $group->id }})">
                                             {{ __('Delete') }}
                                         </flux:button>
                                     </div>
@@ -697,4 +910,31 @@ new #[Title('Recipient management')] class extends Component {
             </div>
         </aside>
     </div>
+
+    <flux:modal wire:model="showDeleteConfirmationModal" class="max-w-md">
+        <div class="space-y-6">
+            <div>
+                <flux:heading size="lg">{{ __('Are you sure you want to delete this?') }}</flux:heading>
+                <flux:subheading class="mt-2">
+                    @if ($deleteConfirmationType === 'recipient')
+                        {{ __('This will permanently delete the recipient ":name".', ['name' => $deleteConfirmationName]) }}
+                    @elseif ($deleteConfirmationType === 'group')
+                        {{ __('This will permanently delete the group ":name".', ['name' => $deleteConfirmationName]) }}
+                    @else
+                        {{ __('This action cannot be undone.') }}
+                    @endif
+                </flux:subheading>
+            </div>
+
+            <div class="flex justify-end gap-3">
+                <flux:button type="button" variant="ghost" wire:click="cancelDeleteConfirmation">
+                    {{ __('Cancel') }}
+                </flux:button>
+
+                <flux:button type="button" variant="danger" wire:click="deleteConfirmedItem">
+                    {{ __('Delete') }}
+                </flux:button>
+            </div>
+        </div>
+    </flux:modal>
 </section>

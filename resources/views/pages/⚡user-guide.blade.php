@@ -40,11 +40,11 @@ new #[Title('User guide')] class extends Component {
                 <flux:subheading class="mt-2">{{ __('Admin only') }}</flux:subheading>
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
                     <p>{{ __('Recipients are delivery targets for notifications or outbound events. Each recipient must have a name and an endpoint.') }}</p>
-                    <p>{{ __('Use `mailto://name@example.com` for email-style destinations.') }}</p>
-                    <p>{{ __('Use `webhook://example.com/path` or `webhook://https://example.com/path` for webhook destinations.') }}</p>
-                    <p>{{ __('Webhook recipients can be configured with no authentication, bearer token authentication, basic authentication, or a custom header.') }}</p>
+                    <p>{{ __('Choose `Email` or `Webhook` from the protocol selector, then enter the address or target without the internal prefix.') }}</p>
+                    <p>{{ __('Email destinations are stored internally as `mailto://name@example.com`, while webhooks are stored as `webhook://example.com/path` or `webhook://https://example.com/path`.') }}</p>
+                    <p>{{ __('Webhook recipients can be configured with no authentication, bearer token authentication, basic authentication, or a custom header, and the matching fields appear as soon as you choose the authentication type.') }}</p>
                     <p>{{ __('Recipients can belong to multiple groups, which makes it easier to organise related delivery targets together.') }}</p>
-                    <p>{{ __('Existing recipients can be edited or deleted from the management table once they have been created.') }}</p>
+                    <p>{{ __('Existing recipients can be edited or deleted from the management table once they have been created. Editing scrolls you to the form automatically, and deletes ask for confirmation before anything is removed.') }}</p>
                 </div>
             </div>
         </div>
@@ -56,7 +56,7 @@ new #[Title('User guide')] class extends Component {
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
                     <p>{{ __('Groups let you organise recipients into reusable collections such as Operations, Finance, or On-call.') }}</p>
                     <p>{{ __('Create groups from the side panel on the Recipients page, then assign one or more groups while creating or editing a recipient.') }}</p>
-                    <p>{{ __('Groups can be renamed or deleted later as your routing structure evolves.') }}</p>
+                    <p>{{ __('Groups can be renamed or deleted later as your routing structure evolves. Editing scrolls you back to the group form, and group deletion also uses a confirmation modal.') }}</p>
                 </div>
             </div>
 

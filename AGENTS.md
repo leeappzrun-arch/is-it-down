@@ -39,6 +39,10 @@ This project has domain-specific skills available. You MUST activate the relevan
 - You must follow all existing code conventions used in this application. When creating or editing a file, check sibling files for the correct structure, approach, and naming.
 - Use descriptive names for variables and methods. For example, `isRegisteredForDiscounts`, not `discount()`.
 - Check for existing components to reuse before writing a new one.
+- For Livewire forms with conditional sections controlled by a select, radio, checkbox, toggle, or similar input, use explicit state fields and `wire:model.live` on the controlling input so dependent UI appears immediately.
+- For admin or management pages with inline Edit actions, dispatch a browser event after loading the record and scroll the relevant form into view with a brief highlight or pulse so it is obvious what is being edited.
+- For destructive actions on management pages, prefer a confirmation modal over immediate deletion from a table row or card action.
+- Keep new and updated pages responsive by default. Prefer layouts that stack cleanly on smaller screens, avoid cramped multi-column forms before there is enough width, and make primary actions easy to reach on mobile.
 - API key permissions are registered in `config/api_keys.php`. Whenever a new app section, management area, or API capability is added, update that permission registry in the same change so new read/write permissions are available immediately.
 
 ## Verification Scripts

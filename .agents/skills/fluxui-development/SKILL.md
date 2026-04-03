@@ -67,6 +67,11 @@ php artisan flux:icon crown grip-vertical github
 </flux:modal>
 ```
 
+### Management Page UX
+
+- Use confirmation modals for destructive actions such as delete, revoke, or remove instead of firing them immediately from table rows or cards.
+- When a page includes a list plus an edit form elsewhere on the same screen, pair the Edit action with a browser event so the destination form can scroll into view and briefly highlight itself.
+
 ## Verification
 
 1. Check component renders correctly

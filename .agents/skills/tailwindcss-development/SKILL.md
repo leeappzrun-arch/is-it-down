@@ -17,6 +17,7 @@ Use `search-docs` for detailed Tailwind CSS v4 patterns and documentation.
 - Use Tailwind CSS classes to style HTML. Check and follow existing Tailwind conventions in the project before introducing new patterns.
 - Offer to extract repeated patterns into components that match the project's conventions (e.g., Blade, JSX, Vue).
 - Consider class placement, order, priority, and defaults. Remove redundant classes, add classes to parent or child elements carefully to reduce repetition, and group elements logically.
+- Treat responsiveness as part of the feature, not polish. Default to single-column or stacked layouts on constrained widths, only introduce multi-column form rows when the available width supports them, and keep primary actions easy to tap on mobile.
 
 ## Tailwind CSS v4 Specifics
 

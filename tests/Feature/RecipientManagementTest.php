@@ -39,7 +39,8 @@ class RecipientManagementTest extends TestCase
 
         $response = Livewire::test('pages::recipients.index')
             ->set('name', 'Ops mailbox')
-            ->set('endpoint', 'mailto://ops@example.com')
+            ->set('endpointType', Recipient::TYPE_MAIL)
+            ->set('endpointTarget', 'ops@example.com')
             ->set('selectedGroupIds', [(string) $primaryGroup->id, (string) $secondaryGroup->id])
             ->call('saveRecipient');
 
@@ -63,7 +64,8 @@ class RecipientManagementTest extends TestCase
 
         $response = Livewire::test('pages::recipients.index')
             ->set('name', 'Pager duty')
-            ->set('endpoint', 'webhook://hooks.example.com/services/pager-duty')
+            ->set('endpointType', Recipient::TYPE_WEBHOOK)
+            ->set('endpointTarget', 'hooks.example.com/services/pager-duty')
             ->set('webhookAuthType', Recipient::WEBHOOK_AUTH_BEARER)
             ->set('webhookAuthToken', 'top-secret-token')
             ->call('saveRecipient');
@@ -83,10 +85,61 @@ class RecipientManagementTest extends TestCase
 
         $response = Livewire::test('pages::recipients.index')
             ->set('name', 'Broken')
-            ->set('endpoint', 'sms://123456789')
+            ->set('endpointType', Recipient::TYPE_WEBHOOK)
+            ->set('endpointTarget', 'not a valid webhook')
             ->call('saveRecipient');
 
-        $response->assertHasErrors(['endpoint']);
+        $response->assertHasErrors(['endpointTarget']);
+    }
+
+    public function test_webhook_authentication_fields_render_as_soon_as_webhook_protocol_is_selected(): void
+    {
+        $this->actingAs(User::factory()->admin()->create());
+
+        Livewire::test('pages::recipients.index')
+            ->assertDontSee('Webhook authentication')
+            ->set('endpointType', Recipient::TYPE_WEBHOOK)
+            ->assertSee('Webhook authentication');
+    }
+
+    public function test_webhook_authentication_fields_render_as_soon_as_authentication_type_is_selected(): void
+    {
+        $this->actingAs(User::factory()->admin()->create());
+
+        Livewire::test('pages::recipients.index')
+            ->set('endpointType', Recipient::TYPE_WEBHOOK)
+            ->assertDontSee('Header name')
+            ->set('webhookAuthType', Recipient::WEBHOOK_AUTH_HEADER)
+            ->assertSee('Header name');
+    }
+
+    public function test_editing_a_recipient_dispatches_a_focus_event_for_the_form(): void
+    {
+        $this->actingAs(User::factory()->admin()->create());
+
+        $recipient = Recipient::factory()->create();
+
+        Livewire::test('pages::recipients.index')
+            ->call('editRecipient', $recipient->id)
+            ->assertSet('editingRecipientId', $recipient->id)
+            ->assertDispatched('focus-form', form: 'recipient');
+    }
+
+    public function test_admin_users_confirm_before_deleting_a_recipient(): void
+    {
+        $this->actingAs(User::factory()->admin()->create());
+
+        $recipient = Recipient::factory()->create(['name' => 'Pager duty']);
+
+        Livewire::test('pages::recipients.index')
+            ->call('confirmRecipientDeletion', $recipient->id)
+            ->assertSet('showDeleteConfirmationModal', true)
+            ->assertSet('deleteConfirmationType', 'recipient')
+            ->call('deleteConfirmedItem');
+
+        $this->assertDatabaseMissing('recipients', [
+            'id' => $recipient->id,
+        ]);
     }
 
     public function test_admin_users_can_manage_groups(): void
@@ -114,10 +167,26 @@ class RecipientManagementTest extends TestCase
             'name' => 'On-call Operations',
         ]);
 
-        $response->call('deleteGroup', $group->id);
+        $response
+            ->call('confirmGroupDeletion', $group->id)
+            ->assertSet('showDeleteConfirmationModal', true)
+            ->assertSet('deleteConfirmationType', 'group')
+            ->call('deleteConfirmedItem');
 
         $this->assertDatabaseMissing('recipient_groups', [
             'id' => $group->id,
         ]);
+    }
+
+    public function test_editing_a_group_dispatches_a_focus_event_for_the_form(): void
+    {
+        $this->actingAs(User::factory()->admin()->create());
+
+        $group = RecipientGroup::factory()->create();
+
+        Livewire::test('pages::recipients.index')
+            ->call('editGroup', $group->id)
+            ->assertSet('editingGroupId', $group->id)
+            ->assertDispatched('focus-form', form: 'group');
     }
 }

@@ -21,19 +21,20 @@ Is It Down is a Laravel 13 and Livewire 4 application for managing who receives 
 ### Recipient management
 
 - Create, edit, and delete recipients.
-- Support `mailto://` endpoints for email destinations.
-- Support `webhook://` endpoints for webhook destinations.
+- Choose `Email` or `Webhook` in the UI while the application stores `mailto://` and `webhook://` endpoints internally.
 - Configure webhook authentication as:
   - none
   - bearer token
   - basic auth
   - custom header
 - Assign recipients to one or more groups.
+- Confirm recipient and group deletions in a modal before they are removed.
 
 ### Group management
 
 - Create, rename, and delete recipient groups.
 - Use groups to organise related recipients for future routing use cases.
+- Confirm group deletion before it is applied.
 
 ### User management
 
