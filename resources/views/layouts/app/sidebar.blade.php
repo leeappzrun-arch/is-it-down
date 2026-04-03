@@ -19,6 +19,7 @@
                         <flux:sidebar.item icon="folder" :href="route('recipients.index')" :current="request()->routeIs('recipients.*')" wire:navigate>
                             {{ __('Recipients') }}
                         </flux:sidebar.item>
+                        <flux:separator variant="subtle" class="mt-6 mb-2" />
                         <flux:sidebar.item icon="users" :href="route('users.index')" :current="request()->routeIs('users.*')" wire:navigate>
                             {{ __('Users') }}
                         </flux:sidebar.item>
@@ -78,6 +79,7 @@
                             <flux:menu.item :href="route('recipients.index')" icon="folder" wire:navigate>
                                 {{ __('Recipients') }}
                             </flux:menu.item>
+                            <flux:menu.separator />
                             <flux:menu.item :href="route('users.index')" icon="users" wire:navigate>
                                 {{ __('Users') }}
                             </flux:menu.item>

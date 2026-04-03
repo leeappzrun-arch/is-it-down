@@ -16,6 +16,7 @@ class UserManagementTest extends TestCase
             ->get(route('users.index'));
 
         $response->assertOk();
+        $response->assertSeeTextInOrder(['Recipients', 'Users']);
         $response->assertSeeText('Users');
     }
 
