@@ -31,7 +31,7 @@ This project has domain-specific skills available. You MUST activate the relevan
 - `fluxui-development` — Use this skill for Flux UI development in Livewire applications only. Trigger when working with <flux:*> components, building or customizing Livewire component UIs, creating forms, modals, tables, or other interactive elements. Covers: flux: components (buttons, inputs, modals, forms, tables, date-pickers, kanban, badges, tooltips, etc.), component composition, Tailwind CSS styling, Heroicons/Lucide icon integration, validation patterns, responsive design, and theming. Do not use for non-Livewire frameworks or non-component styling.
 - `livewire-development` — Use for any task or question involving Livewire. Activate if user mentions Livewire, wire: directives, or Livewire-specific concepts like wire:model, wire:click, wire:sort, or islands, invoke this skill. Covers building new components, debugging reactivity issues, real-time form validation, drag-and-drop, loading states, migrating from Livewire 3 to 4, converting component formats (SFC/MFC/class-based), and performance optimization. Do not use for non-Livewire reactive UI (React, Vue, Alpine-only, Inertia.js) or standard Laravel forms without Livewire.
 - `tailwindcss-development` — Always invoke when the user's message includes 'tailwind' in any form. Also invoke for: building responsive grid layouts (multi-column card grids, product grids), flex/grid page structures (dashboards with sidebars, fixed topbars, mobile-toggle navs), styling UI components (cards, tables, navbars, pricing sections, forms, inputs, badges), adding dark mode variants, fixing spacing or typography, and Tailwind v3/v4 work. The core use case: writing or fixing Tailwind utility classes in HTML templates (Blade, JSX, Vue). Skip for backend PHP logic, database queries, API routes, JavaScript with no HTML/CSS component, CSS file audits, build tool configuration, and vanilla CSS.
-- `ddev-development` — Use this skill when a .ddev folder is present in the project. Trigger when working on local development environments, setting up or configuring DDEV, troubleshooting DDEV issues, or optimizing DDEV performance. Covers: DDEV configuration files, common commands (ddev start, ddev stop, ddev exec), environment variable management, database access with DDEV, and best practices for local development with DDEV. Do not use for non-DDEV related tasks or production environment issues.
+- `ddev-development` — Use this skill whenever a `.ddev` folder is present in the project. When `.ddev` exists, ALWAYS run Composer, Artisan, PHPUnit, npm, and other local PHP/Node project commands through DDEV unless the task is explicitly about the host machine. Prefer `ddev composer ...`, `ddev exec php artisan ...`, `ddev exec php artisan test ...`, and `ddev npm ...` or `ddev exec npm ...`. Also use this skill for DDEV configuration, troubleshooting, and environment alignment.
 
 ## Conventions
 
@@ -50,7 +50,7 @@ This project has domain-specific skills available. You MUST activate the relevan
 
 ## Frontend Bundling
 
-- If the user doesn't see a frontend change reflected in the UI, it could mean they need to run `npm run build`, `npm run dev`, or `composer run dev`. Ask them.
+- If the user doesn't see a frontend change reflected in the UI, it could mean they need to run `ddev npm run build`, `ddev npm run dev`, or `ddev composer run dev`. Ask them.
 
 ## Documentation Files
 
@@ -88,16 +88,16 @@ This project has domain-specific skills available. You MUST activate the relevan
 
 ## Artisan
 
-- Run Artisan commands directly via the command line (e.g., `php artisan route:list`). Use `php artisan list` to discover available commands and `php artisan [command] --help` to check parameters.
-- Inspect routes with `php artisan route:list`. Filter with: `--method=GET`, `--name=users`, `--path=api`, `--except-vendor`, `--only-vendor`.
+- If a `.ddev` folder exists, run Artisan commands through DDEV (e.g., `ddev exec php artisan route:list`). Use `ddev exec php artisan list` to discover available commands and `ddev exec php artisan [command] --help` to check parameters.
+- Inspect routes with `ddev exec php artisan route:list`. Filter with: `--method=GET`, `--name=users`, `--path=api`, `--except-vendor`, `--only-vendor`.
 - Read configuration values using dot notation: `php artisan config:show app.name`, `php artisan config:show database.default`. Or read config files directly from the `config/` directory.
 - To check environment variables, read the `.env` file directly.
 
 ## Tinker
 
-- Execute PHP in app context for debugging and testing code. Do not create models without user approval, prefer tests with factories instead. Prefer existing Artisan commands over custom tinker code.
-- Always use single quotes to prevent shell expansion: `php artisan tinker --execute 'Your::code();'`
-  - Double quotes for PHP strings inside: `php artisan tinker --execute 'User::where("active", true)->count();'`
+- Execute PHP in app context for debugging and testing code. Do not create models without user approval, prefer tests with factories instead. Prefer existing Artisan commands over custom tinker code. If `.ddev` exists, run these commands through DDEV.
+- Always use single quotes to prevent shell expansion: `ddev exec php artisan tinker --execute 'Your::code();'`
+  - Double quotes for PHP strings inside: `ddev exec php artisan tinker --execute 'User::where("active", true)->count();'`
 
 === php rules ===
 
@@ -115,19 +115,19 @@ This project has domain-specific skills available. You MUST activate the relevan
 # Test Enforcement
 
 - Every change must be programmatically tested. Write a new test or update an existing test, then run the affected tests to make sure they pass.
-- Run the minimum number of tests needed to ensure code quality and speed. Use `php artisan test --compact` with a specific filename or filter.
+- Run the minimum number of tests needed to ensure code quality and speed. If `.ddev` exists, use `ddev exec php artisan test --compact` with a specific filename or filter.
 
 === laravel/core rules ===
 
 # Do Things the Laravel Way
 
-- Use `php artisan make:` commands to create new files (i.e. migrations, controllers, models, etc.). You can list available Artisan commands using `php artisan list` and check their parameters with `php artisan [command] --help`.
-- If you're creating a generic PHP class, use `php artisan make:class`.
+- Use `php artisan make:` commands to create new files (i.e. migrations, controllers, models, etc.). If `.ddev` exists, run them through DDEV. You can list available Artisan commands using `ddev exec php artisan list` and check their parameters with `ddev exec php artisan [command] --help`.
+- If you're creating a generic PHP class, use `php artisan make:class`, or `ddev exec php artisan make:class` when `.ddev` exists.
 - Pass `--no-interaction` to all Artisan commands to ensure they work without user input. You should also pass the correct `--options` to ensure correct behavior.
 
 ### Model Creation
 
-- When creating new models, create useful factories and seeders for them too. Ask the user if they need any other things, using `php artisan make:model --help` to check the available options.
+- When creating new models, create useful factories and seeders for them too. Ask the user if they need any other things, using `ddev exec php artisan make:model --help` when `.ddev` exists.
 
 ## APIs & Eloquent Resources
 
@@ -141,11 +141,11 @@ This project has domain-specific skills available. You MUST activate the relevan
 
 - When creating models for tests, use the factories for the models. Check if the factory has custom states that can be used before manually setting up the model.
 - Faker: Use methods such as `$this->faker->word()` or `fake()->randomDigit()`. Follow existing conventions whether to use `$this->faker` or `fake()`.
-- When creating tests, make use of `php artisan make:test [options] {name}` to create a feature test, and pass `--unit` to create a unit test. Most tests should be feature tests.
+- When creating tests, make use of `php artisan make:test [options] {name}` to create a feature test, and pass `--unit` to create a unit test. If `.ddev` exists, run the command through DDEV. Most tests should be feature tests.
 
 ## Vite Error
 
-- If you receive an "Illuminate\Foundation\ViteException: Unable to locate file in Vite manifest" error, you can run `npm run build` or ask the user to run `npm run dev` or `composer run dev`.
+- If you receive an "Illuminate\Foundation\ViteException: Unable to locate file in Vite manifest" error, you can run `ddev npm run build` or ask the user to run `ddev npm run dev` or `ddev composer run dev`.
 
 === livewire/core rules ===
 
@@ -166,7 +166,7 @@ This project has domain-specific skills available. You MUST activate the relevan
 
 # PHPUnit
 
-- This application uses PHPUnit for testing. All tests must be written as PHPUnit classes. Use `php artisan make:test --phpunit {name}` to create a new test.
+- This application uses PHPUnit for testing. All tests must be written as PHPUnit classes. Use `php artisan make:test --phpunit {name}` to create a new test, or `ddev exec php artisan make:test --phpunit {name}` when `.ddev` exists.
 - If you see a test using "Pest", convert it to PHPUnit.
 - Every time a test has been updated, run that singular test.
 - When the tests relating to your feature are passing, ask the user if they would like to also run the entire test suite to make sure everything is still passing.
@@ -176,8 +176,8 @@ This project has domain-specific skills available. You MUST activate the relevan
 ## Running Tests
 
 - Run the minimal number of tests, using an appropriate filter, before finalizing.
-- To run all tests: `php artisan test --compact`.
-- To run all tests in a file: `php artisan test --compact tests/Feature/ExampleTest.php`.
-- To filter on a particular test name: `php artisan test --compact --filter=testName` (recommended after making a change to a related file).
+- To run all tests: `ddev exec php artisan test --compact`.
+- To run all tests in a file: `ddev exec php artisan test --compact tests/Feature/ExampleTest.php`.
+- To filter on a particular test name: `ddev exec php artisan test --compact --filter=testName` (recommended after making a change to a related file).
 
 </laravel-boost-guidelines>

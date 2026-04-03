@@ -1,0 +1,7 @@
+interface:
+  display_name: "DDEV Development"
+  short_description: "Use DDEV-first workflows in repos with .ddev."
+  default_prompt: "Use $ddev-development to run Composer, Artisan, and npm commands through DDEV in this repository."
+
+policy:
+  allow_implicit_invocation: true
