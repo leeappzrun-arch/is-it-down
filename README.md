@@ -142,6 +142,63 @@ Available API key permissions are defined in `config/api_keys.php`.
 - Every listed resource automatically receives `read` and `write` permissions.
 - When new sections or API capabilities ship, update this config, the relevant tests, the API routes, the endpoint catalog, and the documentation in the same change.
 
+## Docker Deployment
+
+The repository now publishes a container image to GitHub Container Registry as `ghcr.io/leeappzrun-arch/is-it-down:latest` whenever the default branch is updated.
+
+The image already includes a production `.env` with non-sensitive defaults for the app name, production mode, SQLite, database-backed sessions/cache/queue, stderr logging, and the scheduler loop. Any values you pass from your own Compose `.env` file override those baked-in defaults.
+
+Create a `docker-compose.yml` file like this:
+
+```yaml
+services:
+  is-it-down:
+    image: ghcr.io/leeappzrun-arch/is-it-down:latest
+    pull_policy: always
+    restart: unless-stopped
+    env_file:
+      - ./.env
+    ports:
+      - "${APP_PORT:-8080}:80"
+    volumes:
+      - "${APP_DATA_DIR:-./data}:/var/www/html/database/data"
+```
+
+Create a matching `.env` file beside it:
+
+```dotenv
+APP_PORT=8080
+APP_DATA_DIR=./data
+APP_URL=http://localhost:8080
+
+INITIAL_ADMIN_NAME=Admin User
+INITIAL_ADMIN_EMAIL=admin@example.com
+INITIAL_ADMIN_PASSWORD=change-this-password
+```
+
+Then start the application with:
+
+```bash
+docker compose up -d
+```
+
+On the first boot the container will:
+
+- create `database.sqlite` inside your mapped data directory
+- generate and persist an `APP_KEY` in `app.key` inside that same data directory when you have not supplied one yourself
+- run the Laravel migrations
+- create the initial admin account from `INITIAL_ADMIN_*` when you provide those values
+- start the Laravel scheduler loop so monitoring continues to run inside the same container
+
+To change the public port, update `APP_PORT` in your `.env` file.
+To move the persistent data somewhere else on the host, update `APP_DATA_DIR`.
+To upgrade to the newest published build, run:
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
 ## Local Development
 
 This repository includes `.ddev` and should be worked on through DDEV whenever Docker is available.
