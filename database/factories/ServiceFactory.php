@@ -23,6 +23,12 @@ class ServiceFactory extends Factory
             'interval_seconds' => fake()->randomElement(array_keys(Service::intervalOptions())),
             'expect_type' => null,
             'expect_value' => null,
+            'current_status' => null,
+            'last_response_code' => null,
+            'last_check_reason' => null,
+            'last_checked_at' => null,
+            'next_check_at' => null,
+            'last_status_changed_at' => null,
         ];
     }
 
@@ -45,6 +51,36 @@ class ServiceFactory extends Factory
         return $this->state(fn (): array => [
             'expect_type' => Service::EXPECT_REGEX,
             'expect_value' => '/healthy/i',
+        ]);
+    }
+
+    /**
+     * Indicate that the service is currently up.
+     */
+    public function currentlyUp(): static
+    {
+        return $this->state(fn (): array => [
+            'current_status' => Service::STATUS_UP,
+            'last_response_code' => 200,
+            'last_check_reason' => 'Received an HTTP 200 response.',
+            'last_checked_at' => now()->subMinute(),
+            'next_check_at' => now()->addMinute(),
+            'last_status_changed_at' => now()->subHour(),
+        ]);
+    }
+
+    /**
+     * Indicate that the service is currently down.
+     */
+    public function currentlyDown(): static
+    {
+        return $this->state(fn (): array => [
+            'current_status' => Service::STATUS_DOWN,
+            'last_response_code' => 503,
+            'last_check_reason' => 'Expected HTTP 200 response but received 503.',
+            'last_checked_at' => now()->subMinute(),
+            'next_check_at' => now()->addMinute(),
+            'last_status_changed_at' => now()->subMinutes(10),
         ]);
     }
 }

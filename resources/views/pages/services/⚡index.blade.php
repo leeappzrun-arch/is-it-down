@@ -93,6 +93,10 @@ new #[Title('Service management')] class extends Component {
                     $service->url,
                     $service->intervalLabel(),
                     $service->expectSummary(),
+                    $service->monitoringStatusLabel(),
+                    $service->statusDurationSummary(),
+                    $service->monitoringReasonSummary(),
+                    $service->nextCheckSummary(),
                     $service->groups->pluck('name')->all(),
                     $service->recipientGroups->pluck('name')->all(),
                     $service->recipients->pluck('name')->all(),
@@ -565,7 +569,7 @@ new #[Title('Service management')] class extends Component {
     }
 }; ?>
 
-<section class="w-full">
+<section wire:poll.5s.visible class="w-full">
     <div class="relative mb-6 w-full">
         <flux:heading size="xl" level="1">{{ __('Services') }}</flux:heading>
         <flux:subheading size="lg" class="mb-6">{{ __('Create monitored services, set their polling interval and expectation rules, then route alerts through direct recipients, recipient groups, and reusable service groups.') }}</flux:subheading>
@@ -784,35 +788,86 @@ new #[Title('Service management')] class extends Component {
                                         <div class="font-semibold text-zinc-900 dark:text-zinc-100">{{ $service->name }}</div>
                                         <div class="break-all text-sm text-zinc-600 dark:text-zinc-300">{{ $service->url }}</div>
                                         <div class="flex flex-wrap gap-2 text-xs">
+                                            <span class="rounded-full px-3 py-1 font-medium {{ $service->monitoringStatusClasses() }}">{{ __($service->monitoringStatusLabel()) }}</span>
                                             <span class="rounded-full bg-sky-100 px-3 py-1 font-medium text-sky-700 dark:bg-sky-500/15 dark:text-sky-300">{{ $service->intervalLabel() }}</span>
                                             <span class="rounded-full bg-zinc-200 px-3 py-1 font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">{{ $service->expectSummary() }}</span>
                                             <span class="rounded-full bg-emerald-100 px-3 py-1 font-medium text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
                                                 {{ trans_choice('{1} :count unique recipient|[2,*] :count unique recipients', $effectiveRecipients->count(), ['count' => $effectiveRecipients->count()]) }}
                                             </span>
+                                            <span
+                                                x-data="window.serviceCheckTimer(@js($service->next_check_at?->toIso8601String()))"
+                                                x-init="init()"
+                                                x-on:livewire:navigating.window="destroy()"
+                                                class="rounded-full bg-amber-100 px-3 py-1 font-medium text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
+                                            >
+                                                <span x-text="remainingLabel">{{ $service->nextCheckSummary() }}</span>
+                                            </span>
                                         </div>
                                     </div>
 
                                     <div class="flex items-center gap-3 text-sm text-zinc-500 dark:text-zinc-400">
-                                        <span class="font-medium">{{ __('Routing details') }}</span>
+                                        <span class="font-medium">{{ __('Monitoring and routing details') }}</span>
                                         <span class="rounded-full border border-zinc-300 px-3 py-1 text-xs font-medium uppercase tracking-[0.2em] dark:border-zinc-600">
                                             {{ __('Expand') }}
                                         </span>
                                     </div>
                                 </div>
 
-                                <p class="mt-3 text-sm text-zinc-500 dark:text-zinc-400">{{ __('Expand to review routing details and effective recipients.') }}</p>
+                                <p class="mt-3 text-sm text-zinc-500 dark:text-zinc-400">{{ __('Expand to review monitoring status, the next check timer, routing details, and effective recipients.') }}</p>
                             </summary>
 
                             <div class="mt-4 space-y-4 border-t border-zinc-200 pt-4 dark:border-zinc-700">
                                 <div class="flex flex-wrap items-start justify-between gap-4">
                                     <div>
-                                        <div class="text-sm font-medium text-zinc-900 dark:text-zinc-100">{{ __('Routing summary') }}</div>
-                                        <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-300">{{ __('Review direct assignments, inherited groups, and the final resolved recipients for this service.') }}</p>
+                                        <div class="text-sm font-medium text-zinc-900 dark:text-zinc-100">{{ __('Monitoring and routing summary') }}</div>
+                                        <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-300">{{ __('Review the most recent monitoring outcome, the next scheduled check, and every recipient that will be notified when the status changes.') }}</p>
                                     </div>
 
                                     <div class="flex flex-wrap items-center gap-2">
                                         <flux:button type="button" variant="ghost" wire:click="editService({{ $service->id }})">{{ __('Edit') }}</flux:button>
                                         <flux:button type="button" variant="danger" wire:click="confirmServiceDeletion({{ $service->id }})">{{ __('Delete') }}</flux:button>
+                                    </div>
+                                </div>
+
+                                <div class="grid gap-4 lg:grid-cols-4">
+                                    <div class="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
+                                        <div class="text-sm font-medium text-zinc-900 dark:text-zinc-100">{{ __('Current status') }}</div>
+                                        <div class="mt-3">
+                                            <span class="inline-flex rounded-full px-3 py-1 text-xs font-medium {{ $service->monitoringStatusClasses() }}">{{ __($service->monitoringStatusLabel()) }}</span>
+                                            @if ($service->statusDurationSummary())
+                                                <div class="mt-2 text-xs text-zinc-500 dark:text-zinc-400">{{ __('Status duration: :duration', ['duration' => $service->statusDurationSummary()]) }}</div>
+                                            @endif
+                                        </div>
+                                    </div>
+
+                                    <div class="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
+                                        <div class="text-sm font-medium text-zinc-900 dark:text-zinc-100">{{ __('Next check') }}</div>
+                                        <div
+                                            x-data="window.serviceCheckTimer(@js($service->next_check_at?->toIso8601String()))"
+                                            x-init="init()"
+                                            x-on:livewire:navigating.window="destroy()"
+                                            class="mt-3 text-sm text-zinc-600 dark:text-zinc-300"
+                                        >
+                                            <div class="font-medium text-zinc-900 dark:text-zinc-100" x-text="remainingLabel">{{ $service->nextCheckSummary() }}</div>
+                                            <div class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                                                {{ $service->next_check_at?->toDayDateTimeString() ?? __('Waiting to be scheduled') }}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
+                                        <div class="text-sm font-medium text-zinc-900 dark:text-zinc-100">{{ __('Last checked') }}</div>
+                                        <div class="mt-3 text-sm text-zinc-600 dark:text-zinc-300">
+                                            {{ $service->last_checked_at?->diffForHumans() ?? __('Not checked yet') }}
+                                        </div>
+                                        @if ($service->last_checked_at)
+                                            <div class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{{ $service->last_checked_at->toDayDateTimeString() }}</div>
+                                        @endif
+                                    </div>
+
+                                    <div class="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
+                                        <div class="text-sm font-medium text-zinc-900 dark:text-zinc-100">{{ __('Latest reason') }}</div>
+                                        <div class="mt-3 text-sm text-zinc-600 dark:text-zinc-300">{{ $service->monitoringReasonSummary() }}</div>
                                     </div>
                                 </div>
 

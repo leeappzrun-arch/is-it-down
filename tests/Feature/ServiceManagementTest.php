@@ -24,7 +24,7 @@ class ServiceManagementTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('sticky top-4 z-20', false);
-        $response->assertSeeText('Expand to review routing details and effective recipients.');
+        $response->assertSeeText('Expand to review monitoring status, the next check timer, routing details, and effective recipients.');
     }
 
     public function test_non_admin_users_cannot_visit_the_service_management_page(): void
@@ -191,7 +191,63 @@ class ServiceManagementTest extends TestCase
         $response->assertSeeText('Direct recipient');
         $response->assertSeeText('Recipient group: Leadership');
         $response->assertSeeText('Service group: Production');
-        $response->assertSeeText('Expand to review routing details and effective recipients.');
+        $response->assertSeeText('Expand to review monitoring status, the next check timer, routing details, and effective recipients.');
+    }
+
+    public function test_service_page_shows_monitoring_status_and_next_check_timer(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $service = Service::factory()->currentlyDown()->create([
+            'name' => 'Marketing site',
+            'next_check_at' => now()->addSeconds(45),
+            'last_check_reason' => 'Expected HTTP 200 response but received 503.',
+            'last_status_changed_at' => now()->subMinutes(5),
+        ]);
+
+        $expectedNextCheckSummary = $service->nextCheckSummary();
+
+        $response = $this->actingAs($admin)->get(route('services.index'));
+
+        $response->assertOk();
+        $response->assertSeeText('Current status');
+        $response->assertSeeText('Down for 5 minutes');
+        $response->assertSeeText($expectedNextCheckSummary);
+        $response->assertSeeText('Latest reason');
+        $response->assertSeeText('Status duration: 5 minutes');
+        $response->assertSeeText('Expected HTTP 200 response but received 503.');
+        $response->assertSee('wire:poll.5s.visible', false);
+    }
+
+    public function test_service_page_shows_checking_for_overdue_services(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        Service::factory()->currentlyUp()->create([
+            'name' => 'Billing API',
+            'next_check_at' => now()->subSecond(),
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('services.index'));
+
+        $response->assertOk();
+        $response->assertSeeText('Checking...');
+    }
+
+    public function test_service_page_rounds_up_status_durations_to_whole_seconds(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        Service::factory()->currentlyDown()->create([
+            'name' => 'Fast status',
+            'last_status_changed_at' => now(),
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('services.index'));
+
+        $response->assertOk();
+        $response->assertSeeText('Down for 1 second');
+        $response->assertSeeText('Status duration: 1 second');
     }
 
     public function test_admin_users_can_search_services_and_service_groups(): void

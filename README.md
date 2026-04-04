@@ -2,7 +2,7 @@
 
 ## Overview
 
-Is It Down is a Laravel 13 and Livewire 4 application for managing monitored services and the recipients who should be notified about them. The project currently focuses on authenticated access, role-based administration, recipient management, service management, grouped routing targets, user/account management, and pre-provisioned API keys for future integrations.
+Is It Down is a Laravel 13 and Livewire 4 application for managing monitored services and the recipients who should be notified about them. The project currently focuses on authenticated access, role-based administration, recipient management, service management, grouped routing targets, scheduled uptime checks, webhook and email delivery, user/account management, and pre-provisioned API keys for future integrations.
 
 ## Current Features
 
@@ -10,7 +10,7 @@ Is It Down is a Laravel 13 and Livewire 4 application for managing monitored ser
 
 - Users sign in through Laravel Fortify.
 - Verified users are routed to the dashboard.
-- The dashboard shows high-level totals for recipients, recipient groups, services, service groups, users, and API keys.
+- The dashboard shows a live service-status grid plus high-level totals for recipients, recipient groups, services, service groups, users, and API keys.
 - Admins can open those dashboard stats to jump straight into the matching management screens.
 - Authenticated users can access profile, appearance, and security settings.
 
@@ -46,6 +46,12 @@ Is It Down is a Laravel 13 and Livewire 4 application for managing monitored ser
 - Configure a service name, URL, polling interval, and optional expectation using either plain text or a regular expression.
 - Assign services to one or more service groups.
 - Assign recipients and recipient groups directly to a service.
+- Track the latest monitoring status, how long the service has been in that state, the last reason, the last check time, and a live next-check timer from the Services page.
+- Mark a service as down when the response is not HTTP 200 or when a configured text or regex expectation does not match the response body.
+- Notify assigned recipients only when the service changes state, so repeated down checks do not resend the same alert until the service recovers.
+- Deliver email alerts to `mailto://` recipients and JSON payloads to `webhook://` recipients using the authentication method saved on each webhook recipient.
+- Include outage duration in recovery notifications so emails and webhook consumers can see how long a service was down before it came back up.
+- Email all admin users if any webhook delivery fails during a status-change notification.
 - Review the effective recipients for a service, including whether each route is direct, comes from a recipient group, or is inherited through a service group.
 
 ### Service group management
@@ -107,11 +113,28 @@ This repository includes `.ddev` and should be worked on through DDEV whenever D
 ddev start
 ddev composer install --no-interaction --prefer-dist
 ddev exec php artisan migrate --seed
+ddev exec php artisan schedule:work
 ddev exec php artisan test --compact
 ddev npm run dev
 ```
 
 If DDEV is unavailable, host-side Artisan and test commands may still work, but DDEV remains the preferred workflow for this project.
+
+### Scheduler setup
+
+Monitoring checks are scheduled inside `routes/console.php` and run every 30 seconds through Laravel's scheduler.
+
+For local development, keep the scheduler running with:
+
+```bash
+ddev exec php artisan schedule:work
+```
+
+For production, add a single cron entry that runs Laravel's scheduler every minute:
+
+```bash
+* * * * * cd /path-to-your-project && php artisan schedule:run >> /dev/null 2>&1
+```
 
 ### Seeded access
 
@@ -121,7 +144,7 @@ Running the database seeder provisions two verified accounts for local developme
 - `user@example.com` / `password`
 
 The seeder also creates sample recipient groups, recipients, and API keys so the dashboard and management screens have representative data immediately.
-It also seeds service groups and services so the new routing views have meaningful examples on a fresh install.
+It also seeds service groups and services so the routing views and monitoring status cards have meaningful examples on a fresh install.
 
 ## Testing
 

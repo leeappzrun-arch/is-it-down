@@ -126,6 +126,16 @@ class Recipient extends Model
     }
 
     /**
+     * Get the webhook URL used for outbound delivery.
+     */
+    public function webhookUrl(): string
+    {
+        $target = $this->endpointTarget();
+
+        return Str::startsWith($target, ['http://', 'https://']) ? $target : 'https://'.ltrim($target, '/');
+    }
+
+    /**
      * Get the human-readable endpoint type label.
      */
     public function endpointTypeLabel(): string

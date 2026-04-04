@@ -15,6 +15,8 @@ class ServiceSeeder extends Seeder
      */
     public function run(): void
     {
+        $seededAt = now();
+
         $recipientGroups = RecipientGroup::query()
             ->whereIn('name', ['Operations', 'Leadership', 'Vendors'])
             ->get()
@@ -37,6 +39,12 @@ class ServiceSeeder extends Seeder
                 'interval_seconds' => Service::INTERVAL_1_MINUTE,
                 'expect_type' => Service::EXPECT_TEXT,
                 'expect_value' => 'All systems operational',
+                'current_status' => Service::STATUS_UP,
+                'last_response_code' => 200,
+                'last_check_reason' => 'Received an HTTP 200 response and the expected text was present.',
+                'last_checked_at' => $seededAt->copy()->subSeconds(30),
+                'next_check_at' => $seededAt->copy()->addSeconds(30),
+                'last_status_changed_at' => $seededAt->copy()->subDay(),
             ],
             recipientIds: [
                 $recipients->get('Operations Inbox')?->id,
@@ -57,6 +65,12 @@ class ServiceSeeder extends Seeder
                 'interval_seconds' => Service::INTERVAL_5_MINUTES,
                 'expect_type' => Service::EXPECT_REGEX,
                 'expect_value' => '/status\\s*:\\s*ok/i',
+                'current_status' => Service::STATUS_DOWN,
+                'last_response_code' => 503,
+                'last_check_reason' => 'Expected HTTP 200 response but received 503.',
+                'last_checked_at' => $seededAt->copy()->subMinutes(4),
+                'next_check_at' => $seededAt->copy()->addMinute(),
+                'last_status_changed_at' => $seededAt->copy()->subMinutes(20),
             ],
             recipientIds: [
                 $recipients->get('Vendor Status Webhook')?->id,

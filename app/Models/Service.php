@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\CarbonInterface;
 use Database\Factories\ServiceFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -37,6 +38,10 @@ class Service extends Model
     public const EXPECT_TEXT = 'text';
 
     public const EXPECT_REGEX = 'regex';
+
+    public const STATUS_UP = 'up';
+
+    public const STATUS_DOWN = 'down';
 
     /**
      * Get the supported monitoring interval options.
@@ -101,6 +106,10 @@ class Service extends Model
     {
         return [
             'interval_seconds' => 'integer',
+            'last_response_code' => 'integer',
+            'last_checked_at' => 'datetime',
+            'next_check_at' => 'datetime',
+            'last_status_changed_at' => 'datetime',
         ];
     }
 
@@ -132,6 +141,146 @@ class Service extends Model
         $label = $this->expect_type === self::EXPECT_REGEX ? 'Regex' : 'Text';
 
         return $label.': '.Str::limit((string) $this->expect_value, 80);
+    }
+
+    /**
+     * Get the human-readable monitoring status label.
+     */
+    public function monitoringStatusLabel(): string
+    {
+        return match ($this->current_status) {
+            self::STATUS_UP => 'Up'.$this->statusDurationSuffix(),
+            self::STATUS_DOWN => 'Down'.$this->statusDurationSuffix(),
+            default => 'Pending first check',
+        };
+    }
+
+    /**
+     * Get a human-readable summary of how long the service has held its current status.
+     */
+    public function statusDurationSummary(?CarbonInterface $referenceTime = null): ?string
+    {
+        if ($this->last_status_changed_at === null || blank($this->current_status)) {
+            return null;
+        }
+
+        return $this->formatDurationFromTimestamp($this->last_status_changed_at, $referenceTime);
+    }
+
+    /**
+     * Get the duration, in seconds, that the service has held its current status.
+     */
+    public function statusDurationInSeconds(?CarbonInterface $referenceTime = null): ?int
+    {
+        if ($this->last_status_changed_at === null || blank($this->current_status)) {
+            return null;
+        }
+
+        return $this->elapsedSeconds($this->last_status_changed_at, $referenceTime);
+    }
+
+    /**
+     * Get the badge classes for the monitoring status label.
+     */
+    public function monitoringStatusClasses(): string
+    {
+        return match ($this->current_status) {
+            self::STATUS_UP => 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300',
+            self::STATUS_DOWN => 'bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300',
+            default => 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300',
+        };
+    }
+
+    /**
+     * Get a short summary of the most recent monitoring reason.
+     */
+    public function monitoringReasonSummary(): string
+    {
+        if (blank($this->last_check_reason)) {
+            return 'Awaiting the first monitoring check.';
+        }
+
+        return Str::limit((string) $this->last_check_reason, 120);
+    }
+
+    /**
+     * Get the human-readable summary for the next check.
+     */
+    public function nextCheckSummary(): string
+    {
+        if ($this->next_check_at === null) {
+            return 'Due now';
+        }
+
+        /** @var CarbonInterface $nextCheckAt */
+        $nextCheckAt = $this->next_check_at;
+
+        return $nextCheckAt->isPast()
+            ? 'Checking...'
+            : 'Next check '.$nextCheckAt->diffForHumans();
+    }
+
+    /**
+     * Get the status duration suffix shown in the badge label.
+     */
+    private function statusDurationSuffix(): string
+    {
+        $duration = $this->statusDurationSummary();
+
+        return $duration === null ? '' : ' for '.$duration;
+    }
+
+    /**
+     * Format the elapsed time from the given timestamp to now.
+     */
+    private function formatDurationFromTimestamp(CarbonInterface $timestamp, ?CarbonInterface $referenceTime = null): string
+    {
+        $remainingSeconds = $this->elapsedSeconds($timestamp, $referenceTime);
+
+        if ($remainingSeconds < 60) {
+            return trim(trans_choice('{1} :count second|[2,*] :count seconds', $remainingSeconds, ['count' => $remainingSeconds]));
+        }
+
+        $units = [
+            'day' => 86400,
+            'hour' => 3600,
+            'minute' => 60,
+        ];
+
+        $segments = [];
+
+        foreach ($units as $unit => $secondsPerUnit) {
+            if ($remainingSeconds < $secondsPerUnit) {
+                continue;
+            }
+
+            $value = intdiv($remainingSeconds, $secondsPerUnit);
+            $remainingSeconds %= $secondsPerUnit;
+
+            $segments[] = trans_choice('{1} :count '.$unit.'|[2,*] :count '.$unit.'s', $value, ['count' => $value]);
+
+            if (count($segments) === 2) {
+                break;
+            }
+        }
+
+        if ($segments === []) {
+            $segments[] = trans_choice('{1} :count minute|[2,*] :count minutes', 1, ['count' => 1]);
+        }
+
+        return trim(implode(' ', $segments));
+    }
+
+    /**
+     * Get the elapsed seconds between the given timestamp and the reference time.
+     */
+    private function elapsedSeconds(CarbonInterface $timestamp, ?CarbonInterface $referenceTime = null): int
+    {
+        $referenceTime ??= now();
+
+        $milliseconds = max(0, $timestamp->diffInMilliseconds($referenceTime));
+
+        return max(1, (int) ceil($milliseconds / 1000));
     }
 
     /**
