@@ -17,10 +17,14 @@ class ServiceManagementTest extends TestCase
 
     public function test_admin_users_can_visit_the_service_management_page(): void
     {
+        Service::factory()->create();
+
         $response = $this->actingAs(User::factory()->admin()->create())
             ->get(route('services.index'));
 
         $response->assertOk();
+        $response->assertSee('sticky top-4 z-20', false);
+        $response->assertSeeText('Expand to review routing details and effective recipients.');
     }
 
     public function test_non_admin_users_cannot_visit_the_service_management_page(): void
@@ -187,6 +191,7 @@ class ServiceManagementTest extends TestCase
         $response->assertSeeText('Direct recipient');
         $response->assertSeeText('Recipient group: Leadership');
         $response->assertSeeText('Service group: Production');
+        $response->assertSeeText('Expand to review routing details and effective recipients.');
     }
 
     public function test_admin_users_can_search_services_and_service_groups(): void

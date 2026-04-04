@@ -19,6 +19,7 @@ class RecipientManagementTest extends TestCase
             ->get(route('recipients.index'));
 
         $response->assertOk();
+        $response->assertSee('sticky top-4 z-20', false);
     }
 
     public function test_non_admin_users_cannot_visit_the_recipient_management_page(): void

@@ -19,6 +19,7 @@ class ApiKeyManagementTest extends TestCase
 
         $response->assertOk();
         $response->assertSeeText('API Keys');
+        $response->assertSee('sticky top-4 z-20', false);
     }
 
     public function test_non_admin_users_cannot_visit_the_api_key_management_page(): void

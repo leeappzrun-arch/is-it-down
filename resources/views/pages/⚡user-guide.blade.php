@@ -46,7 +46,7 @@ new #[Title('User guide')] class extends Component {
                     <p>{{ __('Webhook recipients can be configured with no authentication, bearer token authentication, basic authentication, or a custom header, and the matching fields appear as soon as you choose the authentication type.') }}</p>
                     <p>{{ __('Use the Webhook Documentation page for a dedicated reference on supported destination formats, authentication options, and the details that should stay aligned with future webhook delivery work.') }}</p>
                     <p>{{ __('Recipients can belong to multiple groups, which makes it easier to organise related delivery targets together.') }}</p>
-                    <p>{{ __('Use the search field at the top of the Recipients page to filter both the recipient table and the existing groups list without changing the form selections on the page.') }}</p>
+                    <p>{{ __('Use the sticky search field at the top of the Recipients page to filter both the recipient table and the existing groups list without changing the form selections on the page.') }}</p>
                     <p>{{ __('Existing recipients can be edited or deleted from the management table once they have been created. Editing scrolls you to the form automatically, and deletes ask for confirmation before anything is removed.') }}</p>
                 </div>
             </div>
@@ -69,8 +69,8 @@ new #[Title('User guide')] class extends Component {
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
                     <p>{{ __('Services represent the URLs you want to monitor. Each service includes a name, URL, polling interval, and an optional expectation that can be plain text or a regex pattern.') }}</p>
                     <p>{{ __('A service can have direct recipients, direct recipient groups, and one or more service groups attached at the same time.') }}</p>
-                    <p>{{ __('Use the search field at the top of the Services page to narrow both managed services and service groups from a single query.') }}</p>
-                    <p>{{ __('The Services page shows an effective recipient breakdown for every service so you can immediately tell whether someone is attached directly, through a recipient group, or through a service group.') }}</p>
+                    <p>{{ __('Use the sticky search field at the top of the Services page to narrow both managed services and service groups from a single query.') }}</p>
+                    <p>{{ __('Each service now opens as an accordion so the list stays compact while still exposing the full effective recipient breakdown when you expand a service.') }}</p>
                     <p>{{ __('Editing a service scrolls the form back into view, and deleting a service asks for confirmation before it is removed.') }}</p>
                 </div>
             </div>
@@ -90,7 +90,7 @@ new #[Title('User guide')] class extends Component {
                 <flux:subheading class="mt-2">{{ __('Admin only') }}</flux:subheading>
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
                     <p>{{ __('Admins can create new users, assign roles, update existing user roles, and delete standard users from the Users page.') }}</p>
-                    <p>{{ __('The search field at the top of the Users page filters the management table by name, email address, or role.') }}</p>
+                    <p>{{ __('The sticky search field at the top of the Users page filters the management table by name, email address, or role.') }}</p>
                     <p>{{ __('Two roles currently exist: `admin` and `user`. Admins can access management screens, while standard users have a more limited experience.') }}</p>
                     <p>{{ __('The system protects the final admin account from being downgraded, which prevents accidental lockout from admin-only tools.') }}</p>
                     <p>{{ __('Deleting a standard user requires confirmation, and admin accounts are intentionally protected from deletion on that screen.') }}</p>
@@ -102,7 +102,7 @@ new #[Title('User guide')] class extends Component {
                 <flux:subheading class="mt-2">{{ __('Admin only') }}</flux:subheading>
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
                     <p>{{ __('Admins can create API keys for their own account or for a named service from the API Keys page.') }}</p>
-                    <p>{{ __('The page-level search field filters issued keys by key details, ownership information, permissions, and status so older keys are easier to find.') }}</p>
+                    <p>{{ __('The sticky page-level search field filters issued keys by key details, ownership information, permissions, and status so older keys are easier to find.') }}</p>
                     <p>{{ __('Every key can be given read and write access for each supported application area, including Services, Users, and Recipients.') }}</p>
                     <p>{{ __('Expiration can be set to 6 months, 1 year, 2 years, or never. The plain-text key is only shown once in a confirmation modal when it is created, so it should be copied immediately.') }}</p>
                     <p>{{ __('Keys can be revoked later without deleting the audit trail of who created them and what access they were given.') }}</p>

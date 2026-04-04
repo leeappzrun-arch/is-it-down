@@ -637,7 +637,7 @@ new #[Title('Recipient management')] class extends Component {
         <flux:separator variant="subtle" />
     </div>
 
-    <div class="mb-6 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-6 dark:border-zinc-700 dark:bg-zinc-900">
+    <div class="sticky top-4 z-20 mb-6 rounded-xl border border-zinc-200 bg-white/95 p-4 shadow-sm backdrop-blur sm:p-6 dark:border-zinc-700 dark:bg-zinc-900/95">
         <flux:input
             wire:model.live.debounce.300ms="search"
             :label="__('Search recipients and groups')"

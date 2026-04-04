@@ -19,6 +19,7 @@ class UserManagementTest extends TestCase
         $response->assertOk();
         $response->assertSeeTextInOrder(['Recipients', 'Services', 'Users']);
         $response->assertSeeText('Users');
+        $response->assertSee('sticky top-4 z-20', false);
     }
 
     public function test_non_admin_users_cannot_visit_the_user_management_page(): void
