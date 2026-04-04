@@ -236,11 +236,15 @@ class ServiceManagementTest extends TestCase
 
     public function test_service_page_rounds_up_status_durations_to_whole_seconds(): void
     {
+        $referenceTime = now();
+
+        $this->travelTo($referenceTime);
+
         $admin = User::factory()->admin()->create();
 
         Service::factory()->currentlyDown()->create([
             'name' => 'Fast status',
-            'last_status_changed_at' => now(),
+            'last_status_changed_at' => $referenceTime,
         ]);
 
         $response = $this->actingAs($admin)->get(route('services.index'));
@@ -248,6 +252,8 @@ class ServiceManagementTest extends TestCase
         $response->assertOk();
         $response->assertSeeText('Down for 1 second');
         $response->assertSeeText('Status duration: 1 second');
+
+        $this->travelBack();
     }
 
     public function test_admin_users_can_search_services_and_service_groups(): void
