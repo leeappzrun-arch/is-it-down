@@ -7,6 +7,8 @@ on:
       - main
       - master
       - workos
+    tags:
+      - 'v*'
   workflow_dispatch:
 
 permissions:
@@ -39,6 +41,9 @@ jobs:
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=sha
+            type=semver,pattern={{version}},value=${{ github.ref_name }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ github.ref_name }}
+            type=semver,pattern={{major}},value=${{ github.ref_name }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6

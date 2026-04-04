@@ -146,6 +146,12 @@ Available API key permissions are defined in `config/api_keys.php`.
 
 The repository now publishes a container image to GitHub Container Registry as `ghcr.io/leeappzrun-arch/is-it-down:latest` whenever the default branch is updated.
 
+Release tags also publish versioned images. For example, pushing Git tag `v1.2.3` publishes:
+
+- `ghcr.io/leeappzrun-arch/is-it-down:1.2.3`
+- `ghcr.io/leeappzrun-arch/is-it-down:1.2`
+- `ghcr.io/leeappzrun-arch/is-it-down:1`
+
 The image already includes a production `.env` with non-sensitive defaults for the app name, production mode, SQLite, database-backed sessions/cache/queue, stderr logging, and the scheduler loop. Any values you pass from your own Compose `.env` file override those baked-in defaults.
 
 Create a `docker-compose.yml` file like this:
@@ -192,6 +198,19 @@ On the first boot the container will:
 
 To change the public port, update `APP_PORT` in your `.env` file.
 To move the persistent data somewhere else on the host, update `APP_DATA_DIR`.
+To stay on a fixed release instead of tracking new builds, change the image tag in `docker-compose.yml`, for example:
+
+```yaml
+image: ghcr.io/leeappzrun-arch/is-it-down:1.2.3
+```
+
+To publish a new pinned release image, create and push a semantic version tag:
+
+```bash
+git tag v1.2.3
+git push origin v1.2.3
+```
+
 To upgrade to the newest published build, run:
 
 ```bash
