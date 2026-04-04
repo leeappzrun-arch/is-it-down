@@ -128,4 +128,34 @@ class ApiKeyManagementTest extends TestCase
 
         $this->assertNotNull($apiKey->refresh()->revoked_at);
     }
+
+    public function test_admin_users_can_search_api_keys(): void
+    {
+        $admin = User::factory()->admin()->create([
+            'name' => 'Admin User',
+            'email' => 'admin@example.com',
+        ]);
+
+        ApiKey::factory()->for($admin, 'creator')->for($admin)->create([
+            'name' => 'Primary monitoring key',
+            'permissions' => ['services:read'],
+        ]);
+
+        ApiKey::factory()->for($admin, 'creator')->create([
+            'name' => 'Payroll integration',
+            'owner_type' => ApiKey::OWNER_SERVICE,
+            'user_id' => null,
+            'service_name' => 'Payroll worker',
+            'permissions' => ['users:read'],
+        ]);
+
+        $this->actingAs($admin);
+
+        Livewire::test('pages::api-keys.index')
+            ->assertSee('Primary monitoring key')
+            ->assertSee('Payroll integration')
+            ->set('search', 'payroll')
+            ->assertSee('Payroll integration')
+            ->assertDontSee('Primary monitoring key');
+    }
 }

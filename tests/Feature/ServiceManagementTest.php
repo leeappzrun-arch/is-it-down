@@ -188,4 +188,37 @@ class ServiceManagementTest extends TestCase
         $response->assertSeeText('Recipient group: Leadership');
         $response->assertSeeText('Service group: Production');
     }
+
+    public function test_admin_users_can_search_services_and_service_groups(): void
+    {
+        $this->actingAs(User::factory()->admin()->create());
+
+        Service::factory()->create([
+            'name' => 'Marketing site',
+            'url' => 'https://marketing.example.com',
+        ]);
+
+        Service::factory()->create([
+            'name' => 'Billing API',
+            'url' => 'https://billing.example.com',
+        ]);
+
+        ServiceGroup::factory()->create(['name' => 'Production']);
+        ServiceGroup::factory()->create(['name' => 'Staging']);
+
+        Livewire::test('pages::services.index')
+            ->assertSee('Marketing site')
+            ->assertSee('Billing API')
+            ->assertSee('Production')
+            ->assertSee('Staging')
+            ->set('search', 'marketing')
+            ->assertSee('Marketing site')
+            ->assertDontSee('https://billing.example.com')
+            ->assertSee('No service groups match your search.')
+            ->set('search', 'production')
+            ->assertSee('Production')
+            ->assertSee('No services match your search.')
+            ->assertDontSee('https://marketing.example.com')
+            ->assertDontSee('https://billing.example.com');
+    }
 }

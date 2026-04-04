@@ -11,6 +11,8 @@ use Livewire\Attributes\Title;
 use Livewire\Component;
 
 new #[Title('Service management')] class extends Component {
+    public string $search = '';
+
     public ?int $editingServiceId = null;
 
     public ?int $editingServiceGroupId = null;
@@ -64,7 +66,7 @@ new #[Title('Service management')] class extends Component {
     #[Computed]
     public function services()
     {
-        return Service::query()
+        $services = Service::query()
             ->with([
                 'recipients:id,name,endpoint',
                 'recipientGroups:id,name',
@@ -77,6 +79,28 @@ new #[Title('Service management')] class extends Component {
             ->orderBy('name')
             ->orderBy('url')
             ->get();
+
+        if ($this->searchTerm() === '') {
+            return $services;
+        }
+
+        return $services
+            ->filter(function (Service $service): bool {
+                $effectiveRecipients = $service->effectiveRecipientRoutes();
+
+                return $this->matchesSearch([
+                    $service->name,
+                    $service->url,
+                    $service->intervalLabel(),
+                    $service->expectSummary(),
+                    $service->groups->pluck('name')->all(),
+                    $service->recipientGroups->pluck('name')->all(),
+                    $service->recipients->pluck('name')->all(),
+                    $effectiveRecipients->map(fn (array $route): string => $route['recipient']->name)->all(),
+                    $effectiveRecipients->flatMap(fn (array $route): array => $route['sources'])->all(),
+                ]);
+            })
+            ->values();
     }
 
     /**
@@ -93,6 +117,25 @@ new #[Title('Service management')] class extends Component {
             ->withCount(['services', 'recipients', 'recipientGroups'])
             ->orderBy('name')
             ->get();
+    }
+
+    /**
+     * Get the service groups shown in the management list.
+     */
+    #[Computed]
+    public function managedServiceGroups()
+    {
+        if ($this->searchTerm() === '') {
+            return $this->serviceGroups;
+        }
+
+        return $this->serviceGroups
+            ->filter(fn (ServiceGroup $serviceGroup): bool => $this->matchesSearch([
+                $serviceGroup->name,
+                $serviceGroup->recipientGroups->pluck('name')->all(),
+                $serviceGroup->recipients->pluck('name')->all(),
+            ]))
+            ->values();
     }
 
     /**
@@ -494,6 +537,32 @@ new #[Title('Service management')] class extends Component {
 
         $this->dispatch('service-group-deleted');
     }
+
+    /**
+     * Get the normalized search term.
+     */
+    private function searchTerm(): string
+    {
+        return Str::lower(trim($this->search));
+    }
+
+    /**
+     * Determine whether the provided values match the current search term.
+     *
+     * @param  array<int, mixed>  $segments
+     */
+    private function matchesSearch(array $segments): bool
+    {
+        $search = $this->searchTerm();
+
+        if ($search === '') {
+            return true;
+        }
+
+        $haystack = Str::of(collect($segments)->flatten()->filter()->implode(' '))->lower();
+
+        return $haystack->contains($search);
+    }
 }; ?>
 
 <section class="w-full">
@@ -501,6 +570,15 @@ new #[Title('Service management')] class extends Component {
         <flux:heading size="xl" level="1">{{ __('Services') }}</flux:heading>
         <flux:subheading size="lg" class="mb-6">{{ __('Create monitored services, set their polling interval and expectation rules, then route alerts through direct recipients, recipient groups, and reusable service groups.') }}</flux:subheading>
         <flux:separator variant="subtle" />
+    </div>
+
+    <div class="mb-6 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-6 dark:border-zinc-700 dark:bg-zinc-900">
+        <flux:input
+            wire:model.live.debounce.300ms="search"
+            :label="__('Search services and service groups')"
+            type="search"
+            :placeholder="__('Search by name, URL, routing, or related recipients')"
+        />
     </div>
 
     <div class="grid gap-6 xl:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]">
@@ -691,7 +769,9 @@ new #[Title('Service management')] class extends Component {
             </div>
 
             @if ($this->services->isEmpty())
-                <p class="mt-6 rounded-lg border border-dashed border-zinc-300 px-4 py-6 text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">{{ __('No services have been created yet.') }}</p>
+                <p class="mt-6 rounded-lg border border-dashed border-zinc-300 px-4 py-6 text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
+                    {{ trim($search) !== '' ? __('No services match your search.') : __('No services have been created yet.') }}
+                </p>
             @else
                 <div class="mt-6 space-y-4">
                     @foreach ($this->services as $service)
@@ -892,11 +972,13 @@ new #[Title('Service management')] class extends Component {
                 <x-action-message on="service-group-deleted">{{ __('Service group removed.') }}</x-action-message>
             </div>
 
-            @if ($this->serviceGroups->isEmpty())
-                <p class="mt-6 rounded-lg border border-dashed border-zinc-300 px-4 py-6 text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">{{ __('No service groups have been created yet.') }}</p>
+            @if ($this->managedServiceGroups->isEmpty())
+                <p class="mt-6 rounded-lg border border-dashed border-zinc-300 px-4 py-6 text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
+                    {{ trim($search) !== '' ? __('No service groups match your search.') : __('No service groups have been created yet.') }}
+                </p>
             @else
                 <div class="mt-6 grid gap-4 lg:grid-cols-2">
-                    @foreach ($this->serviceGroups as $serviceGroup)
+                    @foreach ($this->managedServiceGroups as $serviceGroup)
                         <div wire:key="service-group-row-{{ $serviceGroup->id }}" class="rounded-2xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-950/40">
                             <div class="flex flex-wrap items-start justify-between gap-4">
                                 <div>

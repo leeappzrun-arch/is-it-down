@@ -69,4 +69,28 @@ class UserManagementTest extends TestCase
             'role' => User::ROLE_ADMIN,
         ]);
     }
+
+    public function test_admin_users_can_search_the_user_management_table(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        User::factory()->create([
+            'name' => 'Alice Support',
+            'email' => 'alice@example.com',
+        ]);
+
+        User::factory()->create([
+            'name' => 'Bob Finance',
+            'email' => 'bob@example.com',
+        ]);
+
+        $this->actingAs($admin);
+
+        Livewire::test('pages::users.index')
+            ->assertSee('Alice Support')
+            ->assertSee('Bob Finance')
+            ->set('search', 'alice')
+            ->assertSee('Alice Support')
+            ->assertDontSee('Bob Finance');
+    }
 }

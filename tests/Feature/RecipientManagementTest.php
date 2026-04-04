@@ -189,4 +189,37 @@ class RecipientManagementTest extends TestCase
             ->assertSet('editingGroupId', $group->id)
             ->assertDispatched('focus-form', form: 'group');
     }
+
+    public function test_admin_users_can_search_recipients_and_groups(): void
+    {
+        $this->actingAs(User::factory()->admin()->create());
+
+        Recipient::factory()->create([
+            'name' => 'Ops mailbox',
+            'endpoint' => 'mailto://ops@example.com',
+        ]);
+
+        Recipient::factory()->create([
+            'name' => 'Pager duty',
+            'endpoint' => 'webhook://hooks.example.com/pager-duty',
+        ]);
+
+        RecipientGroup::factory()->create(['name' => 'Operations']);
+        RecipientGroup::factory()->create(['name' => 'Finance']);
+
+        Livewire::test('pages::recipients.index')
+            ->assertSee('Ops mailbox')
+            ->assertSee('Pager duty')
+            ->assertSee('Operations')
+            ->assertSee('Finance')
+            ->set('search', 'pager')
+            ->assertSee('Pager duty')
+            ->assertDontSee('ops@example.com')
+            ->assertSee('No groups match your search.')
+            ->set('search', 'finance')
+            ->assertSee('Finance')
+            ->assertSee('No recipients match your search.')
+            ->assertDontSee('ops@example.com')
+            ->assertDontSee('hooks.example.com/pager-duty');
+    }
 }

@@ -118,6 +118,7 @@ These things changed in Livewire 4, but may not have been updated in this applic
 - Always use `wire:key` in loops
 - Use `wire:loading` for loading states
 - Use `wire:model.live` for instant updates (default is debounced)
+- On admin or management pages that show lists, tables, or result cards, add a search input near the top of the page and bind it to component state so the rendered results filter immediately.
 - When one field controls whether other inputs appear, bind the controlling field with `wire:model.live` and drive the conditional UI from explicit component state instead of parsing partial free-text input.
 - On management screens, when an Edit action loads a record into a form elsewhere on the page, dispatch a browser event and use Alpine to scroll the destination form into view and briefly highlight it.
 - Validate and authorize in actions (treat like HTTP requests)

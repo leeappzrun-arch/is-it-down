@@ -9,6 +9,8 @@ use Livewire\Attributes\Title;
 use Livewire\Component;
 
 new #[Title('Recipient management')] class extends Component {
+    public string $search = '';
+
     public ?int $editingRecipientId = null;
 
     public ?int $editingGroupId = null;
@@ -58,11 +60,26 @@ new #[Title('Recipient management')] class extends Component {
     #[Computed]
     public function recipients()
     {
-        return Recipient::query()
+        $recipients = Recipient::query()
             ->with('groups:id,name')
             ->orderBy('name')
             ->orderBy('endpoint')
             ->get();
+
+        if ($this->searchTerm() === '') {
+            return $recipients;
+        }
+
+        return $recipients
+            ->filter(fn (Recipient $recipient): bool => $this->matchesSearch([
+                $recipient->name,
+                $recipient->endpoint,
+                $recipient->endpointTarget(),
+                $recipient->endpointTypeLabel(),
+                $recipient->isWebhookEndpoint() ? $recipient->webhookAuthenticationSummary() : 'Not required',
+                $recipient->groups->pluck('name')->all(),
+            ]))
+            ->values();
     }
 
     /**
@@ -75,6 +92,21 @@ new #[Title('Recipient management')] class extends Component {
             ->withCount('recipients')
             ->orderBy('name')
             ->get();
+    }
+
+    /**
+     * Get the groups shown in the management sidebar.
+     */
+    #[Computed]
+    public function managedGroups()
+    {
+        if ($this->searchTerm() === '') {
+            return $this->groups;
+        }
+
+        return $this->groups
+            ->filter(fn (RecipientGroup $group): bool => $this->matchesSearch([$group->name]))
+            ->values();
     }
 
     /**
@@ -570,6 +602,32 @@ new #[Title('Recipient management')] class extends Component {
     {
         return $this->endpointType === Recipient::TYPE_WEBHOOK;
     }
+
+    /**
+     * Get the normalized search term.
+     */
+    private function searchTerm(): string
+    {
+        return Str::lower(trim($this->search));
+    }
+
+    /**
+     * Determine whether the provided values match the current search term.
+     *
+     * @param  array<int, mixed>  $segments
+     */
+    private function matchesSearch(array $segments): bool
+    {
+        $search = $this->searchTerm();
+
+        if ($search === '') {
+            return true;
+        }
+
+        $haystack = Str::of(collect($segments)->flatten()->filter()->implode(' '))->lower();
+
+        return $haystack->contains($search);
+    }
 }; ?>
 
 <section class="w-full">
@@ -577,6 +635,15 @@ new #[Title('Recipient management')] class extends Component {
         <flux:heading size="xl" level="1">{{ __('Recipients') }}</flux:heading>
         <flux:subheading size="lg" class="mb-6">{{ __('Manage email and webhook recipients, organise them into groups, and configure webhook authentication when needed.') }}</flux:subheading>
         <flux:separator variant="subtle" />
+    </div>
+
+    <div class="mb-6 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-6 dark:border-zinc-700 dark:bg-zinc-900">
+        <flux:input
+            wire:model.live.debounce.300ms="search"
+            :label="__('Search recipients and groups')"
+            type="search"
+            :placeholder="__('Search by name, endpoint, authentication, or group')"
+        />
     </div>
 
     <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
@@ -767,7 +834,7 @@ new #[Title('Recipient management')] class extends Component {
 
                 @if ($this->recipients->isEmpty())
                     <p class="mt-6 rounded-lg border border-dashed border-zinc-300 px-4 py-6 text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
-                        {{ __('No recipients have been created yet.') }}
+                        {{ trim($search) !== '' ? __('No recipients match your search.') : __('No recipients have been created yet.') }}
                     </p>
                 @else
                     <div class="mt-6 max-w-full overflow-x-auto">
@@ -878,13 +945,13 @@ new #[Title('Recipient management')] class extends Component {
                     <x-action-message on="group-deleted">{{ __('Group removed.') }}</x-action-message>
                 </div>
 
-                @if ($this->groups->isEmpty())
+                @if ($this->managedGroups->isEmpty())
                     <p class="mt-6 rounded-lg border border-dashed border-zinc-300 px-4 py-6 text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
-                        {{ __('No groups have been created yet.') }}
+                        {{ trim($search) !== '' ? __('No groups match your search.') : __('No groups have been created yet.') }}
                     </p>
                 @else
                     <div class="mt-6 space-y-3">
-                        @foreach ($this->groups as $group)
+                        @foreach ($this->managedGroups as $group)
                             <div wire:key="group-row-{{ $group->id }}" class="rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-950/40">
                                 <div class="flex flex-wrap items-start justify-between gap-3">
                                     <div>

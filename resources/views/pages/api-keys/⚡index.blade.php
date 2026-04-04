@@ -2,12 +2,15 @@
 
 use App\Models\ApiKey;
 use App\Support\ApiKeyPermissions;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
 new #[Title('API key management')] class extends Component {
+    public string $search = '';
+
     public string $name = '';
 
     public string $ownerType = ApiKey::OWNER_USER;
@@ -102,11 +105,32 @@ new #[Title('API key management')] class extends Component {
     #[Computed]
     public function apiKeys()
     {
-        return ApiKey::query()
+        $apiKeys = ApiKey::query()
             ->with(['creator:id,name,email', 'user:id,name,email'])
             ->orderByRaw('CASE WHEN revoked_at IS NULL THEN 0 ELSE 1 END')
             ->orderBy('name')
             ->get();
+
+        if ($this->searchTerm() === '') {
+            return $apiKeys;
+        }
+
+        return $apiKeys
+            ->filter(function (ApiKey $apiKey): bool {
+                return $this->matchesSearch([
+                    $apiKey->name,
+                    $apiKey->token_prefix,
+                    $apiKey->creator?->name,
+                    $apiKey->creator?->email,
+                    $apiKey->user?->name,
+                    $apiKey->user?->email,
+                    $apiKey->service_name,
+                    implode(' ', $apiKey->permissions ?? []),
+                    $apiKey->expirationLabel(),
+                    $apiKey->isRevoked() ? 'revoked' : ($apiKey->isExpired() ? 'expired' : 'active'),
+                ]);
+            })
+            ->values();
     }
 
     /**
@@ -194,6 +218,32 @@ new #[Title('API key management')] class extends Component {
             default => null,
         };
     }
+
+    /**
+     * Get the normalized search term.
+     */
+    private function searchTerm(): string
+    {
+        return Str::lower(trim($this->search));
+    }
+
+    /**
+     * Determine whether the provided values match the current search term.
+     *
+     * @param  array<int, mixed>  $segments
+     */
+    private function matchesSearch(array $segments): bool
+    {
+        $search = $this->searchTerm();
+
+        if ($search === '') {
+            return true;
+        }
+
+        $haystack = Str::of(collect($segments)->flatten()->filter()->implode(' '))->lower();
+
+        return $haystack->contains($search);
+    }
 }; ?>
 
 <section class="w-full">
@@ -201,6 +251,15 @@ new #[Title('API key management')] class extends Component {
         <flux:heading size="xl" level="1">{{ __('API Keys') }}</flux:heading>
         <flux:subheading size="lg" class="mb-6">{{ __('Issue account or service keys now, then reuse them once the API layer is introduced.') }}</flux:subheading>
         <flux:separator variant="subtle" />
+    </div>
+
+    <div class="mb-6 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-6 dark:border-zinc-700 dark:bg-zinc-900">
+        <flux:input
+            wire:model.live.debounce.300ms="search"
+            :label="__('Search API keys')"
+            type="search"
+            :placeholder="__('Search by key name, owner, permission, or status')"
+        />
     </div>
 
     <div class="grid gap-6 xl:grid-cols-[minmax(0,24rem)_minmax(0,1fr)]">
@@ -312,7 +371,7 @@ new #[Title('API key management')] class extends Component {
 
             @if ($this->apiKeys->isEmpty())
                 <p class="mt-6 rounded-lg border border-dashed border-zinc-300 px-4 py-6 text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
-                    {{ __('No API keys have been created yet.') }}
+                    {{ trim($search) !== '' ? __('No API keys match your search.') : __('No API keys have been created yet.') }}
                 </p>
             @else
                 <div class="mt-6 overflow-x-auto">

@@ -23,6 +23,7 @@ Is It Down is a Laravel 13 and Livewire 4 application for managing monitored ser
 ### Recipient management
 
 - Create, edit, and delete recipients.
+- Search the Recipients page to quickly filter recipient rows and recipient groups.
 - Choose `Email` or `Webhook` in the UI while the application stores `mailto://` and `webhook://` endpoints internally.
 - Configure webhook authentication as:
   - none
@@ -41,6 +42,7 @@ Is It Down is a Laravel 13 and Livewire 4 application for managing monitored ser
 ### Service management
 
 - Create, edit, and delete services.
+- Search the Services page to filter both service cards and service group cards from one input.
 - Configure a service name, URL, polling interval, and optional expectation using either plain text or a regular expression.
 - Assign services to one or more service groups.
 - Assign recipients and recipient groups directly to a service.
@@ -56,6 +58,7 @@ Is It Down is a Laravel 13 and Livewire 4 application for managing monitored ser
 ### User management
 
 - Admins can create users.
+- Admins can search the Users page by name, email, or role.
 - Admins can assign and update roles.
 - Admins can delete standard users after confirming the action.
 - Admin accounts cannot be deleted from the Users page.
@@ -63,6 +66,7 @@ Is It Down is a Laravel 13 and Livewire 4 application for managing monitored ser
 ### API key management
 
 - Admins can create API keys for their own account or for named services.
+- Admins can search the API Keys page by key details, owners, permissions, and status.
 - Keys support expiration presets of 6 months, 1 year, 2 years, or never.
 - Keys support per-section `read` and `write` permissions, including the new `services` area.
 - API keys are stored securely as hashes and the plain-text token is only shown once in a post-create modal.

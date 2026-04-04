@@ -12,6 +12,8 @@ new #[Title('User management')] class extends Component {
     use PasswordValidationRules;
     use ProfileValidationRules;
 
+    public string $search = '';
+
     public string $name = '';
     public string $email = '';
     public string $password = '';
@@ -43,7 +45,17 @@ new #[Title('User management')] class extends Component {
     #[Computed]
     public function users()
     {
+        $search = $this->searchTerm();
+
         return User::query()
+            ->when($search !== '', function ($query) use ($search): void {
+                $query->where(function ($userQuery) use ($search): void {
+                    $userQuery
+                        ->where('name', 'like', '%'.$search.'%')
+                        ->orWhere('email', 'like', '%'.$search.'%')
+                        ->orWhere('role', 'like', '%'.$search.'%');
+                });
+            })
             ->orderBy('name')
             ->orderBy('email')
             ->get();
@@ -185,6 +197,14 @@ new #[Title('User management')] class extends Component {
         $this->deleteConfirmationUserId = null;
         $this->deleteConfirmationUserName = '';
     }
+
+    /**
+     * Get the normalized search term.
+     */
+    private function searchTerm(): string
+    {
+        return trim($this->search);
+    }
 }; ?>
 
 <section class="w-full">
@@ -192,6 +212,15 @@ new #[Title('User management')] class extends Component {
         <flux:heading size="xl" level="1">{{ __('Users') }}</flux:heading>
         <flux:subheading size="lg" class="mb-6">{{ __('Create accounts and manage who has admin access.') }}</flux:subheading>
         <flux:separator variant="subtle" />
+    </div>
+
+    <div class="mb-6 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-6 dark:border-zinc-700 dark:bg-zinc-900">
+        <flux:input
+            wire:model.live.debounce.300ms="search"
+            :label="__('Search users')"
+            type="search"
+            :placeholder="__('Search by name, email, or role')"
+        />
     </div>
 
     <div class="grid gap-6 xl:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
@@ -240,57 +269,63 @@ new #[Title('User management')] class extends Component {
                 </div>
             </div>
 
-            <div class="mt-6 overflow-x-auto">
-                <table class="min-w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-700">
-                    <thead>
-                        <tr class="text-left text-zinc-500 dark:text-zinc-400">
-                            <th class="pb-3 font-medium">{{ __('Name') }}</th>
-                            <th class="pb-3 font-medium">{{ __('Email') }}</th>
-                            <th class="pb-3 font-medium">{{ __('Role') }}</th>
-                            <th class="pb-3 font-medium">{{ __('Actions') }}</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-zinc-200 dark:divide-zinc-800">
-                        @foreach ($this->users as $user)
-                            <tr wire:key="user-row-{{ $user->id }}" class="align-top">
-                                <td class="py-4 pe-4">
-                                    <div class="font-medium text-zinc-900 dark:text-zinc-100">{{ $user->name }}</div>
-                                    @if ($user->id === auth()->id())
-                                        <div class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{{ __('You') }}</div>
-                                    @endif
-                                </td>
-                                <td class="py-4 pe-4 text-zinc-600 dark:text-zinc-300">{{ $user->email }}</td>
-                                <td class="py-4 pe-4">
-                                    <select
-                                        wire:model="editingRoles.{{ $user->id }}"
-                                        class="w-full min-w-32 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-                                    >
-                                        @foreach ($this->roles as $availableRole)
-                                            <option value="{{ $availableRole }}">{{ ucfirst($availableRole) }}</option>
-                                        @endforeach
-                                    </select>
-                                    @error("editingRoles.$user->id")
-                                        <p class="mt-2 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
-                                    @enderror
-                                </td>
-                                <td class="py-4">
-                                    <div class="flex flex-wrap gap-2">
-                                        <flux:button wire:click="updateRole({{ $user->id }})" variant="ghost">
-                                            {{ __('Save role') }}
-                                        </flux:button>
-
-                                        @if (! $user->isAdmin())
-                                            <flux:button type="button" variant="danger" wire:click="confirmUserDeletion({{ $user->id }})">
-                                                {{ __('Delete') }}
-                                            </flux:button>
-                                        @endif
-                                    </div>
-                                </td>
+            @if ($this->users->isEmpty())
+                <p class="mt-6 rounded-lg border border-dashed border-zinc-300 px-4 py-6 text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
+                    {{ trim($search) !== '' ? __('No users match your search.') : __('No users have been created yet.') }}
+                </p>
+            @else
+                <div class="mt-6 overflow-x-auto">
+                    <table class="min-w-full divide-y divide-zinc-200 text-sm dark:divide-zinc-700">
+                        <thead>
+                            <tr class="text-left text-zinc-500 dark:text-zinc-400">
+                                <th class="pb-3 font-medium">{{ __('Name') }}</th>
+                                <th class="pb-3 font-medium">{{ __('Email') }}</th>
+                                <th class="pb-3 font-medium">{{ __('Role') }}</th>
+                                <th class="pb-3 font-medium">{{ __('Actions') }}</th>
                             </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
+                        </thead>
+                        <tbody class="divide-y divide-zinc-200 dark:divide-zinc-800">
+                            @foreach ($this->users as $user)
+                                <tr wire:key="user-row-{{ $user->id }}" class="align-top">
+                                    <td class="py-4 pe-4">
+                                        <div class="font-medium text-zinc-900 dark:text-zinc-100">{{ $user->name }}</div>
+                                        @if ($user->id === auth()->id())
+                                            <div class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{{ __('You') }}</div>
+                                        @endif
+                                    </td>
+                                    <td class="py-4 pe-4 text-zinc-600 dark:text-zinc-300">{{ $user->email }}</td>
+                                    <td class="py-4 pe-4">
+                                        <select
+                                            wire:model="editingRoles.{{ $user->id }}"
+                                            class="w-full min-w-32 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                                        >
+                                            @foreach ($this->roles as $availableRole)
+                                                <option value="{{ $availableRole }}">{{ ucfirst($availableRole) }}</option>
+                                            @endforeach
+                                        </select>
+                                        @error("editingRoles.$user->id")
+                                            <p class="mt-2 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                                        @enderror
+                                    </td>
+                                    <td class="py-4">
+                                        <div class="flex flex-wrap gap-2">
+                                            <flux:button wire:click="updateRole({{ $user->id }})" variant="ghost">
+                                                {{ __('Save role') }}
+                                            </flux:button>
+
+                                            @if (! $user->isAdmin())
+                                                <flux:button type="button" variant="danger" wire:click="confirmUserDeletion({{ $user->id }})">
+                                                    {{ __('Delete') }}
+                                                </flux:button>
+                                            @endif
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @endif
         </div>
     </div>
 

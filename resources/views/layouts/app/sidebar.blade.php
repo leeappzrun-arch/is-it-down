@@ -16,11 +16,11 @@
                         {{ __('Dashboard') }}
                     </flux:sidebar.item>
                     @if (auth()->user()->isAdmin())
-                        <flux:sidebar.item icon="folder" :href="route('recipients.index')" :current="request()->routeIs('recipients.*')" wire:navigate>
-                            {{ __('Recipients') }}
-                        </flux:sidebar.item>
                         <flux:sidebar.item icon="cpu-chip" :href="route('services.index')" :current="request()->routeIs('services.*')" wire:navigate>
                             {{ __('Services') }}
+                        </flux:sidebar.item>
+                        <flux:sidebar.item icon="folder" :href="route('recipients.index')" :current="request()->routeIs('recipients.*')" wire:navigate>
+                            {{ __('Recipients') }}
                         </flux:sidebar.item>
                     @endif
                 </flux:sidebar.group>
