@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "f323fe04754effa5331d2f2ad15f0d08",
+    "content-hash": "7d768f596440775ce089509c77af5517",
     "packages": [
         {
             "name": "bacon/bacon-qr-code",
@@ -6926,6 +6926,72 @@
         }
     ],
     "packages-dev": [
+        {
+            "name": "dgtlss/warden",
+            "version": "1.5.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/dgtlss/warden.git",
+                "reference": "92cf6288dcd0ede4bea6a00b530072f375296e6b"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/dgtlss/warden/zipball/92cf6288dcd0ede4bea6a00b530072f375296e6b",
+                "reference": "92cf6288dcd0ede4bea6a00b530072f375296e6b",
+                "shasum": ""
+            },
+            "require": {
+                "guzzlehttp/guzzle": "^7.0",
+                "illuminate/cache": "^7.0|^8.0|^9.0|^10.0|^11.0|^12.0|^13.0",
+                "illuminate/support": "^7.0|^8.0|^9.0|^10.0|^11.0|^12.0|^13.0",
+                "laravel/prompts": "^0.3",
+                "php": ">=8.3"
+            },
+            "require-dev": {
+                "larastan/larastan": "^3.0",
+                "orchestra/testbench": "^10.9|^11.0",
+                "phpstan/phpstan": "^2.1",
+                "rector/rector": "^2.2"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Dgtlss\\Warden\\Providers\\WardenServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Dgtlss\\Warden\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Nathan Langer",
+                    "email": "nathanlanger@googlemail.com"
+                }
+            ],
+            "description": "A Laravel package that proactively monitors your dependencies for security vulnerabilities by running automated composer audits and sending notifications via webhooks and email",
+            "keywords": [
+                "audits",
+                "composer",
+                "cve",
+                "laravel",
+                "notifications",
+                "security",
+                "vulnerabilities"
+            ],
+            "support": {
+                "issues": "https://github.com/dgtlss/warden/issues",
+                "source": "https://github.com/dgtlss/warden/tree/v1.5.1"
+            },
+            "time": "2026-03-31T22:16:08+00:00"
+        },
         {
             "name": "fakerphp/faker",
             "version": "v1.24.1",

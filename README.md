@@ -14,6 +14,12 @@ Is It Down is a Laravel 13 and Livewire 4 application for managing monitored ser
 - Admins can open those dashboard stats to jump straight into the matching management screens.
 - Authenticated users can access profile, appearance, and security settings.
 
+### Security auditing
+
+- Laravel Warden is installed for dependency and configuration audits.
+- Local high-severity audits can be run through Composer scripts.
+- GitHub Actions runs a Warden audit before PHPUnit in the main test workflow.
+
 ### Role-based access
 
 - `admin` users can manage recipients and users.
@@ -115,6 +121,7 @@ ddev composer install --no-interaction --prefer-dist
 ddev exec php artisan migrate --seed
 ddev exec php artisan schedule:work
 ddev exec php artisan test --compact
+ddev exec env CACHE_STORE=file composer security:audit
 ddev npm run dev
 ```
 
@@ -154,11 +161,33 @@ Run focused tests while developing:
 ddev exec php artisan test --compact tests/Feature/DocumentationPagesTest.php
 ```
 
+Run the Warden audit locally:
+
+```bash
+ddev exec env CACHE_STORE=file composer security:audit
+```
+
+Run the Warden audit with NPM checks:
+
+```bash
+ddev exec env CACHE_STORE=file composer security:audit:npm
+```
+
 Run the full test suite when needed:
 
 ```bash
 ddev exec php artisan test --compact
 ```
+
+## Git Hooks
+
+To make Warden run before each commit, point Git at the repo-managed hooks once per clone:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+The included pre-commit hook runs `ddev exec env CACHE_STORE=file composer security:audit`, which blocks commits when Warden reports high-severity issues.
 
 ## Documentation Maintenance
 

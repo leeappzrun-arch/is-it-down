@@ -53,6 +53,11 @@ jobs:
       - name: Generate Application Key
         run: php artisan key:generate
 
+      - name: Run Warden Security Audit
+        env:
+          CACHE_STORE: file
+        run: composer security:audit:github
+
       - name: Build Assets
         run: npm run build
 

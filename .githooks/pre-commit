@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+
+set -eu
+
+if ! command -v ddev >/dev/null 2>&1; then
+    printf '%s\n' 'DDEV is required to run the Warden pre-commit audit.' >&2
+    exit 1
+fi
+
+printf '%s\n' 'Running Warden pre-commit audit...'
+ddev exec env CACHE_STORE=file composer security:audit
