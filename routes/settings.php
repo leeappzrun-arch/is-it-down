@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\User;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
 
@@ -22,4 +23,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ),
         )
         ->name('security.edit');
+});
+
+Route::middleware(['auth', 'verified', 'role:'.User::ROLE_ADMIN])->group(function () {
+    Route::livewire('settings/ai-assistant', 'pages::settings.ai-assistant')->name('ai-assistant.edit');
 });

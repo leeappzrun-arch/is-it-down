@@ -28,16 +28,16 @@
 
             @if (auth()->user()->isAdmin())
                 <flux:sidebar.nav>
-                    <flux:sidebar.group :heading="__('Access')" class="grid">
-                        <flux:sidebar.item icon="users" :href="route('users.index')" :current="request()->routeIs('users.*')" wire:navigate>
-                            {{ __('Users') }}
-                        </flux:sidebar.item>
-                        <flux:sidebar.item icon="key" :href="route('api-keys.index')" :current="request()->routeIs('api-keys.*')" wire:navigate>
-                            {{ __('API Keys') }}
-                        </flux:sidebar.item>
-                    </flux:sidebar.group>
-                </flux:sidebar.nav>
-            @endif
+                <flux:sidebar.group :heading="__('Access')" class="grid">
+                    <flux:sidebar.item icon="users" :href="route('users.index')" :current="request()->routeIs('users.*')" wire:navigate>
+                        {{ __('Users') }}
+                    </flux:sidebar.item>
+                    <flux:sidebar.item icon="key" :href="route('api-keys.index')" :current="request()->routeIs('api-keys.*')" wire:navigate>
+                        {{ __('API Keys') }}
+                    </flux:sidebar.item>
+                </flux:sidebar.group>
+            </flux:sidebar.nav>
+        @endif
 
             <flux:spacer />
 
@@ -132,6 +132,10 @@
         </flux:header>
 
         {{ $slot }}
+
+        @if (auth()->check() && \App\Models\AiAssistantSetting::enabled() !== null)
+            <livewire:ai-assistant.widget />
+        @endif
 
         @fluxScripts
     </body>

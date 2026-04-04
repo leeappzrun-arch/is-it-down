@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\AiAssistantSetting;
 use App\Models\Recipient;
 use App\Models\RecipientGroup;
 use App\Models\Service;
@@ -37,6 +38,7 @@ class DatabaseSeederTest extends TestCase
         $this->assertDatabaseCount('service_groups', 2);
         $this->assertDatabaseCount('services', 2);
         $this->assertDatabaseCount('api_keys', 2);
+        $this->assertDatabaseCount('ai_assistant_settings', 1);
 
         $operationsInbox = Recipient::query()->where('name', 'Operations Inbox')->first();
         $operationsGroup = RecipientGroup::query()->where('name', 'Operations')->first();
@@ -54,6 +56,7 @@ class DatabaseSeederTest extends TestCase
         );
         $this->assertSame([$productionGroup->id], $marketingSite->groups()->where('service_groups.name', 'Production')->pluck('service_groups.id')->all());
         $this->assertSame(Service::EXPECT_TEXT, $marketingSite->expect_type);
+        $this->assertFalse(AiAssistantSetting::current()->is_enabled);
         $this->assertContains(ApiKeyPermissions::permission('services', 'read'), ApiKeyPermissions::all());
         $this->assertContains(ApiKeyPermissions::permission('services', 'write'), ApiKeyPermissions::all());
     }

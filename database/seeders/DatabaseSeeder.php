@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
             ServiceGroupSeeder::class,
             ServiceSeeder::class,
             ApiKeySeeder::class,
+            AiAssistantSettingSeeder::class,
         ]);
     }
 }

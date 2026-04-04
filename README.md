@@ -13,6 +13,7 @@ Is It Down is a Laravel 13 and Livewire 4 application for managing monitored ser
 - The dashboard shows a live service-status grid plus high-level totals for recipients, recipient groups, services, service groups, users, and API keys.
 - Admins can open those dashboard stats to jump straight into the matching management screens.
 - Authenticated users can access profile, appearance, and security settings.
+- When the AI assistant is enabled and configured by an admin, authenticated users also get a floating bottom-right chat launcher across the application shell.
 
 ### Security auditing
 
@@ -84,6 +85,17 @@ Is It Down is a Laravel 13 and Livewire 4 application for managing monitored ser
 - API keys are stored securely as hashes and the plain-text token is only shown once in a post-create modal.
 - Keys can be revoked without removing the database record.
 
+### AI assistant
+
+- Admins can configure the in-app AI assistant from `/settings/ai-assistant`.
+- The AI Assistant settings link appears in the admin settings navigation.
+- The assistant stays hidden until an admin enables it and saves a provider URL, model, and API key.
+- The assistant appears as a floating chat launcher in the bottom-right corner of authenticated pages.
+- Conversations stay open across closes and page navigation for the current browser session.
+- Standard users can ask for help with monitoring and outage questions.
+- Admins can also ask the assistant to create, update, and delete users, recipients, and services.
+- The assistant rules and management tool guidance are centralized in `app/Support/AiAssistant/AiAssistantRules.php` and `app/Support/AiAssistant/AiAssistantToolExecutor.php`, which should be updated when new features or management flows are added.
+
 ### REST API
 
 - Versioned API routes live under `/api/v1`.
@@ -110,6 +122,7 @@ Is It Down is a Laravel 13 and Livewire 4 application for managing monitored ser
 - `/services` is the admin service and service group management page.
 - `/users` is the admin user management page.
 - `/api-keys` is the admin API key management page.
+- `/settings/ai-assistant` is the admin AI assistant configuration page.
 - `/api/v1/*` is the authenticated REST API surface for recipients, recipient groups, services, service groups, and users.
 - `/settings/profile`, `/settings/appearance`, and `/settings/security` manage account preferences.
 - `/user-guide`, `/api-documentation`, `/api-playground`, and `/webhook-documentation` provide internal documentation pages.
@@ -213,6 +226,7 @@ The following files are part of the project’s living documentation and should 
 - `resources/views/pages/⚡webhook-documentation.blade.php` for webhook recipient setup, authentication, payload expectations, and delivery guidance
 - `config/api_keys.php` for the API key permission registry used by the admin UI and future API authorization
 - `app/Support/ApiDocumentation.php` for the shared endpoint catalog that powers the docs and playground
+- `app/Support/AiAssistant/AiAssistantRules.php` and `app/Support/AiAssistant/AiAssistantToolExecutor.php` for the assistant's built-in application rules and supported management actions
 
 If a feature, route, role, workflow, UI label, setup step, or API behavior changes, update the relevant documentation files in the same change.
 If webhook configuration, authentication, payload shape, retry behavior, or delivery semantics change, update the webhook documentation page in the same change.

@@ -11,7 +11,7 @@ new #[Title('User guide')] class extends Component {
     <div class="relative mb-6 w-full">
         <flux:heading size="xl" level="1">{{ __('User Guide') }}</flux:heading>
         <flux:subheading size="lg" class="mb-6">
-            {{ __('A practical walkthrough of the features currently available in Is It Down.') }}
+            {{ __('A practical walkthrough of the features currently available in Is It Down?') }}
         </flux:subheading>
         <flux:separator variant="subtle" />
     </div>
@@ -24,6 +24,7 @@ new #[Title('User guide')] class extends Component {
                     <p>{{ __('Sign in with your account to access the application. Verified users are taken to the dashboard after login.') }}</p>
                     <p>{{ __('If you are a standard user, your day-to-day actions are currently centered around your account settings and reviewing the in-app guidance pages.') }}</p>
                     <p>{{ __('If you are an admin, the main navigation will show Monitoring for Dashboard, Recipients, and Services, plus Access for Users and API Keys.') }}</p>
+                    <p>{{ __('If an admin has configured the AI assistant, a floating chat launcher will appear in the bottom-right corner of the app so you can ask for help without leaving the page.') }}</p>
                 </div>
             </div>
 
@@ -108,6 +109,18 @@ new #[Title('User guide')] class extends Component {
                     <p>{{ __('Every key can be given read and write access for each supported application area, including Services, Users, and Recipients.') }}</p>
                     <p>{{ __('Expiration can be set to 6 months, 1 year, 2 years, or never. The plain-text key is only shown once in a confirmation modal when it is created, so it should be copied immediately.') }}</p>
                     <p>{{ __('Keys can be revoked later without deleting the audit trail of who created them and what access they were given.') }}</p>
+                </div>
+            </div>
+
+            <div class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+                <flux:heading size="lg">{{ __('AI assistant') }}</flux:heading>
+                <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+                    <p>{{ __('The AI assistant appears as a floating button in the bottom-right corner of the application, but only after an admin has enabled it and added valid provider settings.') }}</p>
+                    <p>{{ __('Admins can reach the AI Assistant configuration from the Settings area.') }}</p>
+                    <p>{{ __('If you close the chat and open it again later, or move to another page, the current conversation should stay available during the same browser session.') }}</p>
+                    <p>{{ __('Standard users can use it for guidance about outages, monitoring state, and the way the current system works.') }}</p>
+                    <p>{{ __('Admins can additionally use it to create, edit, and delete users, recipients, and services when the request is clear enough to act on safely.') }}</p>
+                    <p>{{ __('If the assistant cannot act because something is ambiguous or your account lacks permission, it should explain that clearly instead of pretending the change happened.') }}</p>
                 </div>
             </div>
 
