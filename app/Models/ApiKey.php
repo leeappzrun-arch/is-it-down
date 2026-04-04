@@ -13,9 +13,7 @@ use Illuminate\Support\Str;
 
 #[Fillable([
     'name',
-    'owner_type',
     'user_id',
-    'service_name',
     'created_by_id',
     'token_prefix',
     'token_hash',
@@ -29,23 +27,6 @@ class ApiKey extends Model
 {
     /** @use HasFactory<ApiKeyFactory> */
     use HasFactory;
-
-    public const OWNER_USER = 'user';
-
-    public const OWNER_SERVICE = 'service';
-
-    /**
-     * Get the supported owner types.
-     *
-     * @return array<int, string>
-     */
-    public static function ownerTypes(): array
-    {
-        return [
-            self::OWNER_USER,
-            self::OWNER_SERVICE,
-        ];
-    }
 
     /**
      * Create a new plain text token for an API key.
@@ -120,22 +101,6 @@ class ApiKey extends Model
     }
 
     /**
-     * Determine whether the key belongs to a user account.
-     */
-    public function isUserOwned(): bool
-    {
-        return $this->owner_type === self::OWNER_USER;
-    }
-
-    /**
-     * Determine whether the key belongs to a service.
-     */
-    public function isServiceOwned(): bool
-    {
-        return $this->owner_type === self::OWNER_SERVICE;
-    }
-
-    /**
      * Determine whether the key has been revoked.
      */
     public function isRevoked(): bool
@@ -177,5 +142,17 @@ class ApiKey extends Model
         }
 
         return $this->expires_at->toFormattedDateString();
+    }
+
+    /**
+     * Get the human-readable last-used label.
+     */
+    public function lastUsedLabel(): string
+    {
+        if ($this->last_used_at === null) {
+            return 'Never used';
+        }
+
+        return $this->last_used_at->diffForHumans();
     }
 }

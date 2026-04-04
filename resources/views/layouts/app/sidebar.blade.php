@@ -49,6 +49,9 @@
                     <flux:sidebar.item icon="square-code" :href="route('api-documentation')" :current="request()->routeIs('api-documentation')" wire:navigate>
                         {{ __('API Documentation') }}
                     </flux:sidebar.item>
+                    <flux:sidebar.item icon="command-line" :href="route('api-playground')" :current="request()->routeIs('api-playground')" wire:navigate>
+                        {{ __('API Playground') }}
+                    </flux:sidebar.item>
                     <flux:sidebar.item icon="link" :href="route('webhook-documentation')" :current="request()->routeIs('webhook-documentation')" wire:navigate>
                         {{ __('Webhook Documentation') }}
                     </flux:sidebar.item>

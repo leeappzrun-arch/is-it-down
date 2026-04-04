@@ -1,16 +1,19 @@
 <?php
 
+use App\Concerns\ServiceValidation;
 use App\Models\Recipient;
 use App\Models\RecipientGroup;
 use App\Models\Service;
 use App\Models\ServiceGroup;
+use App\Support\Services\ServiceData;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
 new #[Title('Service management')] class extends Component {
+    use ServiceValidation;
+
     public string $search = '';
 
     public ?int $editingServiceId = null;
@@ -174,7 +177,7 @@ new #[Title('Service management')] class extends Component {
     #[Computed]
     public function intervalOptions(): array
     {
-        return Service::intervalOptions();
+        return $this->serviceIntervalOptions();
     }
 
     /**
@@ -185,7 +188,7 @@ new #[Title('Service management')] class extends Component {
     #[Computed]
     public function expectTypeOptions(): array
     {
-        return Service::expectTypes();
+        return $this->serviceExpectationOptions();
     }
 
     /**
@@ -345,48 +348,7 @@ new #[Title('Service management')] class extends Component {
      */
     private function serviceRules(): array
     {
-        return [
-            'name' => ['required', 'string', 'max:255'],
-            'url' => [
-                'required',
-                'string',
-                'max:2048',
-                function (string $attribute, mixed $value, \Closure $fail): void {
-                    if (! is_string($value)) {
-                        $fail(__('The URL must be a string.'));
-
-                        return;
-                    }
-
-                    if (! filter_var($this->normalizeUrl($value), FILTER_VALIDATE_URL)) {
-                        $fail(__('Service URLs must use the format example.com/status or https://example.com/status.'));
-                    }
-                },
-            ],
-            'intervalSeconds' => ['required', 'integer', Rule::in(array_keys($this->intervalOptions()))],
-            'expectType' => ['required', Rule::in(array_keys($this->expectTypeOptions()))],
-            'expectValue' => [
-                Rule::requiredIf(fn (): bool => $this->expectType !== Service::EXPECT_NONE),
-                'nullable',
-                'string',
-                'max:65535',
-                function (string $attribute, mixed $value, \Closure $fail): void {
-                    if ($this->expectType !== Service::EXPECT_REGEX || blank($value)) {
-                        return;
-                    }
-
-                    if (! is_string($value) || @preg_match($value, '') === false) {
-                        $fail(__('Regular expressions must be valid PHP patterns including delimiters, for example /healthy/i.'));
-                    }
-                },
-            ],
-            'selectedServiceGroupIds' => ['array'],
-            'selectedServiceGroupIds.*' => ['integer', Rule::exists('service_groups', 'id')],
-            'selectedRecipientGroupIds' => ['array'],
-            'selectedRecipientGroupIds.*' => ['integer', Rule::exists('recipient_groups', 'id')],
-            'selectedRecipientIds' => ['array'],
-            'selectedRecipientIds.*' => ['integer', Rule::exists('recipients', 'id')],
-        ];
+        return $this->serviceValidationRules($this->expectType);
     }
 
     /**
@@ -396,32 +358,7 @@ new #[Title('Service management')] class extends Component {
      */
     private function serviceGroupRules(): array
     {
-        return [
-            'groupName' => [
-                'required',
-                'string',
-                'max:255',
-                Rule::unique('service_groups', 'name')->ignore($this->editingServiceGroupId),
-            ],
-            'groupSelectedRecipientGroupIds' => ['array'],
-            'groupSelectedRecipientGroupIds.*' => ['integer', Rule::exists('recipient_groups', 'id')],
-            'groupSelectedRecipientIds' => ['array'],
-            'groupSelectedRecipientIds.*' => ['integer', Rule::exists('recipients', 'id')],
-        ];
-    }
-
-    /**
-     * Normalize the submitted URL.
-     */
-    private function normalizeUrl(string $url): string
-    {
-        $url = trim($url);
-
-        if ($url === '') {
-            return '';
-        }
-
-        return Str::startsWith($url, ['http://', 'https://']) ? $url : 'https://'.ltrim($url, '/');
+        return $this->serviceGroupValidationRules($this->editingServiceGroupId);
     }
 
     /**
@@ -432,16 +369,7 @@ new #[Title('Service management')] class extends Component {
      */
     private function servicePayload(array $validated): array
     {
-        $expectType = $validated['expectType'];
-        $expectValue = trim((string) ($validated['expectValue'] ?? ''));
-
-        return [
-            'name' => trim($validated['name']),
-            'url' => $this->normalizeUrl($validated['url']),
-            'interval_seconds' => (int) $validated['intervalSeconds'],
-            'expect_type' => $expectType === Service::EXPECT_NONE ? null : $expectType,
-            'expect_value' => $expectType === Service::EXPECT_NONE || $expectValue === '' ? null : $expectValue,
-        ];
+        return ServiceData::payload($validated);
     }
 
     /**

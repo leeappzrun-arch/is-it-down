@@ -45,6 +45,7 @@ This project has domain-specific skills available. You MUST activate the relevan
 - For destructive actions on management pages, prefer a confirmation modal over immediate deletion from a table row or card action.
 - Keep new and updated pages responsive by default. Prefer layouts that stack cleanly on smaller screens, avoid cramped multi-column forms before there is enough width, and make primary actions easy to reach on mobile.
 - API key permissions are registered in `config/api_keys.php`. Whenever a new app section, management area, or API capability is added, update that permission registry in the same change so new read/write permissions are available immediately.
+- When new functionality, management areas, or permission scopes affect the API, update the REST endpoints, `config/api_keys.php`, `app/Support/ApiDocumentation.php`, `resources/views/pages/⚡api-documentation.blade.php`, `resources/views/pages/⚡api-playground.blade.php`, and the related API tests in the same change so the permission matrix and API surface stay aligned.
 - Treat the dashboard stats as part of the product surface. When a new top-level management area or important application feature is added, decide whether it needs a dashboard stat card and update the dashboard in the same change when appropriate.
 - When a new feature, management area, or model is introduced, add or update factories and seeders in the same change so local development and tests have representative data available immediately.
 
@@ -64,11 +65,12 @@ This project has domain-specific skills available. You MUST activate the relevan
 ## Documentation Files
 
 - You must only create documentation files if explicitly requested by the user.
-- The user has explicitly requested project documentation in this repository. Treat `README.md`, `resources/views/pages/⚡user-guide.blade.php`, `resources/views/pages/⚡api-documentation.blade.php`, and `resources/views/pages/⚡webhook-documentation.blade.php` as living documentation files.
+- The user has explicitly requested project documentation in this repository. Treat `README.md`, `resources/views/pages/⚡user-guide.blade.php`, `resources/views/pages/⚡api-documentation.blade.php`, `resources/views/pages/⚡api-playground.blade.php`, and `resources/views/pages/⚡webhook-documentation.blade.php` as living documentation files.
 - Whenever a change affects setup steps, routes, navigation, roles, permissions, UI workflows, recipient handling, webhook behavior, user management, API key permissions, or API behavior, update the relevant documentation files in the same change.
 - Keep `README.md` focused on project overview, setup, routes, and developer workflow.
 - Keep `resources/views/pages/⚡user-guide.blade.php` focused on user-facing guidance for the features currently shipped.
 - Keep `resources/views/pages/⚡api-documentation.blade.php` focused on current API behavior. Until APIs exist, keep its placeholder status accurate.
+- Keep `resources/views/pages/⚡api-playground.blade.php` focused on the live endpoint catalog and interactive testing experience for the currently shipped API.
 - Keep `resources/views/pages/⚡webhook-documentation.blade.php` focused on current webhook recipient behavior, delivery expectations, authentication, and examples.
 - Keep dashboard documentation accurate too: if the visible dashboard stats or their click-through behavior change, update the relevant docs and AI guidance in the same change.
 

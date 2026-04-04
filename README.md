@@ -2,7 +2,7 @@
 
 ## Overview
 
-Is It Down is a Laravel 13 and Livewire 4 application for managing monitored services and the recipients who should be notified about them. The project currently focuses on authenticated access, role-based administration, recipient management, service management, grouped routing targets, scheduled uptime checks, webhook and email delivery, user/account management, and pre-provisioned API keys for future integrations.
+Is It Down is a Laravel 13 and Livewire 4 application for managing monitored services and the recipients who should be notified about them. The project currently focuses on authenticated access, role-based administration, recipient management, service management, grouped routing targets, scheduled uptime checks, webhook and email delivery, user/account management, personal API keys, and a versioned REST API for integrations.
 
 ## Current Features
 
@@ -77,17 +77,29 @@ Is It Down is a Laravel 13 and Livewire 4 application for managing monitored ser
 
 ### API key management
 
-- Admins can create API keys for their own account or for named services.
+- Admins can create personal API keys that are always linked to the account that created them.
 - Admins can search the API Keys page by key details, owners, permissions, and status.
 - Keys support expiration presets of 6 months, 1 year, 2 years, or never.
 - Keys support per-section `read` and `write` permissions, including the new `services` area.
 - API keys are stored securely as hashes and the plain-text token is only shown once in a post-create modal.
 - Keys can be revoked without removing the database record.
 
+### REST API
+
+- Versioned API routes live under `/api/v1`.
+- Requests authenticate with a bearer token using a stored API key hash.
+- Expired, revoked, or unlinked API keys are rejected automatically.
+- `recipients:*` permissions cover recipients and recipient groups.
+- `services:*` permissions cover services and service groups.
+- `users:*` permissions cover user listing and management.
+- Listing endpoints support search plus resource-specific filtering where relevant.
+- Creation endpoints reuse the same validation rules as the matching Livewire management forms.
+
 ### In-app documentation
 
 - `/user-guide` contains user-facing guidance for the features currently available.
-- `/api-documentation` explains the current pre-API state and notes that full endpoint documentation will be added once the API exists.
+- `/api-documentation` documents the current REST API, its authentication requirements, permissions, and endpoint contracts.
+- `/api-playground` provides an authenticated in-app playground for trying documented API endpoints with a supplied API key.
 - `/webhook-documentation` documents the current webhook recipient setup, supported authentication modes, and the details that should stay aligned with future webhook delivery changes.
 
 ## Main Routes
@@ -98,8 +110,9 @@ Is It Down is a Laravel 13 and Livewire 4 application for managing monitored ser
 - `/services` is the admin service and service group management page.
 - `/users` is the admin user management page.
 - `/api-keys` is the admin API key management page.
+- `/api/v1/*` is the authenticated REST API surface for recipients, recipient groups, services, service groups, and users.
 - `/settings/profile`, `/settings/appearance`, and `/settings/security` manage account preferences.
-- `/user-guide`, `/api-documentation`, and `/webhook-documentation` provide internal documentation pages.
+- `/user-guide`, `/api-documentation`, `/api-playground`, and `/webhook-documentation` provide internal documentation pages.
 
 ## API Key Permissions
 
@@ -107,7 +120,7 @@ Available API key permissions are defined in `config/api_keys.php`.
 
 - Add each new app section to the `resources` array.
 - Every listed resource automatically receives `read` and `write` permissions.
-- When new sections or API capabilities ship, update this config, the relevant tests, and the documentation in the same change.
+- When new sections or API capabilities ship, update this config, the relevant tests, the API routes, the endpoint catalog, and the documentation in the same change.
 
 ## Local Development
 
@@ -150,7 +163,7 @@ Running the database seeder provisions two verified accounts for local developme
 - `admin@example.com` / `password`
 - `user@example.com` / `password`
 
-The seeder also creates sample recipient groups, recipients, and API keys so the dashboard and management screens have representative data immediately.
+The seeder also creates sample recipient groups, recipients, and personal API keys so the dashboard, management screens, and API have representative data immediately.
 It also seeds service groups and services so the routing views and monitoring status cards have meaningful examples on a fresh install.
 
 ## Testing
@@ -196,9 +209,12 @@ The following files are part of the project’s living documentation and should 
 - `README.md` for setup, architecture, feature summaries, routes, and developer workflow
 - `resources/views/pages/⚡user-guide.blade.php` for user-facing workflow instructions
 - `resources/views/pages/⚡api-documentation.blade.php` for API capabilities, contracts, authentication, and examples
+- `resources/views/pages/⚡api-playground.blade.php` for the interactive endpoint playground
 - `resources/views/pages/⚡webhook-documentation.blade.php` for webhook recipient setup, authentication, payload expectations, and delivery guidance
 - `config/api_keys.php` for the API key permission registry used by the admin UI and future API authorization
+- `app/Support/ApiDocumentation.php` for the shared endpoint catalog that powers the docs and playground
 
 If a feature, route, role, workflow, UI label, setup step, or API behavior changes, update the relevant documentation files in the same change.
 If webhook configuration, authentication, payload shape, retry behavior, or delivery semantics change, update the webhook documentation page in the same change.
 If a new management area or top-level app feature is added, update the dashboard stats as part of the same change when it should be surfaced there.
+If new functionality or permissions affect the API, update the API routes, endpoint catalog, playground, tests, and API documentation in the same change.

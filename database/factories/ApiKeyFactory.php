@@ -22,9 +22,7 @@ class ApiKeyFactory extends Factory
 
         return [
             'name' => fake()->words(2, true),
-            'owner_type' => ApiKey::OWNER_USER,
             'user_id' => User::factory(),
-            'service_name' => null,
             'created_by_id' => User::factory(),
             'token_prefix' => substr($plainTextToken, 0, 12),
             'token_hash' => ApiKey::hashToken($plainTextToken),
@@ -33,18 +31,6 @@ class ApiKeyFactory extends Factory
             'last_used_at' => null,
             'revoked_at' => null,
         ];
-    }
-
-    /**
-     * Indicate that the API key belongs to a service instead of a user.
-     */
-    public function service(): static
-    {
-        return $this->state(fn (array $attributes): array => [
-            'owner_type' => ApiKey::OWNER_SERVICE,
-            'user_id' => null,
-            'service_name' => 'Status page worker',
-        ]);
     }
 
     /**

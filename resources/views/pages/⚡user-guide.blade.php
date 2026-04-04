@@ -103,11 +103,20 @@ new #[Title('User guide')] class extends Component {
                 <flux:heading size="lg">{{ __('API key management') }}</flux:heading>
                 <flux:subheading class="mt-2">{{ __('Admin only') }}</flux:subheading>
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
-                    <p>{{ __('Admins can create API keys for their own account or for a named service from the API Keys page.') }}</p>
+                    <p>{{ __('Admins can create API keys from the API Keys page, and every key is automatically linked to the signed-in account that created it.') }}</p>
                     <p>{{ __('The sticky page-level search field filters issued keys by key details, ownership information, permissions, and status so older keys are easier to find.') }}</p>
                     <p>{{ __('Every key can be given read and write access for each supported application area, including Services, Users, and Recipients.') }}</p>
                     <p>{{ __('Expiration can be set to 6 months, 1 year, 2 years, or never. The plain-text key is only shown once in a confirmation modal when it is created, so it should be copied immediately.') }}</p>
                     <p>{{ __('Keys can be revoked later without deleting the audit trail of who created them and what access they were given.') }}</p>
+                </div>
+            </div>
+
+            <div class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+                <flux:heading size="lg">{{ __('API access') }}</flux:heading>
+                <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+                    <p>{{ __('The application now exposes a REST API under `/api/v1`, authenticated with bearer tokens generated from the API Keys page.') }}</p>
+                    <p>{{ __('Read routes and write routes each require the matching API key permissions, and expired or revoked keys stop working immediately.') }}</p>
+                    <p>{{ __('Use the API Documentation page for the full endpoint reference and the API Playground page to test those endpoints against the current environment.') }}</p>
                 </div>
             </div>
 
@@ -123,7 +132,7 @@ new #[Title('User guide')] class extends Component {
             <div class="rounded-xl border border-dashed border-zinc-300 bg-zinc-50 p-6 dark:border-zinc-700 dark:bg-zinc-950/40">
                 <flux:heading size="lg">{{ __('Need a quick reference?') }}</flux:heading>
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
-                    <p>{{ __('Use this page for user-facing workflow guidance, the API Documentation page for current API status, the Webhook Documentation page for recipient delivery and payload notes, and the project README for setup and technical reference.') }}</p>
+                    <p>{{ __('Use this page for user-facing workflow guidance, the API Documentation page for endpoint contracts, the API Playground page for live testing, the Webhook Documentation page for recipient delivery and payload notes, and the project README for setup and technical reference.') }}</p>
                 </div>
             </div>
         </div>

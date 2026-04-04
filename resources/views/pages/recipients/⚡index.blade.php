@@ -1,14 +1,17 @@
 <?php
 
+use App\Concerns\RecipientValidation;
 use App\Models\Recipient;
 use App\Models\RecipientGroup;
+use App\Support\Recipients\RecipientData;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
 new #[Title('Recipient management')] class extends Component {
+    use RecipientValidation;
+
     public string $search = '';
 
     public ?int $editingRecipientId = null;
@@ -117,10 +120,7 @@ new #[Title('Recipient management')] class extends Component {
     #[Computed]
     public function endpointTypeOptions(): array
     {
-        return [
-            Recipient::TYPE_MAIL => 'Email',
-            Recipient::TYPE_WEBHOOK => 'Webhook',
-        ];
+        return $this->recipientEndpointTypeOptions();
     }
 
     /**
@@ -131,12 +131,7 @@ new #[Title('Recipient management')] class extends Component {
     #[Computed]
     public function webhookAuthenticationOptions(): array
     {
-        return [
-            Recipient::WEBHOOK_AUTH_NONE => 'None',
-            Recipient::WEBHOOK_AUTH_BEARER => 'Bearer token',
-            Recipient::WEBHOOK_AUTH_BASIC => 'Basic auth',
-            Recipient::WEBHOOK_AUTH_HEADER => 'Custom header',
-        ];
+        return $this->recipientWebhookAuthenticationOptions();
     }
 
     /**
@@ -175,7 +170,7 @@ new #[Title('Recipient management')] class extends Component {
             ->with('groups:id')
             ->findOrFail($recipientId);
 
-        ['type' => $endpointType, 'target' => $endpointTarget] = $this->parseEndpoint($recipient->endpoint);
+        ['type' => $endpointType, 'target' => $endpointTarget] = RecipientData::parseEndpoint($recipient->endpoint);
 
         $this->editingRecipientId = $recipient->id;
         $this->name = $recipient->name;
@@ -303,82 +298,7 @@ new #[Title('Recipient management')] class extends Component {
      */
     private function recipientRules(): array
     {
-        return [
-            'name' => ['required', 'string', 'max:255'],
-            'endpointType' => ['required', 'string', Rule::in(array_keys($this->endpointTypeOptions()))],
-            'endpointTarget' => [
-                'required',
-                'string',
-                'max:2048',
-                function (string $attribute, mixed $value, \Closure $fail): void {
-                    if (! is_string($value)) {
-                        $fail(__('The destination must be a string.'));
-
-                        return;
-                    }
-
-                    $target = $this->normalizeEndpointTarget($value, $this->endpointType);
-
-                    if ($this->endpointType === Recipient::TYPE_MAIL) {
-                        if ($target === '' || ! filter_var($target, FILTER_VALIDATE_EMAIL)) {
-                            $fail(__('Email destinations must use the format name@example.com.'));
-                        }
-
-                        return;
-                    }
-
-                    if ($this->endpointType === Recipient::TYPE_WEBHOOK) {
-                        $normalizedTarget = Str::startsWith($target, ['http://', 'https://'])
-                            ? $target
-                            : 'https://'.ltrim($target, '/');
-
-                        if ($target === '' || ! filter_var($normalizedTarget, FILTER_VALIDATE_URL)) {
-                            $fail(__('Webhook destinations must use the format example.com/path or https://example.com/path.'));
-                        }
-
-                        return;
-                    }
-
-                    $fail(__('Choose whether this destination is an email address or a webhook.'));
-                },
-            ],
-            'selectedGroupIds' => ['array'],
-            'selectedGroupIds.*' => ['integer', Rule::exists('recipient_groups', 'id')],
-            'webhookAuthType' => [
-                Rule::requiredIf(fn (): bool => $this->isWebhookEndpoint()),
-                Rule::in(Recipient::webhookAuthTypes()),
-            ],
-            'webhookAuthUsername' => [
-                Rule::requiredIf(fn (): bool => $this->isWebhookEndpoint() && $this->webhookAuthType === Recipient::WEBHOOK_AUTH_BASIC),
-                'nullable',
-                'string',
-                'max:255',
-            ],
-            'webhookAuthPassword' => [
-                Rule::requiredIf(fn (): bool => $this->isWebhookEndpoint() && $this->webhookAuthType === Recipient::WEBHOOK_AUTH_BASIC),
-                'nullable',
-                'string',
-                'max:255',
-            ],
-            'webhookAuthToken' => [
-                Rule::requiredIf(fn (): bool => $this->isWebhookEndpoint() && $this->webhookAuthType === Recipient::WEBHOOK_AUTH_BEARER),
-                'nullable',
-                'string',
-                'max:2048',
-            ],
-            'webhookAuthHeaderName' => [
-                Rule::requiredIf(fn (): bool => $this->isWebhookEndpoint() && $this->webhookAuthType === Recipient::WEBHOOK_AUTH_HEADER),
-                'nullable',
-                'string',
-                'max:255',
-            ],
-            'webhookAuthHeaderValue' => [
-                Rule::requiredIf(fn (): bool => $this->isWebhookEndpoint() && $this->webhookAuthType === Recipient::WEBHOOK_AUTH_HEADER),
-                'nullable',
-                'string',
-                'max:2048',
-            ],
-        ];
+        return $this->recipientValidationRules($this->endpointType, $this->webhookAuthType);
     }
 
     /**
@@ -406,33 +326,7 @@ new #[Title('Recipient management')] class extends Component {
      */
     private function recipientPayload(array $validated): array
     {
-        $endpointType = (string) $validated['endpointType'];
-        $endpointTarget = $this->normalizeEndpointTarget((string) $validated['endpointTarget'], $endpointType);
-        $isWebhookEndpoint = $endpointType === Recipient::TYPE_WEBHOOK;
-        $webhookAuthType = $isWebhookEndpoint
-            ? (string) $validated['webhookAuthType']
-            : Recipient::WEBHOOK_AUTH_NONE;
-
-        return [
-            'name' => trim($validated['name']),
-            'endpoint' => $this->buildEndpoint($endpointType, $endpointTarget),
-            'webhook_auth_type' => $webhookAuthType,
-            'webhook_auth_username' => $isWebhookEndpoint && $webhookAuthType === Recipient::WEBHOOK_AUTH_BASIC
-                ? trim((string) $validated['webhookAuthUsername'])
-                : null,
-            'webhook_auth_password' => $isWebhookEndpoint && $webhookAuthType === Recipient::WEBHOOK_AUTH_BASIC
-                ? (string) $validated['webhookAuthPassword']
-                : null,
-            'webhook_auth_token' => $isWebhookEndpoint && $webhookAuthType === Recipient::WEBHOOK_AUTH_BEARER
-                ? (string) $validated['webhookAuthToken']
-                : null,
-            'webhook_auth_header_name' => $isWebhookEndpoint && $webhookAuthType === Recipient::WEBHOOK_AUTH_HEADER
-                ? trim((string) $validated['webhookAuthHeaderName'])
-                : null,
-            'webhook_auth_header_value' => $isWebhookEndpoint && $webhookAuthType === Recipient::WEBHOOK_AUTH_HEADER
-                ? (string) $validated['webhookAuthHeaderValue']
-                : null,
-        ];
+        return RecipientData::payload($validated);
     }
 
     /**
@@ -541,58 +435,6 @@ new #[Title('Recipient management')] class extends Component {
         $this->deleteConfirmationType = null;
         $this->deleteConfirmationId = null;
         $this->deleteConfirmationName = '';
-    }
-
-    /**
-     * Normalize a user-provided endpoint target.
-     */
-    private function normalizeEndpointTarget(string $target, string $endpointType): string
-    {
-        $normalizedTarget = trim($target);
-
-        if ($endpointType === Recipient::TYPE_MAIL) {
-            return trim(Str::after($normalizedTarget, 'mailto://'));
-        }
-
-        return trim(Str::after($normalizedTarget, 'webhook://'));
-    }
-
-    /**
-     * Build the stored endpoint value.
-     */
-    private function buildEndpoint(string $endpointType, string $endpointTarget): string
-    {
-        return match ($endpointType) {
-            Recipient::TYPE_MAIL => 'mailto://'.$endpointTarget,
-            Recipient::TYPE_WEBHOOK => 'webhook://'.$endpointTarget,
-        };
-    }
-
-    /**
-     * Parse a stored endpoint into editable form fields.
-     *
-     * @return array{type: string, target: string}
-     */
-    private function parseEndpoint(string $endpoint): array
-    {
-        if (Str::startsWith($endpoint, 'mailto://')) {
-            return [
-                'type' => Recipient::TYPE_MAIL,
-                'target' => trim(Str::after($endpoint, 'mailto://')),
-            ];
-        }
-
-        if (Str::startsWith($endpoint, 'webhook://')) {
-            return [
-                'type' => Recipient::TYPE_WEBHOOK,
-                'target' => trim(Str::after($endpoint, 'webhook://')),
-            ];
-        }
-
-        return [
-            'type' => Recipient::TYPE_MAIL,
-            'target' => trim($endpoint),
-        ];
     }
 
     /**

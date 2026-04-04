@@ -1,22 +1,106 @@
 <?php
 
+use App\Support\ApiDocumentation;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
 new #[Title('API documentation')] class extends Component {
-    //
+    /**
+     * Get the endpoint catalog used by the API documentation page.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    #[Computed]
+    public function endpoints(): array
+    {
+        return ApiDocumentation::endpoints();
+    }
 }; ?>
 
 <section class="w-full">
-    <div class="mx-auto max-w-3xl rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+    <div class="relative mb-6 w-full">
         <flux:heading size="xl" level="1">{{ __('API Documentation') }}</flux:heading>
-        <flux:subheading size="lg" class="mt-3">{{ __('API key preparation') }}</flux:subheading>
+        <flux:subheading size="lg" class="mb-6">{{ __('Versioned REST endpoints authenticated with user-owned API keys.') }}</flux:subheading>
+        <flux:separator variant="subtle" />
+    </div>
 
-        <div class="mt-6 space-y-4 rounded-xl border border-dashed border-zinc-300 bg-zinc-50 p-5 text-sm leading-6 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950/40 dark:text-zinc-300">
-            <p>{{ __('Public or internal API endpoints have not been introduced yet, so there are no live base URLs, request schemas, or response examples to document today.') }}</p>
-            <p>{{ __('Admins can already create API keys ahead of that work from the API Keys page. Keys can belong to the current admin account or to a named service integration, they support per-section read and write permissions for areas such as Recipients, Services, and Users, plus optional expiration dates, and the plain-text key is only revealed once in a confirmation modal.') }}</p>
-            <p>{{ __('Webhook recipient configuration is documented separately on the Webhook Documentation page so it can evolve independently from the future HTTP API.') }}</p>
-            <p>{{ __('When the API is added, this page should be updated with authentication headers, endpoint contracts, example payloads, and the permission requirements for each route.') }}</p>
+    <div class="grid gap-6 xl:grid-cols-[minmax(0,24rem)_minmax(0,1fr)]">
+        <div class="space-y-6">
+            <div class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+                <flux:heading size="lg">{{ __('Authentication') }}</flux:heading>
+                <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+                    <p>{{ __('Every request must send an `Authorization: Bearer {api-key}` header. The bearer token is matched against the stored API key hash, and revoked or expired keys are rejected automatically.') }}</p>
+                    <p>{{ __('API keys are always linked to the user who created them, and every request is authorized again against the permissions assigned to that key.') }}</p>
+                    <p>{{ __('The current base path is :url.', ['url' => url('/api/v1')]) }}</p>
+                </div>
+            </div>
+
+            <div class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+                <flux:heading size="lg">{{ __('Permissions') }}</flux:heading>
+                <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+                    <p>{{ __('Each API key permission follows the `resource:action` format. The current API surface uses `recipients:*`, `services:*`, and `users:*` permissions, with read routes requiring `:read` and mutating routes requiring `:write`.') }}</p>
+                    <p>{{ __('Recipient groups share the `recipients` permission family, and service groups share the `services` permission family so the API stays aligned with the admin UI permission matrix.') }}</p>
+                    <p>{{ __('When new functionality or permission areas are added, the endpoints, docs, playground catalog, tests, and API key permission registry should be updated in the same change.') }}</p>
+                </div>
+            </div>
+
+            <div class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+                <flux:heading size="lg">{{ __('Playground') }}</flux:heading>
+                <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+                    <p>{{ __('Use the API Playground page to pick any documented endpoint, review its request contract, paste an API key, and send a real request against this environment.') }}</p>
+                    <p>{{ __('The playground shares the same endpoint catalog as this page so the dropdown documentation and this reference stay in sync.') }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="space-y-4">
+            @foreach ($this->endpoints as $endpoint)
+                <div class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+                    <div class="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                            <flux:heading size="lg">{{ __($endpoint['label']) }}</flux:heading>
+                            <flux:subheading class="mt-2">{{ __($endpoint['description']) }}</flux:subheading>
+                        </div>
+
+                        <div class="flex flex-wrap gap-2 text-xs font-medium">
+                            <span class="rounded-full bg-zinc-900 px-3 py-1 text-white dark:bg-zinc-100 dark:text-zinc-900">{{ $endpoint['method'] }}</span>
+                            <span class="rounded-full bg-sky-100 px-3 py-1 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300">{{ $endpoint['permission'] }}</span>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 font-mono text-sm text-zinc-800 dark:border-zinc-700 dark:bg-zinc-950/40 dark:text-zinc-200">
+                        {{ $endpoint['path'] }}
+                    </div>
+
+                    <div class="mt-4 grid gap-4 lg:grid-cols-2">
+                        <div>
+                            <div class="text-sm font-medium text-zinc-900 dark:text-zinc-100">{{ __('Query parameters') }}</div>
+                            @if ($endpoint['query_parameters'] === [])
+                                <p class="mt-2 text-sm text-zinc-500 dark:text-zinc-400">{{ __('None for this endpoint.') }}</p>
+                            @else
+                                <div class="mt-3 space-y-3">
+                                    @foreach ($endpoint['query_parameters'] as $parameter)
+                                        <div class="rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-sm dark:border-zinc-700 dark:bg-zinc-950/40">
+                                            <div class="font-mono text-zinc-900 dark:text-zinc-100">{{ $parameter['name'] }}</div>
+                                            <div class="mt-1 text-zinc-600 dark:text-zinc-300">{{ $parameter['description'] }}</div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endif
+                        </div>
+
+                        <div>
+                            <div class="text-sm font-medium text-zinc-900 dark:text-zinc-100">{{ __('Example body') }}</div>
+                            @if ($endpoint['body_example'] === null)
+                                <p class="mt-2 text-sm text-zinc-500 dark:text-zinc-400">{{ __('This endpoint does not require a JSON request body.') }}</p>
+                            @else
+                                <pre class="mt-3 overflow-x-auto rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-800 dark:border-zinc-700 dark:bg-zinc-950/40 dark:text-zinc-200">{{ json_encode($endpoint['body_example'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            @endforeach
         </div>
     </div>
 </section>

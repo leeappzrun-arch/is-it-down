@@ -11,6 +11,7 @@ class DocumentationPagesTest extends TestCase
     {
         $this->get(route('user-guide'))->assertRedirect(route('login'));
         $this->get(route('api-documentation'))->assertRedirect(route('login'));
+        $this->get(route('api-playground'))->assertRedirect(route('login'));
         $this->get(route('webhook-documentation'))->assertRedirect(route('login'));
     }
 
@@ -32,7 +33,18 @@ class DocumentationPagesTest extends TestCase
 
         $response->assertOk();
         $response->assertSeeText('API Documentation');
-        $response->assertSeeText('API key preparation');
+        $response->assertSeeText('Versioned REST endpoints authenticated with user-owned API keys.');
+        $response->assertSeeText('List recipients');
+    }
+
+    public function test_authenticated_users_can_visit_the_api_playground_page(): void
+    {
+        $response = $this->actingAs($this->verifiedUser())
+            ->get(route('api-playground'));
+
+        $response->assertOk();
+        $response->assertSeeText('API Playground');
+        $response->assertSeeText('Request setup');
     }
 
     public function test_authenticated_users_can_visit_the_webhook_documentation_page(): void
@@ -53,6 +65,7 @@ class DocumentationPagesTest extends TestCase
         $response->assertOk();
         $response->assertSee('href="'.route('user-guide').'"', false);
         $response->assertSee('href="'.route('api-documentation').'"', false);
+        $response->assertSee('href="'.route('api-playground').'"', false);
         $response->assertSee('href="'.route('webhook-documentation').'"', false);
     }
 

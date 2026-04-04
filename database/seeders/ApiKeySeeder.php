@@ -37,19 +37,6 @@ class ApiKeySeeder extends Seeder
             plainTextToken: 'iid_seed_user_read_key_000002',
             expiresAt: now()->addMonths(6),
         );
-
-        $this->seedServiceKey(
-            name: 'Status Page Worker Key',
-            creator: $admin,
-            serviceName: 'Status page worker',
-            permissions: ApiKeyPermissions::normalize([
-                ApiKeyPermissions::permission('recipients', 'read'),
-                ApiKeyPermissions::permission('recipients', 'write'),
-                ApiKeyPermissions::permission('services', 'read'),
-                ApiKeyPermissions::permission('services', 'write'),
-            ]),
-            plainTextToken: 'iid_seed_status_page_worker_000003',
-        );
     }
 
     /**
@@ -68,43 +55,9 @@ class ApiKeySeeder extends Seeder
         ApiKey::query()->updateOrCreate(
             [
                 'name' => $name,
-                'owner_type' => ApiKey::OWNER_USER,
                 'user_id' => $owner->id,
             ],
             [
-                'service_name' => null,
-                'created_by_id' => $creator->id,
-                'token_prefix' => substr($plainTextToken, 0, 12),
-                'token_hash' => ApiKey::hashToken($plainTextToken),
-                'permissions' => $permissions,
-                'expires_at' => $expiresAt,
-                'last_used_at' => null,
-                'revoked_at' => null,
-            ],
-        );
-    }
-
-    /**
-     * Create or update a service API key.
-     *
-     * @param  array<int, string>  $permissions
-     */
-    private function seedServiceKey(
-        string $name,
-        User $creator,
-        string $serviceName,
-        array $permissions,
-        string $plainTextToken,
-        ?DateTimeInterface $expiresAt = null,
-    ): void {
-        ApiKey::query()->updateOrCreate(
-            [
-                'name' => $name,
-                'owner_type' => ApiKey::OWNER_SERVICE,
-                'service_name' => $serviceName,
-            ],
-            [
-                'user_id' => null,
                 'created_by_id' => $creator->id,
                 'token_prefix' => substr($plainTextToken, 0, 12),
                 'token_hash' => ApiKey::hashToken($plainTextToken),

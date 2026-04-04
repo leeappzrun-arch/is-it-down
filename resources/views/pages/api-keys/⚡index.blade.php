@@ -1,21 +1,20 @@
 <?php
 
+use App\Concerns\ApiKeyValidation;
 use App\Models\ApiKey;
+use App\Support\ApiKeys\ApiKeyData;
 use App\Support\ApiKeyPermissions;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
 new #[Title('API key management')] class extends Component {
+    use ApiKeyValidation;
+
     public string $search = '';
 
     public string $name = '';
-
-    public string $ownerType = ApiKey::OWNER_USER;
-
-    public string $serviceName = '';
 
     public string $expirationOption = '1_year';
 
@@ -37,18 +36,6 @@ new #[Title('API key management')] class extends Component {
     }
 
     /**
-     * Update the form when the owner type changes.
-     */
-    public function updatedOwnerType(string $ownerType): void
-    {
-        if ($ownerType !== ApiKey::OWNER_SERVICE) {
-            $this->serviceName = '';
-        }
-
-        $this->resetValidation();
-    }
-
-    /**
      * Clear the plain-text token once the confirmation modal closes.
      */
     public function updatedShowNewApiKeyModal(bool $showModal): void
@@ -59,20 +46,6 @@ new #[Title('API key management')] class extends Component {
     }
 
     /**
-     * Get the available owner types.
-     *
-     * @return array<string, string>
-     */
-    #[Computed]
-    public function ownerOptions(): array
-    {
-        return [
-            ApiKey::OWNER_USER => 'My account',
-            ApiKey::OWNER_SERVICE => 'Service API key',
-        ];
-    }
-
-    /**
      * Get the expiration presets available to admins.
      *
      * @return array<string, string>
@@ -80,12 +53,7 @@ new #[Title('API key management')] class extends Component {
     #[Computed]
     public function expirationOptions(): array
     {
-        return [
-            '6_months' => '6 Months',
-            '1_year' => '1 Year',
-            '2_years' => '2 Years',
-            'never' => 'Never',
-        ];
+        return $this->apiKeyExpirationOptions();
     }
 
     /**
@@ -124,9 +92,9 @@ new #[Title('API key management')] class extends Component {
                     $apiKey->creator?->email,
                     $apiKey->user?->name,
                     $apiKey->user?->email,
-                    $apiKey->service_name,
                     implode(' ', $apiKey->permissions ?? []),
                     $apiKey->expirationLabel(),
+                    $apiKey->lastUsedLabel(),
                     $apiKey->isRevoked() ? 'revoked' : ($apiKey->isExpired() ? 'expired' : 'active'),
                 ]);
             })
@@ -138,27 +106,16 @@ new #[Title('API key management')] class extends Component {
      */
     public function createApiKey(): void
     {
-        $validated = $this->validate($this->rules());
+        $validated = $this->validate($this->apiKeyCreationRules());
         $plainTextToken = ApiKey::generatePlainTextToken();
 
-        ApiKey::query()->create([
-            'name' => trim($validated['name']),
-            'owner_type' => $validated['ownerType'],
-            'user_id' => $validated['ownerType'] === ApiKey::OWNER_USER ? auth()->id() : null,
-            'service_name' => $validated['ownerType'] === ApiKey::OWNER_SERVICE ? trim((string) $validated['serviceName']) : null,
-            'created_by_id' => auth()->id(),
-            'token_prefix' => substr($plainTextToken, 0, 12),
-            'token_hash' => ApiKey::hashToken($plainTextToken),
-            'permissions' => ApiKeyPermissions::normalize($validated['selectedPermissions']),
-            'expires_at' => $this->resolveExpirationDate($validated['expirationOption']),
-            'last_used_at' => null,
-            'revoked_at' => null,
-        ]);
+        ApiKey::query()->create(
+            ApiKeyData::createPayload($validated, auth()->user(), $plainTextToken)
+        );
 
         $this->newlyCreatedToken = $plainTextToken;
         $this->showNewApiKeyModal = true;
-        $this->reset(['name', 'serviceName']);
-        $this->ownerType = ApiKey::OWNER_USER;
+        $this->reset(['name']);
         $this->expirationOption = '1_year';
         $this->selectedPermissions = ApiKeyPermissions::all();
         $this->resetValidation();
@@ -182,41 +139,6 @@ new #[Title('API key management')] class extends Component {
         ])->save();
 
         $this->dispatch('api-key-revoked');
-    }
-
-    /**
-     * Get the validation rules for API key creation.
-     *
-     * @return array<string, array<int, mixed>>
-     */
-    private function rules(): array
-    {
-        return [
-            'name' => ['required', 'string', 'max:255'],
-            'ownerType' => ['required', Rule::in(ApiKey::ownerTypes())],
-            'serviceName' => [
-                Rule::requiredIf(fn (): bool => $this->ownerType === ApiKey::OWNER_SERVICE),
-                'nullable',
-                'string',
-                'max:255',
-            ],
-            'expirationOption' => ['required', Rule::in(array_keys($this->expirationOptions()))],
-            'selectedPermissions' => ['required', 'array', 'min:1'],
-            'selectedPermissions.*' => ['string', Rule::in(ApiKeyPermissions::all())],
-        ];
-    }
-
-    /**
-     * Resolve an expiration preset to a concrete timestamp.
-     */
-    private function resolveExpirationDate(string $expirationOption): ?\Carbon\CarbonInterface
-    {
-        return match ($expirationOption) {
-            '6_months' => now()->addMonthsNoOverflow(6),
-            '1_year' => now()->addYear(),
-            '2_years' => now()->addYears(2),
-            default => null,
-        };
     }
 
     /**
@@ -249,7 +171,7 @@ new #[Title('API key management')] class extends Component {
 <section class="w-full">
     <div class="relative mb-6 w-full">
         <flux:heading size="xl" level="1">{{ __('API Keys') }}</flux:heading>
-        <flux:subheading size="lg" class="mb-6">{{ __('Issue account or service keys now, then reuse them once the API layer is introduced.') }}</flux:subheading>
+        <flux:subheading size="lg" class="mb-6">{{ __('Create personal API keys for the live REST API, then scope them to the exact areas this account should read or write.') }}</flux:subheading>
         <flux:separator variant="subtle" />
     </div>
 
@@ -258,7 +180,7 @@ new #[Title('API key management')] class extends Component {
             wire:model.live.debounce.300ms="search"
             :label="__('Search API keys')"
             type="search"
-            :placeholder="__('Search by key name, owner, permission, or status')"
+            :placeholder="__('Search by key name, creator, permission, or status')"
         />
     </div>
 
@@ -268,7 +190,7 @@ new #[Title('API key management')] class extends Component {
                 <div class="flex flex-wrap items-start justify-between gap-4">
                     <div>
                         <flux:heading size="lg">{{ __('Create API key') }}</flux:heading>
-                        <flux:subheading class="mt-2">{{ __('Choose whether the key belongs to your admin account or a named service integration, then define what it can read or write.') }}</flux:subheading>
+                        <flux:subheading class="mt-2">{{ __('This key will always belong to your account. Choose what it can read or write before sharing it with an integration.') }}</flux:subheading>
                     </div>
 
                     <x-action-message on="api-key-created">{{ __('API key created.') }}</x-action-message>
@@ -277,29 +199,9 @@ new #[Title('API key management')] class extends Component {
                 <form wire:submit="createApiKey" class="mt-6 space-y-5">
                     <flux:input wire:model="name" :label="__('Key name')" type="text" required placeholder="Production sync" />
 
-                    <div>
-                        <label for="ownerType" class="mb-2 block text-sm font-medium text-zinc-800 dark:text-zinc-100">{{ __('Owner') }}</label>
-                        <select
-                            id="ownerType"
-                            wire:model.live="ownerType"
-                            class="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm text-zinc-900 outline-none transition focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-                        >
-                            @foreach ($this->ownerOptions as $value => $label)
-                                <option value="{{ $value }}">{{ $label }}</option>
-                            @endforeach
-                        </select>
-                        @error('ownerType')
-                            <p class="mt-2 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
-                        @enderror
+                    <div class="rounded-xl border border-dashed border-zinc-300 bg-zinc-50 p-4 text-sm text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950/40 dark:text-zinc-300">
+                        {{ __('This key will be assigned to :email.', ['email' => auth()->user()->email]) }}
                     </div>
-
-                    @if ($ownerType === \App\Models\ApiKey::OWNER_SERVICE)
-                        <flux:input wire:model="serviceName" :label="__('Service name')" type="text" required placeholder="Status page worker" />
-                    @else
-                        <div class="rounded-xl border border-dashed border-zinc-300 bg-zinc-50 p-4 text-sm text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950/40 dark:text-zinc-300">
-                            {{ __('This key will be assigned to :email.', ['email' => auth()->user()->email]) }}
-                        </div>
-                    @endif
 
                     <div>
                         <label for="expirationOption" class="mb-2 block text-sm font-medium text-zinc-800 dark:text-zinc-100">{{ __('Expires') }}</label>
@@ -320,7 +222,7 @@ new #[Title('API key management')] class extends Component {
                     <div class="space-y-3">
                         <div>
                             <flux:heading>{{ __('Permissions') }}</flux:heading>
-                            <flux:subheading class="mt-1">{{ __('Every section gets read and write permissions. Add new sections to the API key config so they appear here automatically.') }}</flux:subheading>
+                            <flux:subheading class="mt-1">{{ __('Choose which areas this key can read or write.') }}</flux:subheading>
                         </div>
 
                         <div class="space-y-4">
@@ -363,7 +265,7 @@ new #[Title('API key management')] class extends Component {
             <div class="flex flex-wrap items-start justify-between gap-4">
                 <div>
                     <flux:heading size="lg">{{ __('Issued keys') }}</flux:heading>
-                    <flux:subheading class="mt-2">{{ __('Review ownership, expiry, and permissions before the API endpoints go live.') }}</flux:subheading>
+                    <flux:subheading class="mt-2">{{ __('Review ownership, expiry, and permissions for every personal API key that has been issued.') }}</flux:subheading>
                 </div>
 
                 <x-action-message on="api-key-revoked">{{ __('API key revoked.') }}</x-action-message>
@@ -382,6 +284,7 @@ new #[Title('API key management')] class extends Component {
                                 <th class="pb-3 font-medium">{{ __('Owner') }}</th>
                                 <th class="pb-3 font-medium">{{ __('Permissions') }}</th>
                                 <th class="pb-3 font-medium">{{ __('Expires') }}</th>
+                                <th class="pb-3 font-medium">{{ __('Last Used') }}</th>
                                 <th class="pb-3 font-medium">{{ __('Status') }}</th>
                                 <th class="pb-3 font-medium">{{ __('Actions') }}</th>
                             </tr>
@@ -399,13 +302,8 @@ new #[Title('API key management')] class extends Component {
                                         </div>
                                     </td>
                                     <td class="py-4 pe-4 text-zinc-600 dark:text-zinc-300">
-                                        @if ($apiKey->isServiceOwned())
-                                            <div class="font-medium text-zinc-900 dark:text-zinc-100">{{ $apiKey->service_name }}</div>
-                                            <div class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{{ __('Service API key') }}</div>
-                                        @else
-                                            <div class="font-medium text-zinc-900 dark:text-zinc-100">{{ $apiKey->user?->name }}</div>
-                                            <div class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{{ $apiKey->user?->email }}</div>
-                                        @endif
+                                        <div class="font-medium text-zinc-900 dark:text-zinc-100">{{ $apiKey->user?->name }}</div>
+                                        <div class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{{ $apiKey->user?->email }}</div>
                                     </td>
                                     <td class="py-4 pe-4">
                                         <div class="flex flex-wrap gap-2">
@@ -418,6 +316,9 @@ new #[Title('API key management')] class extends Component {
                                     </td>
                                     <td class="py-4 pe-4 text-zinc-600 dark:text-zinc-300">
                                         {{ __($apiKey->expirationLabel()) }}
+                                    </td>
+                                    <td class="py-4 pe-4 text-zinc-600 dark:text-zinc-300">
+                                        {{ __($apiKey->lastUsedLabel()) }}
                                     </td>
                                     <td class="py-4 pe-4">
                                         @if ($apiKey->isRevoked())

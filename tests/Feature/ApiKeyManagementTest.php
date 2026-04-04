@@ -40,7 +40,6 @@ class ApiKeyManagementTest extends TestCase
 
         $response = Livewire::test('pages::api-keys.index')
             ->set('name', 'Primary admin key')
-            ->set('ownerType', ApiKey::OWNER_USER)
             ->set('expirationOption', '1_year')
             ->set('selectedPermissions', ['users:read', 'recipients:write'])
             ->call('createApiKey');
@@ -56,64 +55,31 @@ class ApiKeyManagementTest extends TestCase
         $apiKey = ApiKey::query()->where('name', 'Primary admin key')->first();
 
         $this->assertNotNull($apiKey);
-        $this->assertSame(ApiKey::OWNER_USER, $apiKey->owner_type);
         $this->assertSame($admin->id, $apiKey->user_id);
-        $this->assertNull($apiKey->service_name);
         $this->assertSame(['users:read', 'recipients:write'], $apiKey->permissions);
         $this->assertNotNull($apiKey->expires_at);
     }
 
-    public function test_admin_users_can_create_a_service_api_key_without_an_expiration_date(): void
+    public function test_api_keys_always_belong_to_the_current_admin_account(): void
     {
-        $admin = User::factory()->admin()->create();
+        $admin = User::factory()->admin()->create([
+            'email' => 'admin@example.com',
+        ]);
 
         $this->actingAs($admin);
 
-        $response = Livewire::test('pages::api-keys.index')
-            ->set('name', 'Status page')
-            ->set('ownerType', ApiKey::OWNER_SERVICE)
-            ->set('serviceName', 'Status page worker')
+        Livewire::test('pages::api-keys.index')
+            ->assertSee('This key will be assigned to admin@example.com.')
+            ->set('name', 'Read only key')
             ->set('expirationOption', 'never')
             ->set('selectedPermissions', ['recipients:read'])
             ->call('createApiKey');
 
-        $response->assertHasNoErrors();
-
         $this->assertDatabaseHas('api_keys', [
-            'name' => 'Status page',
-            'owner_type' => ApiKey::OWNER_SERVICE,
-            'service_name' => 'Status page worker',
-            'user_id' => null,
+            'name' => 'Read only key',
+            'user_id' => $admin->id,
             'expires_at' => null,
         ]);
-    }
-
-    public function test_service_api_keys_require_a_service_name(): void
-    {
-        $this->actingAs(User::factory()->admin()->create());
-
-        Livewire::test('pages::api-keys.index')
-            ->set('name', 'Broken key')
-            ->set('ownerType', ApiKey::OWNER_SERVICE)
-            ->set('serviceName', '')
-            ->set('selectedPermissions', ['users:read'])
-            ->call('createApiKey')
-            ->assertHasErrors(['serviceName']);
-    }
-
-    public function test_service_api_key_selection_hides_the_user_assignment_helper(): void
-    {
-        $admin = User::factory()->admin()->create([
-            'email' => 'leetcaine@proton.me',
-        ]);
-
-        $this->actingAs($admin);
-
-        Livewire::test('pages::api-keys.index')
-            ->assertSee('This key will be assigned to leetcaine@proton.me.')
-            ->set('ownerType', ApiKey::OWNER_SERVICE)
-            ->assertDontSee('This key will be assigned to leetcaine@proton.me.')
-            ->assertSee('Service name');
     }
 
     public function test_admin_users_can_revoke_an_api_key(): void
@@ -142,11 +108,13 @@ class ApiKeyManagementTest extends TestCase
             'permissions' => ['services:read'],
         ]);
 
-        ApiKey::factory()->for($admin, 'creator')->create([
-            'name' => 'Payroll integration',
-            'owner_type' => ApiKey::OWNER_SERVICE,
-            'user_id' => null,
-            'service_name' => 'Payroll worker',
+        $anotherUser = User::factory()->create([
+            'name' => 'Payroll User',
+            'email' => 'payroll@example.com',
+        ]);
+
+        ApiKey::factory()->for($admin, 'creator')->for($anotherUser)->create([
+            'name' => 'Payroll admin tooling',
             'permissions' => ['users:read'],
         ]);
 
@@ -154,9 +122,31 @@ class ApiKeyManagementTest extends TestCase
 
         Livewire::test('pages::api-keys.index')
             ->assertSee('Primary monitoring key')
-            ->assertSee('Payroll integration')
+            ->assertSee('Payroll admin tooling')
             ->set('search', 'payroll')
-            ->assertSee('Payroll integration')
+            ->assertSee('Payroll admin tooling')
             ->assertDontSee('Primary monitoring key');
+    }
+
+    public function test_api_key_listing_shows_last_used_details(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        ApiKey::factory()->for($admin, 'creator')->for($admin)->create([
+            'name' => 'Unused key',
+            'last_used_at' => null,
+        ]);
+
+        ApiKey::factory()->for($admin, 'creator')->for($admin)->create([
+            'name' => 'Recently used key',
+            'last_used_at' => now()->subHour(),
+        ]);
+
+        $this->actingAs($admin);
+
+        Livewire::test('pages::api-keys.index')
+            ->assertSee('Last Used')
+            ->assertSee('Never used')
+            ->assertSee('hour');
     }
 }
