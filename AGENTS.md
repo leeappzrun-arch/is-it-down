@@ -41,6 +41,7 @@ This project has domain-specific skills available. You MUST activate the relevan
 - Check for existing components to reuse before writing a new one.
 - For Livewire forms with conditional sections controlled by a select, radio, checkbox, toggle, or similar input, use explicit state fields and `wire:model.live` on the controlling input so dependent UI appears immediately.
 - For admin or management pages that render lists, tables, or result cards, add a search input near the top of the page that filters the rendered results.
+- When you add a page-level search input, use the existing sticky search pattern so it stays visible while the user scrolls and gains a stronger drop shadow only after it becomes stuck. Match the Services, Recipients, and API Documentation pages unless the user asks for a different behavior.
 - For admin or management pages with inline Edit actions, dispatch a browser event after loading the record and scroll the relevant form into view with a brief highlight or pulse so it is obvious what is being edited.
 - For destructive actions on management pages, prefer a confirmation modal over immediate deletion from a table row or card action.
 - Keep new and updated pages responsive by default. Prefer layouts that stack cleanly on smaller screens, avoid cramped multi-column forms before there is enough width, and make primary actions easy to reach on mobile.
@@ -72,6 +73,7 @@ This project has domain-specific skills available. You MUST activate the relevan
 - Keep `resources/views/pages/⚡api-documentation.blade.php` focused on current API behavior. Until APIs exist, keep its placeholder status accurate.
 - Keep `resources/views/pages/⚡api-playground.blade.php` focused on the live endpoint catalog and interactive testing experience for the currently shipped API.
 - Keep `resources/views/pages/⚡webhook-documentation.blade.php` focused on current webhook recipient behavior, delivery expectations, authentication, and examples.
+- Keep the section-level table of contents on `resources/views/pages/⚡user-guide.blade.php`, `resources/views/pages/⚡api-documentation.blade.php`, and `resources/views/pages/⚡webhook-documentation.blade.php` in sync whenever sections are added, removed, renamed, or reordered.
 - Keep dashboard documentation accurate too: if the visible dashboard stats or their click-through behavior change, update the relevant docs and AI guidance in the same change.
 
 ## Replies

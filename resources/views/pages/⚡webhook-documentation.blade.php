@@ -16,9 +16,21 @@ new #[Title('Webhook documentation')] class extends Component {
         <flux:separator variant="subtle" />
     </div>
 
-    <div class="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+    <div class="mb-6 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+        <flux:heading size="lg">{{ __('On this page') }}</flux:heading>
+        <div class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <a href="#current-scope" class="rounded-lg border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:text-zinc-100">{{ __('Current scope') }}</a>
+            <a href="#destination-format" class="rounded-lg border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:text-zinc-100">{{ __('Destination format') }}</a>
+            <a href="#authentication-options" class="rounded-lg border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:text-zinc-100">{{ __('Authentication options') }}</a>
+            <a href="#payload-shape" class="rounded-lg border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:text-zinc-100">{{ __('Payload shape') }}</a>
+            <a href="#security-and-storage" class="rounded-lg border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:text-zinc-100">{{ __('Security and storage') }}</a>
+            <a href="#grouping-and-administration" class="rounded-lg border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:text-zinc-100">{{ __('Grouping and administration') }}</a>
+        </div>
+    </div>
+
+    <div class="grid gap-6 xl:grid-cols-2">
         <div class="space-y-6">
-            <div class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+            <div id="current-scope" class="scroll-mt-24 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
                 <flux:heading size="lg">{{ __('Current scope') }}</flux:heading>
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
                     <p>{{ __('Webhook recipients are created and maintained from the Recipients page by admin users.') }}</p>
@@ -27,7 +39,7 @@ new #[Title('Webhook documentation')] class extends Component {
                 </div>
             </div>
 
-            <div class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+            <div id="destination-format" class="scroll-mt-24 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
                 <flux:heading size="lg">{{ __('Destination format') }}</flux:heading>
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
                     <p>{{ __('Choose `Webhook` as the protocol on the Recipients page, then enter the destination without the internal `webhook://` storage prefix.') }}</p>
@@ -37,7 +49,7 @@ new #[Title('Webhook documentation')] class extends Component {
                 </div>
             </div>
 
-            <div class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+            <div id="authentication-options" class="scroll-mt-24 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
                 <flux:heading size="lg">{{ __('Authentication options') }}</flux:heading>
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
                     <p>{{ __('Webhook recipients support four authentication modes: none, bearer token, basic auth, and custom header.') }}</p>
@@ -47,7 +59,7 @@ new #[Title('Webhook documentation')] class extends Component {
                 </div>
             </div>
 
-            <div class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+            <div id="payload-shape" class="scroll-mt-24 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
                 <flux:heading size="lg">{{ __('Payload shape') }}</flux:heading>
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
                     <p>{{ __('Webhook payloads are sent as JSON and include the event name, service details, the new status, the previous status, the check timestamp, the HTTP response code when available, and the reason the service was considered up or down.') }}</p>
@@ -81,7 +93,7 @@ new #[Title('Webhook documentation')] class extends Component {
         </div>
 
         <div class="space-y-6">
-            <div class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+            <div id="security-and-storage" class="scroll-mt-24 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
                 <flux:heading size="lg">{{ __('Security and storage') }}</flux:heading>
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
                     <p>{{ __('Sensitive webhook credential values are stored separately from the endpoint so authentication can be changed without rewriting the destination address.') }}</p>
@@ -90,7 +102,7 @@ new #[Title('Webhook documentation')] class extends Component {
                 </div>
             </div>
 
-            <div class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+            <div id="grouping-and-administration" class="scroll-mt-24 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
                 <flux:heading size="lg">{{ __('Grouping and administration') }}</flux:heading>
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
                     <p>{{ __('Webhook recipients can be assigned to one or more recipient groups during creation or editing.') }}</p>
@@ -100,13 +112,6 @@ new #[Title('Webhook documentation')] class extends Component {
                 </div>
             </div>
 
-            <div class="rounded-xl border border-dashed border-zinc-300 bg-zinc-50 p-6 dark:border-zinc-700 dark:bg-zinc-950/40">
-                <flux:heading size="lg">{{ __('Keep this page current') }}</flux:heading>
-                <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
-                    <p>{{ __('Whenever webhook validation rules, supported authentication modes, payload structure, headers, delivery timing, retry behavior, permissions, or navigation change, update this page in the same pull request.') }}</p>
-                    <p>{{ __('Use the User Guide for broader workflow help and the API Documentation page for future HTTP API contracts that are separate from recipient configuration.') }}</p>
-                </div>
-            </div>
         </div>
     </div>
 </section>

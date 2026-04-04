@@ -480,7 +480,14 @@ new #[Title('Recipient management')] class extends Component {
         <flux:separator variant="subtle" />
     </div>
 
-    <div class="sticky top-4 z-20 mb-6 rounded-xl border border-zinc-200 bg-white/95 p-4 shadow-sm backdrop-blur sm:p-6 dark:border-zinc-700 dark:bg-zinc-900/95">
+    <div
+        x-data="{ isStuck: false, updateStickyState() { this.isStuck = this.$el.getBoundingClientRect().top <= 16 && window.scrollY > 0; } }"
+        x-init="updateStickyState()"
+        x-on:scroll.window.throttle.50ms="updateStickyState()"
+        x-on:resize.window.throttle.50ms="updateStickyState()"
+        :class="isStuck ? 'shadow-lg shadow-zinc-900/10 dark:shadow-black/30' : 'shadow-sm'"
+        class="sticky top-4 z-20 mb-6 rounded-xl border border-zinc-200 bg-white/95 p-4 backdrop-blur transition-shadow duration-200 sm:p-6 dark:border-zinc-700 dark:bg-zinc-900/95"
+    >
         <flux:input
             wire:model.live.debounce.300ms="search"
             :label="__('Search recipients and groups')"

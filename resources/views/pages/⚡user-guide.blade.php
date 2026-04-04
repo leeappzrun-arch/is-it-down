@@ -16,9 +16,27 @@ new #[Title('User guide')] class extends Component {
         <flux:separator variant="subtle" />
     </div>
 
-    <div class="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+    <div class="mb-6 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+        <flux:heading size="lg">{{ __('On this page') }}</flux:heading>
+        <div class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <a href="#getting-started" class="rounded-lg border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:text-zinc-100">{{ __('Getting started') }}</a>
+            <a href="#dashboard" class="rounded-lg border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:text-zinc-100">{{ __('Dashboard') }}</a>
+            <a href="#recipient-management" class="rounded-lg border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:text-zinc-100">{{ __('Recipient management') }}</a>
+            <a href="#group-management" class="rounded-lg border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:text-zinc-100">{{ __('Group management') }}</a>
+            <a href="#service-management" class="rounded-lg border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:text-zinc-100">{{ __('Service management') }}</a>
+            <a href="#service-group-management" class="rounded-lg border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:text-zinc-100">{{ __('Service group management') }}</a>
+            <a href="#user-management" class="rounded-lg border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:text-zinc-100">{{ __('User management') }}</a>
+            <a href="#api-key-management" class="rounded-lg border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:text-zinc-100">{{ __('API key management') }}</a>
+            <a href="#dave" class="rounded-lg border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:text-zinc-100">{{ __('Dave') }}</a>
+            <a href="#api-access" class="rounded-lg border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:text-zinc-100">{{ __('API access') }}</a>
+            <a href="#account-settings" class="rounded-lg border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:text-zinc-100">{{ __('Account settings') }}</a>
+            <a href="#quick-reference" class="rounded-lg border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:text-zinc-100">{{ __('Need a quick reference?') }}</a>
+        </div>
+    </div>
+
+    <div class="grid gap-6 xl:grid-cols-2">
         <div class="space-y-6">
-            <div class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+            <div id="getting-started" class="scroll-mt-24 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
                 <flux:heading size="lg">{{ __('Getting started') }}</flux:heading>
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
                     <p>{{ __('Sign in with your account to access the application. Verified users are taken to the dashboard after login.') }}</p>
@@ -28,7 +46,7 @@ new #[Title('User guide')] class extends Component {
                 </div>
             </div>
 
-            <div class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+            <div id="dashboard" class="scroll-mt-24 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
                 <flux:heading size="lg">{{ __('Dashboard') }}</flux:heading>
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
                     <p>{{ __('The dashboard is the default landing page after authentication and shows a live service-status grid above the headline totals for recipients, recipient groups, services, service groups, users, and API keys.') }}</p>
@@ -37,7 +55,7 @@ new #[Title('User guide')] class extends Component {
                 </div>
             </div>
 
-            <div class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+            <div id="recipient-management" class="scroll-mt-24 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
                 <flux:heading size="lg">{{ __('Recipient management') }}</flux:heading>
                 <flux:subheading class="mt-2">{{ __('Admin only') }}</flux:subheading>
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
@@ -51,10 +69,8 @@ new #[Title('User guide')] class extends Component {
                     <p>{{ __('Existing recipients can be edited or deleted from the management table once they have been created. Editing scrolls you to the form automatically, and deletes ask for confirmation before anything is removed.') }}</p>
                 </div>
             </div>
-        </div>
 
-        <div class="space-y-6">
-            <div class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+            <div id="group-management" class="scroll-mt-24 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
                 <flux:heading size="lg">{{ __('Group management') }}</flux:heading>
                 <flux:subheading class="mt-2">{{ __('Admin only') }}</flux:subheading>
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
@@ -64,7 +80,7 @@ new #[Title('User guide')] class extends Component {
                 </div>
             </div>
 
-            <div class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+            <div id="service-management" class="scroll-mt-24 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
                 <flux:heading size="lg">{{ __('Service management') }}</flux:heading>
                 <flux:subheading class="mt-2">{{ __('Admin only') }}</flux:subheading>
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
@@ -78,7 +94,7 @@ new #[Title('User guide')] class extends Component {
                 </div>
             </div>
 
-            <div class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+            <div id="service-group-management" class="scroll-mt-24 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
                 <flux:heading size="lg">{{ __('Service group management') }}</flux:heading>
                 <flux:subheading class="mt-2">{{ __('Admin only') }}</flux:subheading>
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
@@ -87,8 +103,10 @@ new #[Title('User guide')] class extends Component {
                     <p>{{ __('Like the other management screens, editing scrolls you to the form and deletion is protected behind a confirmation modal.') }}</p>
                 </div>
             </div>
+        </div>
 
-            <div class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+        <div class="space-y-6">
+            <div id="user-management" class="scroll-mt-24 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
                 <flux:heading size="lg">{{ __('User management') }}</flux:heading>
                 <flux:subheading class="mt-2">{{ __('Admin only') }}</flux:subheading>
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
@@ -100,7 +118,7 @@ new #[Title('User guide')] class extends Component {
                 </div>
             </div>
 
-            <div class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+            <div id="api-key-management" class="scroll-mt-24 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
                 <flux:heading size="lg">{{ __('API key management') }}</flux:heading>
                 <flux:subheading class="mt-2">{{ __('Admin only') }}</flux:subheading>
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
@@ -112,9 +130,10 @@ new #[Title('User guide')] class extends Component {
                 </div>
             </div>
 
-            <div class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+            <div id="dave" class="scroll-mt-24 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
                 <flux:heading size="lg">{{ __('Dave') }}</flux:heading>
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+                    <p>{{ __('Dave is the in-app AI assistant for Is It Down? He can answer questions about how the system works, provide guidance on monitoring and outage management best practices, and help admins with user, recipient, and service management tasks when the request is clear enough to act on safely.') }}</p>
                     <p>{{ __('Dave appears as a floating button in the bottom-right corner of the application, but only after an admin has enabled it and added valid provider settings.') }}</p>
                     <p>{{ __('Admins can reach the Dave configuration from the Settings area.') }}</p>
                     <p>{{ __('If you close the chat and open it again later, or move to another page, the current conversation should stay available during the same browser session.') }}</p>
@@ -124,7 +143,7 @@ new #[Title('User guide')] class extends Component {
                 </div>
             </div>
 
-            <div class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+            <div id="api-access" class="scroll-mt-24 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
                 <flux:heading size="lg">{{ __('API access') }}</flux:heading>
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
                     <p>{{ __('The application now exposes a REST API under `/api/v1`, authenticated with bearer tokens generated from the API Keys page.') }}</p>
@@ -133,7 +152,7 @@ new #[Title('User guide')] class extends Component {
                 </div>
             </div>
 
-            <div class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+            <div id="account-settings" class="scroll-mt-24 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
                 <flux:heading size="lg">{{ __('Account settings') }}</flux:heading>
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
                     <p>{{ __('All authenticated users can manage their profile details from Settings.') }}</p>
@@ -142,7 +161,7 @@ new #[Title('User guide')] class extends Component {
                 </div>
             </div>
 
-            <div class="rounded-xl border border-dashed border-zinc-300 bg-zinc-50 p-6 dark:border-zinc-700 dark:bg-zinc-950/40">
+            <div id="quick-reference" class="scroll-mt-24 rounded-xl border border-dashed border-zinc-300 bg-zinc-50 p-6 dark:border-zinc-700 dark:bg-zinc-950/40">
                 <flux:heading size="lg">{{ __('Need a quick reference?') }}</flux:heading>
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
                     <p>{{ __('Use this page for user-facing workflow guidance, the API Documentation page for endpoint contracts, the API Playground page for live testing, the Webhook Documentation page for recipient delivery and payload notes, and the project README for setup and technical reference.') }}</p>

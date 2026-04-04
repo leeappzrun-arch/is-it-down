@@ -21,7 +21,7 @@ class AiAssistantWidgetTest extends TestCase
             ->get(route('dashboard'));
 
         $response->assertOk();
-        $response->assertDontSeeText('Open Dave');
+        $response->assertDontSee('aria-label="Open Dave"', false);
     }
 
     public function test_widget_is_rendered_when_the_assistant_is_configured(): void
@@ -34,7 +34,8 @@ class AiAssistantWidgetTest extends TestCase
             ->get(route('dashboard'));
 
         $response->assertOk();
-        $response->assertSeeText('Open Dave');
+        $response->assertSee('aria-label="Open Dave"', false);
+        $response->assertDontSee('<span class="sr-only">Open Dave</span>', false);
     }
 
     public function test_admin_users_can_create_a_user_through_the_ai_widget(): void

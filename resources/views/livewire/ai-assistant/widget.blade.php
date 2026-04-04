@@ -85,11 +85,10 @@
     <flux:button
         type="button"
         variant="primary"
+        square
         wire:click="toggleOpen"
         class="h-14 w-14 rounded-full shadow-xl"
         icon="sparkles"
         aria-label="{{ $isOpen ? __('Close Dave') : __('Open Dave') }}"
-    >
-        <span class="sr-only">{{ $isOpen ? __('Close Dave') : __('Open Dave') }}</span>
-    </flux:button>
+    />
 </div>

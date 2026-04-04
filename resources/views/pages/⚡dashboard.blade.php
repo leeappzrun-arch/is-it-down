@@ -169,10 +169,4 @@ new #[Title('Dashboard')] class extends Component {
             @endif
         @endforeach
     </div>
-
-    <div class="mt-6 rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 p-5 text-sm leading-6 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950/40 dark:text-zinc-300">
-        {{ auth()->user()?->isAdmin()
-            ? __('Select a card to jump straight into the matching management page.')
-            : __('These totals are visible to all authenticated users, while management pages remain admin only.') }}
-    </div>
 </section>

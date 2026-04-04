@@ -24,6 +24,8 @@ class ServiceManagementTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('sticky top-4 z-20', false);
+        $response->assertSee('x-on:scroll.window.throttle.50ms="updateStickyState()"', false);
+        $response->assertSee('shadow-lg shadow-zinc-900/10 dark:shadow-black/30', false);
         $response->assertSeeText('Expand to review monitoring status, the next check timer, routing details, and effective recipients.');
     }
 

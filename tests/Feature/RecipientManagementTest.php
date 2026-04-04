@@ -20,6 +20,8 @@ class RecipientManagementTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('sticky top-4 z-20', false);
+        $response->assertSee('x-on:scroll.window.throttle.50ms="updateStickyState()"', false);
+        $response->assertSee('shadow-lg shadow-zinc-900/10 dark:shadow-black/30', false);
     }
 
     public function test_non_admin_users_cannot_visit_the_recipient_management_page(): void
