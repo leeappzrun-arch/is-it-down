@@ -196,13 +196,17 @@ class ServiceManagementTest extends TestCase
 
     public function test_service_page_shows_monitoring_status_and_next_check_timer(): void
     {
+        $referenceTime = now();
+
+        $this->travelTo($referenceTime);
+
         $admin = User::factory()->admin()->create();
 
         $service = Service::factory()->currentlyDown()->create([
             'name' => 'Marketing site',
-            'next_check_at' => now()->addSeconds(45),
+            'next_check_at' => $referenceTime->copy()->addSeconds(44),
             'last_check_reason' => 'Expected HTTP 200 response but received 503.',
-            'last_status_changed_at' => now()->subMinutes(5),
+            'last_status_changed_at' => $referenceTime->copy()->subMinutes(5),
         ]);
 
         $expectedNextCheckSummary = $service->nextCheckSummary();
@@ -217,6 +221,8 @@ class ServiceManagementTest extends TestCase
         $response->assertSeeText('Status duration: 5 minutes');
         $response->assertSeeText('Expected HTTP 200 response but received 503.');
         $response->assertSee('wire:poll.5s.visible', false);
+
+        $this->travelBack();
     }
 
     public function test_service_page_shows_checking_for_overdue_services(): void
