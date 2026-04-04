@@ -30,7 +30,7 @@ Is It Down is a Laravel 13 and Livewire 4 application for managing monitored ser
 ### Recipient management
 
 - Create, edit, and delete recipients.
-- Search the Recipients page to quickly filter recipient rows and recipient groups.
+- Search the Recipients page to quickly filter recipient rows.
 - Choose `Email` or `Webhook` in the UI while the application stores `mailto://` and `webhook://` endpoints internally.
 - Configure webhook authentication as:
   - none
@@ -38,21 +38,24 @@ Is It Down is a Laravel 13 and Livewire 4 application for managing monitored ser
   - basic auth
   - custom header
 - Assign recipients to one or more groups.
-- Confirm recipient and group deletions in a modal before they are removed.
+- Open the Recipient Groups page when you want to manage group membership from the group side.
+- Confirm recipient deletion in a modal before it is removed.
 
-### Group management
+### Recipient group management
 
 - Create, rename, and delete recipient groups.
-- Use groups to organise related recipients for future routing use cases.
+- Search the Recipient Groups page by group name or linked recipient.
+- Add or remove recipients from each group directly on the Recipient Groups page.
 - Confirm group deletion before it is applied.
 
 ### Service management
 
 - Create, edit, and delete services.
-- Search the Services page to filter both service cards and service group cards from one input.
+- Search the Services page to filter service cards from one input.
 - Configure a service name, URL, polling interval, and optional expectation using either plain text or a regular expression.
 - Assign services to one or more service groups.
 - Assign recipients and recipient groups directly to a service.
+- Open the Service Groups page when you want to manage service-group membership and routing from the group side.
 - Track the latest monitoring status, how long the service has been in that state, the last reason, the last check time, and a live next-check timer from the Services page.
 - Mark a service as down when the response is not HTTP 200 or when a configured text or regex expectation does not match the response body.
 - Notify assigned recipients only when the service changes state, so repeated down checks do not resend the same alert until the service recovers.
@@ -64,9 +67,11 @@ Is It Down is a Laravel 13 and Livewire 4 application for managing monitored ser
 ### Service group management
 
 - Create, rename, and delete service groups.
+- Link services to a service group from the Service Groups page.
 - Assign direct recipients and recipient groups to a service group.
 - Reuse those service groups across multiple monitored services.
-- Confirm service and service group deletion before it is applied.
+- Search the Service Groups page by group name, linked service, recipient group, or recipient.
+- Confirm service group deletion before it is applied.
 
 ### User management
 
@@ -118,8 +123,10 @@ Is It Down is a Laravel 13 and Livewire 4 application for managing monitored ser
 
 - `/` redirects authenticated users to the dashboard and guests to the login page.
 - `/dashboard` is the main post-login landing page and shows the current system totals.
-- `/recipients` is the admin recipient and group management page.
-- `/services` is the admin service and service group management page.
+- `/recipients` is the admin recipient management page.
+- `/recipient-groups` is the admin recipient group management page.
+- `/services` is the admin service management page.
+- `/service-groups` is the admin service group management page.
 - `/users` is the admin user management page.
 - `/api-keys` is the admin API key management page.
 - `/settings/ai-assistant` is the admin Dave configuration page.

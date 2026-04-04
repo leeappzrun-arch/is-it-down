@@ -27,6 +27,8 @@ class ServiceManagementTest extends TestCase
         $response->assertSee('x-on:scroll.window.throttle.50ms="updateStickyState()"', false);
         $response->assertSee('shadow-lg shadow-zinc-900/10 dark:shadow-black/30', false);
         $response->assertSeeText('Expand to review monitoring status, the next check timer, routing details, and effective recipients.');
+        $response->assertSee('x-data="{ expanded: false }"', false);
+        $response->assertSee('x-bind:open="expanded"', false);
     }
 
     public function test_non_admin_users_cannot_visit_the_service_management_page(): void
@@ -111,61 +113,6 @@ class ServiceManagementTest extends TestCase
         $this->assertDatabaseMissing('services', [
             'id' => $service->id,
         ]);
-    }
-
-    public function test_admin_users_can_manage_service_groups(): void
-    {
-        $this->actingAs(User::factory()->admin()->create());
-
-        $recipientGroup = RecipientGroup::factory()->create(['name' => 'Operations']);
-        $recipient = Recipient::factory()->create(['name' => 'Ops mailbox']);
-
-        $response = Livewire::test('pages::services.index')
-            ->set('groupName', 'Production')
-            ->set('groupSelectedRecipientGroupIds', [(string) $recipientGroup->id])
-            ->set('groupSelectedRecipientIds', [(string) $recipient->id])
-            ->call('saveServiceGroup');
-
-        $response->assertHasNoErrors();
-
-        $serviceGroup = ServiceGroup::query()->where('name', 'Production')->first();
-
-        $this->assertNotNull($serviceGroup);
-        $this->assertSame([$recipientGroup->id], $serviceGroup->recipientGroups()->pluck('recipient_groups.id')->all());
-        $this->assertSame([$recipient->id], $serviceGroup->recipients()->pluck('recipients.id')->all());
-
-        $response
-            ->call('editServiceGroup', $serviceGroup->id)
-            ->set('groupName', 'Production Primary')
-            ->call('saveServiceGroup')
-            ->assertHasNoErrors();
-
-        $this->assertDatabaseHas('service_groups', [
-            'id' => $serviceGroup->id,
-            'name' => 'Production Primary',
-        ]);
-
-        $response
-            ->call('confirmServiceGroupDeletion', $serviceGroup->id)
-            ->assertSet('showDeleteConfirmationModal', true)
-            ->assertSet('deleteConfirmationType', 'service-group')
-            ->call('deleteConfirmedItem');
-
-        $this->assertDatabaseMissing('service_groups', [
-            'id' => $serviceGroup->id,
-        ]);
-    }
-
-    public function test_editing_a_service_group_dispatches_a_focus_event_for_the_form(): void
-    {
-        $this->actingAs(User::factory()->admin()->create());
-
-        $serviceGroup = ServiceGroup::factory()->create();
-
-        Livewire::test('pages::services.index')
-            ->call('editServiceGroup', $serviceGroup->id)
-            ->assertSet('editingServiceGroupId', $serviceGroup->id)
-            ->assertDispatched('focus-form', form: 'service-group');
     }
 
     public function test_service_page_shows_effective_recipient_sources(): void
@@ -264,7 +211,7 @@ class ServiceManagementTest extends TestCase
         $this->travelBack();
     }
 
-    public function test_admin_users_can_search_services_and_service_groups(): void
+    public function test_admin_users_can_search_services(): void
     {
         $this->actingAs(User::factory()->admin()->create());
 
@@ -278,20 +225,13 @@ class ServiceManagementTest extends TestCase
             'url' => 'https://billing.example.com',
         ]);
 
-        ServiceGroup::factory()->create(['name' => 'Production']);
-        ServiceGroup::factory()->create(['name' => 'Staging']);
-
         Livewire::test('pages::services.index')
             ->assertSee('Marketing site')
             ->assertSee('Billing API')
-            ->assertSee('Production')
-            ->assertSee('Staging')
             ->set('search', 'marketing')
             ->assertSee('Marketing site')
             ->assertDontSee('https://billing.example.com')
-            ->assertSee('No service groups match your search.')
-            ->set('search', 'production')
-            ->assertSee('Production')
+            ->set('search', 'missing-service')
             ->assertSee('No services match your search.')
             ->assertDontSee('https://marketing.example.com')
             ->assertDontSee('https://billing.example.com');

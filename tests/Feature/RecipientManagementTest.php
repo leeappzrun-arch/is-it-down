@@ -145,55 +145,7 @@ class RecipientManagementTest extends TestCase
         ]);
     }
 
-    public function test_admin_users_can_manage_groups(): void
-    {
-        $this->actingAs(User::factory()->admin()->create());
-
-        $response = Livewire::test('pages::recipients.index')
-            ->set('groupName', 'Operations')
-            ->call('saveGroup');
-
-        $response->assertHasNoErrors();
-
-        $group = RecipientGroup::query()->where('name', 'Operations')->first();
-
-        $this->assertNotNull($group);
-
-        $response
-            ->call('editGroup', $group->id)
-            ->set('groupName', 'On-call Operations')
-            ->call('saveGroup')
-            ->assertHasNoErrors();
-
-        $this->assertDatabaseHas('recipient_groups', [
-            'id' => $group->id,
-            'name' => 'On-call Operations',
-        ]);
-
-        $response
-            ->call('confirmGroupDeletion', $group->id)
-            ->assertSet('showDeleteConfirmationModal', true)
-            ->assertSet('deleteConfirmationType', 'group')
-            ->call('deleteConfirmedItem');
-
-        $this->assertDatabaseMissing('recipient_groups', [
-            'id' => $group->id,
-        ]);
-    }
-
-    public function test_editing_a_group_dispatches_a_focus_event_for_the_form(): void
-    {
-        $this->actingAs(User::factory()->admin()->create());
-
-        $group = RecipientGroup::factory()->create();
-
-        Livewire::test('pages::recipients.index')
-            ->call('editGroup', $group->id)
-            ->assertSet('editingGroupId', $group->id)
-            ->assertDispatched('focus-form', form: 'group');
-    }
-
-    public function test_admin_users_can_search_recipients_and_groups(): void
+    public function test_admin_users_can_search_recipients(): void
     {
         $this->actingAs(User::factory()->admin()->create());
 
@@ -207,20 +159,13 @@ class RecipientManagementTest extends TestCase
             'endpoint' => 'webhook://hooks.example.com/pager-duty',
         ]);
 
-        RecipientGroup::factory()->create(['name' => 'Operations']);
-        RecipientGroup::factory()->create(['name' => 'Finance']);
-
         Livewire::test('pages::recipients.index')
             ->assertSee('Ops mailbox')
             ->assertSee('Pager duty')
-            ->assertSee('Operations')
-            ->assertSee('Finance')
             ->set('search', 'pager')
             ->assertSee('Pager duty')
             ->assertDontSee('ops@example.com')
-            ->assertSee('No groups match your search.')
-            ->set('search', 'finance')
-            ->assertSee('Finance')
+            ->set('search', 'missing-recipient')
             ->assertSee('No recipients match your search.')
             ->assertDontSee('ops@example.com')
             ->assertDontSee('hooks.example.com/pager-duty');

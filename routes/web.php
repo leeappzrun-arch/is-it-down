@@ -21,7 +21,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 Route::middleware(['auth', 'verified', 'role:'.User::ROLE_ADMIN])->group(function () {
     Route::livewire('recipients', 'pages::recipients.index')->name('recipients.index');
+    Route::livewire('recipient-groups', 'pages::recipients.groups')->name('recipient-groups.index');
     Route::livewire('services', 'pages::services.index')->name('services.index');
+    Route::livewire('service-groups', 'pages::services.groups')->name('service-groups.index');
     Route::livewire('users', 'pages::users.index')->name('users.index');
     Route::livewire('api-keys', 'pages::api-keys.index')->name('api-keys.index');
 });

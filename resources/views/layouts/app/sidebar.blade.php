@@ -16,11 +16,17 @@
                         {{ __('Dashboard') }}
                     </flux:sidebar.item>
                     @if (auth()->user()->isAdmin())
-                        <flux:sidebar.item icon="cpu-chip" :href="route('services.index')" :current="request()->routeIs('services.*')" wire:navigate>
+                        <flux:sidebar.item icon="layers-2" :href="route('services.index')" :current="request()->routeIs('services.index')" wire:navigate>
                             {{ __('Services') }}
                         </flux:sidebar.item>
-                        <flux:sidebar.item icon="folder" :href="route('recipients.index')" :current="request()->routeIs('recipients.*')" wire:navigate>
+                        <flux:sidebar.item icon="layers" :href="route('service-groups.index')" :current="request()->routeIs('service-groups.*')" wire:navigate>
+                            {{ __('Service groups') }}
+                        </flux:sidebar.item>
+                        <flux:sidebar.item icon="mail" :href="route('recipients.index')" :current="request()->routeIs('recipients.index')" wire:navigate>
                             {{ __('Recipients') }}
+                        </flux:sidebar.item>
+                        <flux:sidebar.item icon="mails" :href="route('recipient-groups.index')" :current="request()->routeIs('recipient-groups.*')" wire:navigate>
+                            {{ __('Recipient groups') }}
                         </flux:sidebar.item>
                     @endif
                 </flux:sidebar.group>
@@ -52,7 +58,7 @@
                     <flux:sidebar.item icon="command-line" :href="route('api-playground')" :current="request()->routeIs('api-playground')" wire:navigate>
                         {{ __('API Playground') }}
                     </flux:sidebar.item>
-                    <flux:sidebar.item icon="link" :href="route('webhook-documentation')" :current="request()->routeIs('webhook-documentation')" wire:navigate>
+                    <flux:sidebar.item icon="webhook" :href="route('webhook-documentation')" :current="request()->routeIs('webhook-documentation')" wire:navigate>
                         {{ __('Webhook Documentation') }}
                     </flux:sidebar.item>
                 </flux:sidebar.group>
@@ -97,8 +103,14 @@
                             <flux:menu.item :href="route('recipients.index')" icon="folder" wire:navigate>
                                 {{ __('Recipients') }}
                             </flux:menu.item>
+                            <flux:menu.item :href="route('recipient-groups.index')" icon="folder" wire:navigate>
+                                {{ __('Recipient groups') }}
+                            </flux:menu.item>
                             <flux:menu.item :href="route('services.index')" icon="cpu-chip" wire:navigate>
                                 {{ __('Services') }}
+                            </flux:menu.item>
+                            <flux:menu.item :href="route('service-groups.index')" icon="cpu-chip" wire:navigate>
+                                {{ __('Service groups') }}
                             </flux:menu.item>
                             <flux:menu.separator />
                             <flux:menu.item :href="route('users.index')" icon="users" wire:navigate>

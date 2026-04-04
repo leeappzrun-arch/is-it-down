@@ -50,7 +50,9 @@ class DashboardTest extends TestCase
         $response->assertSeeTextInOrder(['Recipients', '2', 'Recipient groups', '3', 'Services', '4', 'Service groups', '5', 'Users', '1', 'API Keys', '4']);
         $response->assertSeeText('View only');
         $response->assertDontSee(route('recipients.index'), false);
+        $response->assertDontSee(route('recipient-groups.index'), false);
         $response->assertDontSee(route('services.index'), false);
+        $response->assertDontSee(route('service-groups.index'), false);
         $response->assertDontSee(route('users.index'), false);
         $response->assertDontSee(route('api-keys.index'), false);
     }
@@ -81,13 +83,17 @@ class DashboardTest extends TestCase
         $response->assertSeeText('Access');
         $response->assertSeeText('Dashboard');
         $response->assertSeeText('Recipients');
+        $response->assertSeeText('Recipient groups');
         $response->assertSeeText('Services');
+        $response->assertSeeText('Service groups');
         $response->assertSeeText('Users');
         $response->assertSeeText('API Keys');
         $response->assertSeeTextInOrder(['Recipients', '2', 'Recipient groups', '3', 'Services', '4', 'Service groups', '5', 'Users', '3', 'API Keys', '4']);
         $response->assertDontSeeText('Platform');
         $response->assertSee(route('recipients.index'), false);
+        $response->assertSee(route('recipient-groups.index'), false);
         $response->assertSee(route('services.index'), false);
+        $response->assertSee(route('service-groups.index'), false);
         $response->assertSee(route('users.index'), false);
         $response->assertSee(route('api-keys.index'), false);
         $response->assertDontSeeText('View only');

@@ -105,8 +105,8 @@ new #[Title('Webhook documentation')] class extends Component {
             <div id="grouping-and-administration" class="scroll-mt-24 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
                 <flux:heading size="lg">{{ __('Grouping and administration') }}</flux:heading>
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
-                    <p>{{ __('Webhook recipients can be assigned to one or more recipient groups during creation or editing.') }}</p>
-                    <p>{{ __('Admins can edit an existing webhook recipient from the management table, which scrolls the form into view and reloads the saved authentication state.') }}</p>
+                    <p>{{ __('Webhook recipients can be assigned to one or more recipient groups during creation or editing from the Recipients page, or by managing membership from the Recipient Groups page.') }}</p>
+                    <p>{{ __('Admins can edit an existing webhook recipient from the Recipients management table, which scrolls the form into view and reloads the saved authentication state.') }}</p>
                     <p>{{ __('Deleting a webhook recipient uses the same confirmation modal as other management actions so removal is never immediate from the table row.') }}</p>
                     <p>{{ __('If any webhook delivery fails during a status-change alert, every admin user receives an email describing which webhook failed and why.') }}</p>
                 </div>

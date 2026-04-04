@@ -17,7 +17,7 @@ class UserManagementTest extends TestCase
             ->get(route('users.index'));
 
         $response->assertOk();
-        $response->assertSeeTextInOrder(['Recipients', 'Services', 'Users']);
+        $response->assertSeeTextInOrder(['Recipients', 'Recipient groups', 'Services', 'Service groups', 'Users']);
         $response->assertSeeText('Users');
         $response->assertSee('sticky top-4 z-20', false);
     }

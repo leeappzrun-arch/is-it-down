@@ -22,7 +22,7 @@ new #[Title('User guide')] class extends Component {
             <a href="#getting-started" class="rounded-lg border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:text-zinc-100">{{ __('Getting started') }}</a>
             <a href="#dashboard" class="rounded-lg border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:text-zinc-100">{{ __('Dashboard') }}</a>
             <a href="#recipient-management" class="rounded-lg border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:text-zinc-100">{{ __('Recipient management') }}</a>
-            <a href="#group-management" class="rounded-lg border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:text-zinc-100">{{ __('Group management') }}</a>
+            <a href="#recipient-group-management" class="rounded-lg border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:text-zinc-100">{{ __('Recipient group management') }}</a>
             <a href="#service-management" class="rounded-lg border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:text-zinc-100">{{ __('Service management') }}</a>
             <a href="#service-group-management" class="rounded-lg border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:text-zinc-100">{{ __('Service group management') }}</a>
             <a href="#user-management" class="rounded-lg border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:text-zinc-100">{{ __('User management') }}</a>
@@ -41,7 +41,7 @@ new #[Title('User guide')] class extends Component {
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
                     <p>{{ __('Sign in with your account to access the application. Verified users are taken to the dashboard after login.') }}</p>
                     <p>{{ __('If you are a standard user, your day-to-day actions are currently centered around your account settings and reviewing the in-app guidance pages.') }}</p>
-                    <p>{{ __('If you are an admin, the main navigation will show Monitoring for Dashboard, Recipients, and Services, plus Access for Users and API Keys.') }}</p>
+                    <p>{{ __('If you are an admin, the main navigation will show Monitoring for Dashboard, Recipients, Recipient groups, Services, and Service groups, plus Access for Users and API Keys.') }}</p>
                     <p>{{ __('If an admin has configured Dave, a floating chat launcher will appear in the bottom-right corner of the app so you can ask for help without leaving the page.') }}</p>
                 </div>
             </div>
@@ -50,7 +50,7 @@ new #[Title('User guide')] class extends Component {
                 <flux:heading size="lg">{{ __('Dashboard') }}</flux:heading>
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
                     <p>{{ __('The dashboard is the default landing page after authentication and shows a live service-status grid above the headline totals for recipients, recipient groups, services, service groups, users, and API keys.') }}</p>
-                    <p>{{ __('Admins can select those dashboard cards to move directly into the matching management page. Standard users can review the totals but cannot click through to admin-only tools.') }}</p>
+                    <p>{{ __('Admins can select those dashboard cards to move directly into the matching management page for recipients, recipient groups, services, service groups, users, or API keys. Standard users can review the totals but cannot click through to admin-only tools.') }}</p>
                     <p>{{ __('Use the sidebar to move into administration screens, account settings, and supporting documentation.') }}</p>
                 </div>
             </div>
@@ -65,18 +65,20 @@ new #[Title('User guide')] class extends Component {
                     <p>{{ __('Webhook recipients can be configured with no authentication, bearer token authentication, basic authentication, or a custom header, and the matching fields appear as soon as you choose the authentication type.') }}</p>
                     <p>{{ __('Use the Webhook Documentation page for a dedicated reference on supported destination formats, authentication options, and the details that should stay aligned with future webhook delivery work.') }}</p>
                     <p>{{ __('Recipients can belong to multiple groups, which makes it easier to organise related delivery targets together.') }}</p>
-                    <p>{{ __('Use the sticky search field at the top of the Recipients page to filter both the recipient table and the existing groups list without changing the form selections on the page.') }}</p>
+                    <p>{{ __('Use the sticky search field at the top of the Recipients page to filter the recipient table without changing the form selections on the page.') }}</p>
+                    <p>{{ __('When you need to manage group membership from the other direction, open the dedicated Recipient Groups page.') }}</p>
                     <p>{{ __('Existing recipients can be edited or deleted from the management table once they have been created. Editing scrolls you to the form automatically, and deletes ask for confirmation before anything is removed.') }}</p>
                 </div>
             </div>
 
-            <div id="group-management" class="scroll-mt-24 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
-                <flux:heading size="lg">{{ __('Group management') }}</flux:heading>
+            <div id="recipient-group-management" class="scroll-mt-24 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+                <flux:heading size="lg">{{ __('Recipient group management') }}</flux:heading>
                 <flux:subheading class="mt-2">{{ __('Admin only') }}</flux:subheading>
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
                     <p>{{ __('Groups let you organise recipients into reusable collections such as Operations, Finance, or On-call.') }}</p>
-                    <p>{{ __('Create groups from the side panel on the Recipients page, then assign one or more groups while creating or editing a recipient.') }}</p>
-                    <p>{{ __('Groups can be renamed or deleted later as your routing structure evolves. Editing scrolls you back to the group form, and group deletion also uses a confirmation modal.') }}</p>
+                    <p>{{ __('Use the Recipient Groups page to create groups, rename them, and add or remove members directly from the group side.') }}</p>
+                    <p>{{ __('Groups can still be assigned while creating or editing a recipient on the Recipients page, so membership can be adjusted from either side.') }}</p>
+                    <p>{{ __('Editing scrolls you back to the group form, and group deletion also uses a confirmation modal.') }}</p>
                 </div>
             </div>
 
@@ -87,7 +89,8 @@ new #[Title('User guide')] class extends Component {
                     <p>{{ __('Services represent the URLs you want to monitor. Each service includes a name, URL, polling interval, and an optional expectation that can be plain text or a regex pattern.') }}</p>
                     <p>{{ __('A service is considered down whenever the URL does not respond with HTTP 200, or when a configured text or regex expectation fails to match the response body.') }}</p>
                     <p>{{ __('A service can have direct recipients, direct recipient groups, and one or more service groups attached at the same time.') }}</p>
-                    <p>{{ __('Use the sticky search field at the top of the Services page to narrow both managed services and service groups from a single query.') }}</p>
+                    <p>{{ __('Use the sticky search field at the top of the Services page to narrow managed services from a single query.') }}</p>
+                    <p>{{ __('When you want to manage linked services or routing ingredients from the group side, open the dedicated Service Groups page.') }}</p>
                     <p>{{ __('Each service opens as an accordion so the list stays compact while still exposing the current monitoring state, how long the service has been in that state, the latest reason, the last check time, the next check timer, and the full effective recipient breakdown when you expand a service.') }}</p>
                     <p>{{ __('Recipients are only notified when a service changes state. A service that stays down will not keep sending repeated down alerts on every interval, but a recovery alert is sent once it comes back up and includes how long the outage lasted.') }}</p>
                     <p>{{ __('Editing a service scrolls the form back into view, and deleting a service asks for confirmation before it is removed.') }}</p>
@@ -100,6 +103,7 @@ new #[Title('User guide')] class extends Component {
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
                     <p>{{ __('Service groups are reusable routing bundles. They can contain both direct recipients and recipient groups, then be attached to multiple services.') }}</p>
                     <p>{{ __('Use service groups when several monitored services should share the same escalation or stakeholder routing setup.') }}</p>
+                    <p>{{ __('The Service Groups page also lets you attach or remove services from a group directly, so service-to-group relationships can be managed from either side.') }}</p>
                     <p>{{ __('Like the other management screens, editing scrolls you to the form and deletion is protected behind a confirmation modal.') }}</p>
                 </div>
             </div>

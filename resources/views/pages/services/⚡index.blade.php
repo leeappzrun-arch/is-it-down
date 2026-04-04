@@ -18,8 +18,6 @@ new #[Title('Service management')] class extends Component {
 
     public ?int $editingServiceId = null;
 
-    public ?int $editingServiceGroupId = null;
-
     public string $name = '';
 
     public string $url = '';
@@ -38,14 +36,6 @@ new #[Title('Service management')] class extends Component {
 
     /** @var array<int, string> */
     public array $selectedRecipientIds = [];
-
-    public string $groupName = '';
-
-    /** @var array<int, string> */
-    public array $groupSelectedRecipientGroupIds = [];
-
-    /** @var array<int, string> */
-    public array $groupSelectedRecipientIds = [];
 
     public bool $showDeleteConfirmationModal = false;
 
@@ -124,25 +114,6 @@ new #[Title('Service management')] class extends Component {
             ->withCount(['services', 'recipients', 'recipientGroups'])
             ->orderBy('name')
             ->get();
-    }
-
-    /**
-     * Get the service groups shown in the management list.
-     */
-    #[Computed]
-    public function managedServiceGroups()
-    {
-        if ($this->searchTerm() === '') {
-            return $this->serviceGroups;
-        }
-
-        return $this->serviceGroups
-            ->filter(fn (ServiceGroup $serviceGroup): bool => $this->matchesSearch([
-                $serviceGroup->name,
-                $serviceGroup->recipientGroups->pluck('name')->all(),
-                $serviceGroup->recipients->pluck('name')->all(),
-            ]))
-            ->values();
     }
 
     /**
@@ -253,61 +224,6 @@ new #[Title('Service management')] class extends Component {
     }
 
     /**
-     * Create or update a service group.
-     */
-    public function saveServiceGroup(): void
-    {
-        $validated = $this->validate($this->serviceGroupRules());
-
-        $serviceGroup = ServiceGroup::query()->updateOrCreate(
-            ['id' => $this->editingServiceGroupId],
-            ['name' => trim($validated['groupName'])],
-        );
-
-        $serviceGroup->recipientGroups()->sync($validated['groupSelectedRecipientGroupIds'] ?? []);
-        $serviceGroup->recipients()->sync($validated['groupSelectedRecipientIds'] ?? []);
-
-        $this->resetServiceGroupForm();
-        $this->dispatch('service-group-saved');
-    }
-
-    /**
-     * Populate the service group form for editing.
-     */
-    public function editServiceGroup(int $serviceGroupId): void
-    {
-        $serviceGroup = ServiceGroup::query()
-            ->with(['recipientGroups:id', 'recipients:id'])
-            ->findOrFail($serviceGroupId);
-
-        $this->editingServiceGroupId = $serviceGroup->id;
-        $this->groupName = $serviceGroup->name;
-        $this->groupSelectedRecipientGroupIds = $serviceGroup->recipientGroups->pluck('id')->map(fn (int $id): string => (string) $id)->all();
-        $this->groupSelectedRecipientIds = $serviceGroup->recipients->pluck('id')->map(fn (int $id): string => (string) $id)->all();
-
-        $this->resetValidation();
-        $this->dispatch('focus-form', form: 'service-group');
-    }
-
-    /**
-     * Prompt to delete a service group.
-     */
-    public function confirmServiceGroupDeletion(int $serviceGroupId): void
-    {
-        $serviceGroup = ServiceGroup::query()->findOrFail($serviceGroupId);
-
-        $this->promptDeleteConfirmation('service-group', $serviceGroup->id, $serviceGroup->name);
-    }
-
-    /**
-     * Cancel service group editing.
-     */
-    public function cancelServiceGroupEditing(): void
-    {
-        $this->resetServiceGroupForm();
-    }
-
-    /**
      * Update the form when the expectation mode changes.
      */
     public function updatedExpectType(string $expectType): void
@@ -326,7 +242,6 @@ new #[Title('Service management')] class extends Component {
     {
         match ($this->deleteConfirmationType) {
             'service' => $this->deleteService($this->deleteConfirmationId),
-            'service-group' => $this->deleteServiceGroup($this->deleteConfirmationId),
             default => null,
         };
 
@@ -349,16 +264,6 @@ new #[Title('Service management')] class extends Component {
     private function serviceRules(): array
     {
         return $this->serviceValidationRules($this->expectType);
-    }
-
-    /**
-     * Get the validation rules for service groups.
-     *
-     * @return array<string, array<int, mixed>>
-     */
-    private function serviceGroupRules(): array
-    {
-        return $this->serviceGroupValidationRules($this->editingServiceGroupId);
     }
 
     /**
@@ -389,21 +294,6 @@ new #[Title('Service management')] class extends Component {
 
         $this->intervalSeconds = Service::INTERVAL_1_MINUTE;
         $this->expectType = Service::EXPECT_NONE;
-        $this->resetValidation();
-    }
-
-    /**
-     * Reset the service group form to its default state.
-     */
-    private function resetServiceGroupForm(): void
-    {
-        $this->reset([
-            'editingServiceGroupId',
-            'groupName',
-            'groupSelectedRecipientGroupIds',
-            'groupSelectedRecipientIds',
-        ]);
-
         $this->resetValidation();
     }
 
@@ -448,29 +338,6 @@ new #[Title('Service management')] class extends Component {
     }
 
     /**
-     * Delete a service group record.
-     */
-    private function deleteServiceGroup(?int $serviceGroupId): void
-    {
-        if ($serviceGroupId === null) {
-            return;
-        }
-
-        ServiceGroup::query()->findOrFail($serviceGroupId)->delete();
-
-        $this->selectedServiceGroupIds = array_values(array_filter(
-            $this->selectedServiceGroupIds,
-            fn (string $selectedServiceGroupId): bool => (int) $selectedServiceGroupId !== $serviceGroupId,
-        ));
-
-        if ($this->editingServiceGroupId === $serviceGroupId) {
-            $this->resetServiceGroupForm();
-        }
-
-        $this->dispatch('service-group-deleted');
-    }
-
-    /**
      * Get the normalized search term.
      */
     private function searchTerm(): string
@@ -499,8 +366,16 @@ new #[Title('Service management')] class extends Component {
 
 <section wire:poll.5s.visible class="w-full">
     <div class="relative mb-6 w-full">
-        <flux:heading size="xl" level="1">{{ __('Services') }}</flux:heading>
-        <flux:subheading size="lg" class="mb-6">{{ __('Create monitored services, set their polling interval and expectation rules, then route alerts through direct recipients, recipient groups, and reusable service groups.') }}</flux:subheading>
+        <div class="flex flex-wrap items-start justify-between gap-4">
+            <div>
+                <flux:heading size="xl" level="1">{{ __('Services') }}</flux:heading>
+                <flux:subheading size="lg" class="mb-6">{{ __('Create monitored services, set their polling interval and expectation rules, then route alerts through direct recipients, recipient groups, and reusable service groups.') }}</flux:subheading>
+            </div>
+
+            <flux:button variant="ghost" :href="route('service-groups.index')" wire:navigate>
+                {{ __('Manage service groups') }}
+            </flux:button>
+        </div>
         <flux:separator variant="subtle" />
     </div>
 
@@ -514,7 +389,7 @@ new #[Title('Service management')] class extends Component {
     >
         <flux:input
             wire:model.live.debounce.300ms="search"
-            :label="__('Search services and service groups')"
+            :label="__('Search services')"
             type="search"
             :placeholder="__('Search by name, URL, routing, or related recipients')"
         />
@@ -596,13 +471,19 @@ new #[Title('Service management')] class extends Component {
                     </div>
 
                     <div class="space-y-3">
-                        <div>
+                        <div class="flex flex-wrap items-start justify-between gap-3">
+                            <div>
                             <flux:heading>{{ __('Service groups') }}</flux:heading>
                             <flux:subheading class="mt-1">{{ __('Attach reusable routing bundles that already contain their own recipients and recipient groups.') }}</flux:subheading>
+                            </div>
+
+                            <flux:button variant="subtle" size="sm" :href="route('service-groups.index')" wire:navigate>
+                                {{ __('Open service groups') }}
+                            </flux:button>
                         </div>
 
                         @if ($this->serviceGroups->isEmpty())
-                            <p class="rounded-xl border border-dashed border-zinc-300 px-4 py-5 text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">{{ __('Create a service group below and it will appear here for assignment.') }}</p>
+                            <p class="rounded-xl border border-dashed border-zinc-300 px-4 py-5 text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">{{ __('Create a service group from the Service Groups page and it will appear here for assignment.') }}</p>
                         @else
                             <div class="space-y-3">
                                 @foreach ($this->serviceGroups as $serviceGroup)
@@ -716,7 +597,13 @@ new #[Title('Service management')] class extends Component {
                     @foreach ($this->services as $service)
                         @php($effectiveRecipients = $service->effectiveRecipientRoutes())
 
-                        <details wire:key="service-row-{{ $service->id }}" class="group rounded-2xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-950/40">
+                        <details
+                            wire:key="service-row-{{ $service->id }}"
+                            x-data="{ expanded: false }"
+                            x-bind:open="expanded"
+                            x-on:toggle="expanded = $el.open"
+                            class="group rounded-2xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-950/40"
+                        >
                             <summary class="list-none cursor-pointer [&::-webkit-details-marker]:hidden">
                                 <div class="flex flex-wrap items-start justify-between gap-4">
                                     <div class="min-w-0 space-y-2">
@@ -883,163 +770,6 @@ new #[Title('Service management')] class extends Component {
         </div>
     </div>
 
-    <div class="mt-6 grid gap-6 xl:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]">
-        <div class="min-w-0 space-y-6">
-            <div
-                x-data="{ highlight: false, timeout: null, focusForm() { this.$el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' }); this.$nextTick(() => this.$el.querySelector('input, select, textarea, button')?.focus({ preventScroll: true })); this.highlight = true; if (this.timeout) { clearTimeout(this.timeout); } this.timeout = setTimeout(() => { this.highlight = false }, 2200); } }"
-                x-on:focus-form.window="if ($event.detail.form === 'service-group') { focusForm() }"
-                :class="{ 'ring-2 ring-sky-400/70 ring-offset-2 ring-offset-white shadow-lg shadow-sky-500/10 animate-pulse dark:ring-sky-300/60 dark:ring-offset-zinc-900': highlight }"
-                class="min-w-0 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm transition-all duration-300 sm:p-6 dark:border-zinc-700 dark:bg-zinc-900"
-            >
-                <div class="flex flex-wrap items-start justify-between gap-4">
-                    <div>
-                        <flux:heading size="lg">{{ $editingServiceGroupId ? __('Edit service group') : __('Create service group') }}</flux:heading>
-                        <flux:subheading class="mt-2">{{ __('Bundle recipients and recipient groups once, then attach the bundle to multiple services.') }}</flux:subheading>
-                    </div>
-
-                    <x-action-message on="service-group-saved">{{ __('Service group saved.') }}</x-action-message>
-                </div>
-
-                <form wire:submit="saveServiceGroup" class="mt-6 space-y-5">
-                    <flux:input wire:model="groupName" :label="__('Group name')" type="text" required placeholder="Production" />
-
-                    <div class="space-y-3">
-                        <div>
-                            <flux:heading>{{ __('Recipient groups') }}</flux:heading>
-                            <flux:subheading class="mt-1">{{ __('Every recipient inside these groups becomes available to any service using this service group.') }}</flux:subheading>
-                        </div>
-
-                        @if ($this->recipientGroups->isEmpty())
-                            <p class="rounded-xl border border-dashed border-zinc-300 px-4 py-5 text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">{{ __('Create recipient groups first and they will be available here.') }}</p>
-                        @else
-                            <div class="space-y-3">
-                                @foreach ($this->recipientGroups as $recipientGroup)
-                                    <label wire:key="service-group-recipient-group-option-{{ $recipientGroup->id }}" class="flex min-w-0 items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-800 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100">
-                                        <div class="min-w-0">
-                                            <span class="block font-medium">{{ $recipientGroup->name }}</span>
-                                            <span class="mt-1 block text-xs text-zinc-500 dark:text-zinc-400">{{ trans_choice('{0} No recipients|{1} :count recipient|[2,*] :count recipients', $recipientGroup->recipients_count, ['count' => $recipientGroup->recipients_count]) }}</span>
-                                        </div>
-
-                                        <input
-                                            wire:model="groupSelectedRecipientGroupIds"
-                                            type="checkbox"
-                                            value="{{ $recipientGroup->id }}"
-                                            class="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
-                                        >
-                                    </label>
-                                @endforeach
-                            </div>
-                        @endif
-                    </div>
-
-                    <div class="space-y-3">
-                        <div>
-                            <flux:heading>{{ __('Direct recipients') }}</flux:heading>
-                            <flux:subheading class="mt-1">{{ __('Attach one-off recipients that should always travel with this service group.') }}</flux:subheading>
-                        </div>
-
-                        @if ($this->recipients->isEmpty())
-                            <p class="rounded-xl border border-dashed border-zinc-300 px-4 py-5 text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">{{ __('Create recipients first and they will be available here.') }}</p>
-                        @else
-                            <div class="space-y-3">
-                                @foreach ($this->recipients as $recipient)
-                                    <label wire:key="service-group-recipient-option-{{ $recipient->id }}" class="flex min-w-0 items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-800 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100">
-                                        <div class="min-w-0">
-                                            <span class="block font-medium">{{ $recipient->name }}</span>
-                                            <span class="mt-1 block text-xs text-zinc-500 dark:text-zinc-400">{{ __($recipient->endpointTypeLabel()) }} · {{ $recipient->endpointTarget() }}</span>
-                                        </div>
-
-                                        <input
-                                            wire:model="groupSelectedRecipientIds"
-                                            type="checkbox"
-                                            value="{{ $recipient->id }}"
-                                            class="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
-                                        >
-                                    </label>
-                                @endforeach
-                            </div>
-                        @endif
-                    </div>
-
-                    <div class="flex flex-wrap items-center gap-3 pt-2">
-                        <flux:button variant="primary" type="submit">{{ $editingServiceGroupId ? __('Save service group') : __('Create service group') }}</flux:button>
-
-                        @if ($editingServiceGroupId)
-                            <flux:button type="button" variant="ghost" wire:click="cancelServiceGroupEditing">{{ __('Cancel') }}</flux:button>
-                        @endif
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <div class="min-w-0 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-6 dark:border-zinc-700 dark:bg-zinc-900">
-            <div class="flex flex-wrap items-start justify-between gap-4">
-                <div>
-                    <flux:heading size="lg">{{ __('Service groups') }}</flux:heading>
-                    <flux:subheading class="mt-2">{{ __('Review the reusable bundles available to services and keep their routing ingredients up to date.') }}</flux:subheading>
-                </div>
-
-                <x-action-message on="service-group-deleted">{{ __('Service group removed.') }}</x-action-message>
-            </div>
-
-            @if ($this->managedServiceGroups->isEmpty())
-                <p class="mt-6 rounded-lg border border-dashed border-zinc-300 px-4 py-6 text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
-                    {{ trim($search) !== '' ? __('No service groups match your search.') : __('No service groups have been created yet.') }}
-                </p>
-            @else
-                <div class="mt-6 grid gap-4 lg:grid-cols-2">
-                    @foreach ($this->managedServiceGroups as $serviceGroup)
-                        <div wire:key="service-group-row-{{ $serviceGroup->id }}" class="rounded-2xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-950/40">
-                            <div class="flex flex-wrap items-start justify-between gap-4">
-                                <div>
-                                    <div class="font-medium text-zinc-900 dark:text-zinc-100">{{ $serviceGroup->name }}</div>
-                                    <div class="mt-2 flex flex-wrap gap-2 text-xs">
-                                        <span class="rounded-full bg-zinc-200 px-3 py-1 font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">{{ trans_choice('{1} :count service|[2,*] :count services', $serviceGroup->services_count, ['count' => $serviceGroup->services_count]) }}</span>
-                                        <span class="rounded-full bg-emerald-100 px-3 py-1 font-medium text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">{{ trans_choice('{1} :count direct recipient|[2,*] :count direct recipients', $serviceGroup->recipients_count, ['count' => $serviceGroup->recipients_count]) }}</span>
-                                        <span class="rounded-full bg-amber-100 px-3 py-1 font-medium text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">{{ trans_choice('{1} :count recipient group|[2,*] :count recipient groups', $serviceGroup->recipient_groups_count, ['count' => $serviceGroup->recipient_groups_count]) }}</span>
-                                    </div>
-                                </div>
-
-                                <div class="flex flex-wrap gap-2">
-                                    <flux:button type="button" variant="ghost" wire:click="editServiceGroup({{ $serviceGroup->id }})">{{ __('Edit') }}</flux:button>
-                                    <flux:button type="button" variant="danger" wire:click="confirmServiceGroupDeletion({{ $serviceGroup->id }})">{{ __('Delete') }}</flux:button>
-                                </div>
-                            </div>
-
-                            <div class="mt-4 space-y-3">
-                                <div>
-                                    <div class="mb-2 text-sm font-medium text-zinc-900 dark:text-zinc-100">{{ __('Recipient groups') }}</div>
-                                    <div class="flex flex-wrap gap-2">
-                                        @if ($serviceGroup->recipientGroups->isEmpty())
-                                            <span class="text-sm text-zinc-500 dark:text-zinc-400">{{ __('None assigned') }}</span>
-                                        @else
-                                            @foreach ($serviceGroup->recipientGroups as $recipientGroup)
-                                                <span wire:key="service-group-recipient-group-chip-{{ $serviceGroup->id }}-{{ $recipientGroup->id }}" class="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">{{ $recipientGroup->name }}</span>
-                                            @endforeach
-                                        @endif
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <div class="mb-2 text-sm font-medium text-zinc-900 dark:text-zinc-100">{{ __('Direct recipients') }}</div>
-                                    <div class="flex flex-wrap gap-2">
-                                        @if ($serviceGroup->recipients->isEmpty())
-                                            <span class="text-sm text-zinc-500 dark:text-zinc-400">{{ __('None assigned') }}</span>
-                                        @else
-                                            @foreach ($serviceGroup->recipients as $recipient)
-                                                <span wire:key="service-group-recipient-chip-{{ $serviceGroup->id }}-{{ $recipient->id }}" class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">{{ $recipient->name }}</span>
-                                            @endforeach
-                                        @endif
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
-            @endif
-        </div>
-    </div>
-
     <flux:modal wire:model="showDeleteConfirmationModal" class="md:w-[28rem]">
         <div class="space-y-4">
             <div>
@@ -1047,13 +777,11 @@ new #[Title('Service management')] class extends Component {
                 <flux:subheading class="mt-2">
                     @if ($deleteConfirmationType === 'service')
                         {{ __('This will permanently delete the service ":name".', ['name' => $deleteConfirmationName]) }}
-                    @elseif ($deleteConfirmationType === 'service-group')
-                        {{ __('This will permanently delete the service group ":name".', ['name' => $deleteConfirmationName]) }}
                     @endif
                 </flux:subheading>
             </div>
 
-            <p class="text-sm leading-6 text-zinc-600 dark:text-zinc-300">{{ __('Linked assignments will be removed with it, but recipients and recipient groups themselves will stay in place.') }}</p>
+            <p class="text-sm leading-6 text-zinc-600 dark:text-zinc-300">{{ __('Linked assignments will be removed with it, but recipients, recipient groups, and service groups themselves will stay in place.') }}</p>
 
             <div class="flex flex-wrap justify-end gap-3">
                 <flux:button type="button" variant="ghost" wire:click="cancelDeleteConfirmation">{{ __('Cancel') }}</flux:button>

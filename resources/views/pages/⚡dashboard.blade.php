@@ -51,7 +51,7 @@ new #[Title('Dashboard')] class extends Component {
                 'label' => 'Recipient groups',
                 'value' => RecipientGroup::query()->count(),
                 'description' => 'Reusable recipient collections',
-                'href' => $isAdmin ? route('recipients.index') : null,
+                'href' => $isAdmin ? route('recipient-groups.index') : null,
             ],
             [
                 'label' => 'Services',
@@ -63,7 +63,7 @@ new #[Title('Dashboard')] class extends Component {
                 'label' => 'Service groups',
                 'value' => ServiceGroup::query()->count(),
                 'description' => 'Reusable service routing bundles',
-                'href' => $isAdmin ? route('services.index') : null,
+                'href' => $isAdmin ? route('service-groups.index') : null,
             ],
             [
                 'label' => 'Users',
