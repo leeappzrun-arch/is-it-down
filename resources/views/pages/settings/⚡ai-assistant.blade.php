@@ -5,7 +5,7 @@ use Illuminate\Validation\Rule;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
-new #[Title('AI assistant settings')] class extends Component {
+new #[Title('Dave settings')] class extends Component {
     public bool $isEnabled = false;
 
     public string $providerUrl = '';
@@ -92,19 +92,19 @@ new #[Title('AI assistant settings')] class extends Component {
 <section class="w-full">
     @include('partials.settings-heading')
 
-    <flux:heading class="sr-only">{{ __('AI assistant settings') }}</flux:heading>
+    <flux:heading class="sr-only">{{ __('Dave settings') }}</flux:heading>
 
-    <x-pages::settings.layout :heading="__('AI Assistant')" :subheading="__('Configure the floating in-app assistant and the provider it uses')">
+    <x-pages::settings.layout :heading="__('Dave')" :subheading="__('Configure Dave and the provider it uses')">
         <div class="space-y-6">
             <div class="rounded-xl border border-dashed border-zinc-300 bg-zinc-50 p-4 text-sm leading-6 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950/40 dark:text-zinc-300">
-                {{ __('The assistant is only rendered when it is enabled and a provider URL, model, and API key have been saved. Use a chat-completions endpoint URL. For OpenAI-style providers, that usually looks like https://api.openai.com/v1/chat/completions.') }}
+                {{ __('Dave is only rendered when it is enabled and a provider URL, model, and API key have been saved. Use a chat-completions endpoint URL. For OpenAI-style providers, that usually looks like https://api.openai.com/v1/chat/completions.') }}
             </div>
 
             <form wire:submit="saveSettings" class="space-y-6">
                 <div class="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
                     <div class="flex items-start justify-between gap-4">
                         <div>
-                            <flux:heading>{{ __('Enable assistant') }}</flux:heading>
+                            <flux:heading>{{ __('Enable Dave') }}</flux:heading>
                             <flux:subheading class="mt-1">{{ __('Turn the bottom-right chat launcher on or off for authenticated users.') }}</flux:subheading>
                         </div>
 
@@ -156,7 +156,7 @@ new #[Title('AI assistant settings')] class extends Component {
                 />
 
                 <div class="flex items-center gap-4">
-                    <flux:button variant="primary" type="submit">{{ __('Save AI settings') }}</flux:button>
+                    <flux:button variant="primary" type="submit">{{ __('Save Dave settings') }}</flux:button>
 
                     <x-action-message on="ai-settings-saved">{{ __('Saved.') }}</x-action-message>
                 </div>

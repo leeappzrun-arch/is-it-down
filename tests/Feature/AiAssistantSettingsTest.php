@@ -18,7 +18,8 @@ class AiAssistantSettingsTest extends TestCase
             ->get(route('ai-assistant.edit'));
 
         $response->assertOk();
-        $response->assertSeeText('AI Assistant');
+        $response->assertSeeText('Dave');
+        $response->assertSeeText('Enable Dave');
         $response->assertSeeText('Provider URL');
     }
 

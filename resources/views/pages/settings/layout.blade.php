@@ -5,7 +5,7 @@
             <flux:navlist.item :href="route('security.edit')" wire:navigate>{{ __('Security') }}</flux:navlist.item>
             <flux:navlist.item :href="route('appearance.edit')" wire:navigate>{{ __('Appearance') }}</flux:navlist.item>
             @if (auth()->user()?->isAdmin())
-                <flux:navlist.item :href="route('ai-assistant.edit')" wire:navigate>{{ __('AI Assistant') }}</flux:navlist.item>
+                <flux:navlist.item :href="route('ai-assistant.edit')" wire:navigate>{{ __('Dave') }}</flux:navlist.item>
             @endif
         </flux:navlist>
     </div>

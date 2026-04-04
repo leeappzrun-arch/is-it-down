@@ -21,7 +21,7 @@ class AiAssistantWidgetTest extends TestCase
             ->get(route('dashboard'));
 
         $response->assertOk();
-        $response->assertDontSeeText('Open AI assistant');
+        $response->assertDontSeeText('Open Dave');
     }
 
     public function test_widget_is_rendered_when_the_assistant_is_configured(): void
@@ -34,7 +34,7 @@ class AiAssistantWidgetTest extends TestCase
             ->get(route('dashboard'));
 
         $response->assertOk();
-        $response->assertSeeText('Open AI assistant');
+        $response->assertSeeText('Open Dave');
     }
 
     public function test_admin_users_can_create_a_user_through_the_ai_widget(): void
@@ -219,5 +219,19 @@ class AiAssistantWidgetTest extends TestCase
         Livewire::test(Widget::class)
             ->assertSet('isOpen', true)
             ->assertSet('messages.1.content', 'Keep this conversation.');
+    }
+
+    public function test_widget_displays_the_dave_title_when_open(): void
+    {
+        AiAssistantSetting::factory()->configured()->create([
+            'settings_key' => AiAssistantSetting::DEFAULT_SETTINGS_KEY,
+        ]);
+
+        $this->actingAs(User::factory()->create());
+
+        Livewire::test(Widget::class)
+            ->call('toggleOpen')
+            ->assertSee('Ask Dave')
+            ->assertSee('Close Dave');
     }
 }

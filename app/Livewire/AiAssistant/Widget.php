@@ -98,7 +98,7 @@ class Widget extends Component
         } catch (Throwable $throwable) {
             report($throwable);
 
-            $assistantReply = 'I could not reach the configured AI provider just now. Please try again in a moment or review the AI Assistant settings.';
+            $assistantReply = 'I could not reach the configured AI provider just now. Please try again in a moment or review the Dave settings.';
         }
 
         $this->messages[] = [
