@@ -35,6 +35,7 @@ class AiAssistantWidgetTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('aria-label="Open Dave"', false);
+        $response->assertSee('shadow-zinc-900/20', false);
         $response->assertDontSee('<span class="sr-only">Open Dave</span>', false);
     }
 
