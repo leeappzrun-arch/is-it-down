@@ -197,6 +197,7 @@ On the first boot the container will:
 - start the Laravel scheduler loop so monitoring continues to run inside the same container
 
 To change the public port, update `APP_PORT` in your `.env` file.
+
 To move the persistent data somewhere else on the host, update `APP_DATA_DIR`.
 To stay on a fixed release instead of tracking new builds, change the image tag in `docker-compose.yml`, for example:
 
