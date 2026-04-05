@@ -15,7 +15,7 @@
     class="fixed right-4 bottom-4 z-40 flex items-end gap-3"
 >
     @if ($isOpen)
-        <div class="w-[min(30rem,calc(100vw-1.5rem))] rounded-3xl border border-zinc-200 bg-white shadow-2xl dark:border-zinc-700 dark:bg-zinc-900">
+        <div class="w-[min(30rem,calc(100vw-1.5rem))] rounded-3xl border border-zinc-200 bg-white shadow-2xl shadow-zinc-900/15 dark:border-zinc-700 dark:bg-zinc-900 dark:shadow-black/40">
             <div class="flex items-start justify-between gap-3 border-b border-zinc-200 px-4 py-4 dark:border-zinc-700">
                 <div>
                     <flux:heading size="lg">{{ __('Ask Dave') }}</flux:heading>
@@ -87,7 +87,7 @@
         variant="primary"
         square
         wire:click="toggleOpen"
-        class="h-14 w-14 rounded-full shadow-xl"
+        class="h-14 w-14 rounded-full shadow-xl shadow-zinc-900/20 dark:shadow-black/40"
         icon="sparkles"
         aria-label="{{ $isOpen ? __('Close Dave') : __('Open Dave') }}"
     />
