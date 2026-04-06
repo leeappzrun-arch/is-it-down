@@ -59,6 +59,14 @@ This project has domain-specific skills available. You MUST activate the relevan
 - Stick to existing directory structure; don't create new base folders without approval.
 - Do not change the application's dependencies without approval.
 
+## Release Workflow
+
+- When the user asks you to create or publish a new application version, do not cut the release directly from `main` unless the user explicitly asks for that.
+- If the current branch is not already the intended release branch, create and switch to a release branch named `release/<version>` before creating the release commit or tag. For example, version `v1.0.2` should use branch `release/1.0.2`.
+- Create the matching Git tag for the requested version after the release commit is ready. For example, branch `release/1.0.2` should be paired with tag `v1.0.2`.
+- When pushing a release, push the release branch and its tags together so versioned Docker publishing can run from the tag.
+- Avoid creating a branch with the exact same name as the tag.
+
 ## Frontend Bundling
 
 - If the user doesn't see a frontend change reflected in the UI, it could mean they need to run `ddev npm run build`, `ddev npm run dev`, or `ddev composer run dev`. Ask them.
