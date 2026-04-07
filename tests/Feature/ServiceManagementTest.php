@@ -6,6 +6,7 @@ use App\Models\Recipient;
 use App\Models\RecipientGroup;
 use App\Models\Service;
 use App\Models\ServiceGroup;
+use App\Models\ServiceTemplate;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -29,6 +30,7 @@ class ServiceManagementTest extends TestCase
         $response->assertSeeText('Expand to review monitoring status, the next check timer, routing details, and effective recipients.');
         $response->assertSee('x-data="{ expanded: false }"', false);
         $response->assertSee('x-bind:open="expanded"', false);
+        $response->assertSeeText('Manage service templates');
     }
 
     public function test_non_admin_users_cannot_visit_the_service_management_page(): void
@@ -113,6 +115,75 @@ class ServiceManagementTest extends TestCase
         $this->assertDatabaseMissing('services', [
             'id' => $service->id,
         ]);
+    }
+
+    public function test_admin_users_can_save_an_existing_service_as_a_template(): void
+    {
+        $this->actingAs(User::factory()->admin()->create());
+
+        $serviceGroup = ServiceGroup::factory()->create(['name' => 'Production']);
+        $recipientGroup = RecipientGroup::factory()->create(['name' => 'Operations']);
+        $recipient = Recipient::factory()->create(['name' => 'Ops mailbox']);
+        $service = Service::factory()->expectsText()->create([
+            'name' => 'Marketing site',
+            'interval_seconds' => Service::INTERVAL_3_MINUTES,
+        ]);
+
+        $service->groups()->sync([$serviceGroup->id]);
+        $service->recipientGroups()->sync([$recipientGroup->id]);
+        $service->recipients()->sync([$recipient->id]);
+
+        Livewire::test('pages::services.index')
+            ->call('promptTemplateCreation', $service->id)
+            ->assertSet('showCreateTemplateModal', true)
+            ->set('templateName', 'Website starter')
+            ->call('createTemplateFromService')
+            ->assertHasNoErrors();
+
+        $template = ServiceTemplate::query()->where('name', 'Website starter')->first();
+
+        $this->assertNotNull($template);
+        $this->assertSame('Marketing site', $template->serviceName());
+        $this->assertSame(Service::INTERVAL_3_MINUTES, $template->intervalSeconds());
+        $this->assertSame(Service::EXPECT_TEXT, $template->expectType());
+        $this->assertSame('All systems operational', $template->expectValue());
+        $this->assertSame([$serviceGroup->id], $template->selectedServiceGroupIds());
+        $this->assertSame([$recipientGroup->id], $template->selectedRecipientGroupIds());
+        $this->assertSame([$recipient->id], $template->selectedRecipientIds());
+    }
+
+    public function test_service_form_can_be_prefilled_from_a_template(): void
+    {
+        $this->actingAs(User::factory()->admin()->create());
+
+        $serviceGroup = ServiceGroup::factory()->create();
+        $recipientGroup = RecipientGroup::factory()->create();
+        $recipient = Recipient::factory()->create();
+        $template = ServiceTemplate::factory()->create([
+            'name' => 'Website starter',
+            'configuration' => [
+                'name' => 'Marketing site',
+                'interval_seconds' => Service::INTERVAL_5_MINUTES,
+                'expect_type' => Service::EXPECT_TEXT,
+                'expect_value' => 'All systems operational',
+                'service_group_ids' => [$serviceGroup->id],
+                'recipient_group_ids' => [$recipientGroup->id],
+                'recipient_ids' => [$recipient->id],
+            ],
+        ]);
+
+        Livewire::withQueryParams(['template' => $template->id])
+            ->test('pages::services.index')
+            ->assertSet('loadedTemplateId', $template->id)
+            ->assertSet('loadedTemplateName', 'Website starter')
+            ->assertSet('name', 'Marketing site')
+            ->assertSet('url', '')
+            ->assertSet('intervalSeconds', Service::INTERVAL_5_MINUTES)
+            ->assertSet('expectType', Service::EXPECT_TEXT)
+            ->assertSet('expectValue', 'All systems operational')
+            ->assertSet('selectedServiceGroupIds', [(string) $serviceGroup->id])
+            ->assertSet('selectedRecipientGroupIds', [(string) $recipientGroup->id])
+            ->assertSet('selectedRecipientIds', [(string) $recipient->id]);
     }
 
     public function test_service_page_shows_effective_recipient_sources(): void

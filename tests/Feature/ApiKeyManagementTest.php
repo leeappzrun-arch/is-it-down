@@ -19,6 +19,7 @@ class ApiKeyManagementTest extends TestCase
 
         $response->assertOk();
         $response->assertSeeText('API Keys');
+        $response->assertSeeText('Service Templates');
         $response->assertSee('sticky top-4 z-20', false);
     }
 

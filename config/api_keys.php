@@ -16,6 +16,7 @@ return [
     'resources' => [
         'recipients' => 'Recipients',
         'services' => 'Services',
+        'templates' => 'Service Templates',
         'users' => 'Users',
     ],
 

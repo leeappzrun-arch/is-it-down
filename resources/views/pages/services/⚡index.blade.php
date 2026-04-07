@@ -5,8 +5,11 @@ use App\Models\Recipient;
 use App\Models\RecipientGroup;
 use App\Models\Service;
 use App\Models\ServiceGroup;
+use App\Models\ServiceTemplate;
 use App\Support\Services\ServiceData;
+use App\Support\Services\ServiceTemplateData;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -37,6 +40,16 @@ new #[Title('Service management')] class extends Component {
     /** @var array<int, string> */
     public array $selectedRecipientIds = [];
 
+    public bool $showCreateTemplateModal = false;
+
+    public ?int $templateSourceServiceId = null;
+
+    public string $templateName = '';
+
+    public ?int $loadedTemplateId = null;
+
+    public string $loadedTemplateName = '';
+
     public bool $showDeleteConfirmationModal = false;
 
     public ?string $deleteConfirmationType = null;
@@ -51,6 +64,12 @@ new #[Title('Service management')] class extends Component {
     public function mount(): void
     {
         abort_unless(auth()->user()?->isAdmin(), 403);
+
+        $templateId = (int) request()->integer('template');
+
+        if ($templateId > 0) {
+            $this->applyTemplate($templateId);
+        }
     }
 
     /**
@@ -191,6 +210,8 @@ new #[Title('Service management')] class extends Component {
             ->with(['groups:id', 'recipientGroups:id', 'recipients:id'])
             ->findOrFail($serviceId);
 
+        $this->loadedTemplateId = null;
+        $this->loadedTemplateName = '';
         $this->editingServiceId = $service->id;
         $this->name = $service->name;
         $this->url = $service->url;
@@ -221,6 +242,53 @@ new #[Title('Service management')] class extends Component {
     public function cancelServiceEditing(): void
     {
         $this->resetServiceForm();
+    }
+
+    /**
+     * Prompt to create a template from an existing service.
+     */
+    public function promptTemplateCreation(int $serviceId): void
+    {
+        $service = Service::query()->findOrFail($serviceId);
+
+        $this->templateSourceServiceId = $service->id;
+        $this->templateName = $service->name.' template';
+        $this->showCreateTemplateModal = true;
+        $this->resetValidation();
+    }
+
+    /**
+     * Cancel template creation from a service.
+     */
+    public function cancelTemplateCreation(): void
+    {
+        $this->resetTemplateCreationState();
+    }
+
+    /**
+     * Create a template from the selected service.
+     */
+    public function createTemplateFromService(): void
+    {
+        $validated = $this->validate([
+            'templateName' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('service_templates', 'name'),
+            ],
+        ]);
+
+        $service = Service::query()
+            ->with(['groups:id', 'recipientGroups:id', 'recipients:id'])
+            ->findOrFail($this->templateSourceServiceId);
+
+        ServiceTemplate::query()->create(
+            ServiceTemplateData::payloadFromService($service, (string) $validated['templateName'])
+        );
+
+        $this->resetTemplateCreationState();
+        $this->dispatch('service-template-created');
     }
 
     /**
@@ -290,10 +358,23 @@ new #[Title('Service management')] class extends Component {
             'selectedServiceGroupIds',
             'selectedRecipientGroupIds',
             'selectedRecipientIds',
+            'loadedTemplateId',
+            'loadedTemplateName',
         ]);
 
         $this->intervalSeconds = Service::INTERVAL_1_MINUTE;
         $this->expectType = Service::EXPECT_NONE;
+        $this->resetValidation();
+    }
+
+    /**
+     * Reset the template-creation modal state.
+     */
+    private function resetTemplateCreationState(): void
+    {
+        $this->showCreateTemplateModal = false;
+        $this->templateSourceServiceId = null;
+        $this->templateName = '';
         $this->resetValidation();
     }
 
@@ -362,6 +443,39 @@ new #[Title('Service management')] class extends Component {
 
         return $haystack->contains($search);
     }
+
+    /**
+     * Apply a saved template to the service form.
+     */
+    private function applyTemplate(int $templateId): void
+    {
+        $template = ServiceTemplate::query()->findOrFail($templateId);
+        $configuration = $template->serviceConfiguration();
+
+        $this->resetServiceForm();
+        $this->name = $configuration['name'];
+        $this->url = '';
+        $this->intervalSeconds = $configuration['interval_seconds'];
+        $this->expectType = $configuration['expect_type'] ?? Service::EXPECT_NONE;
+        $this->expectValue = $configuration['expect_value'] ?? '';
+        $this->selectedServiceGroupIds = ServiceGroup::query()
+            ->whereIn('id', $configuration['service_group_ids'])
+            ->pluck('id')
+            ->map(fn (int $id): string => (string) $id)
+            ->all();
+        $this->selectedRecipientGroupIds = RecipientGroup::query()
+            ->whereIn('id', $configuration['recipient_group_ids'])
+            ->pluck('id')
+            ->map(fn (int $id): string => (string) $id)
+            ->all();
+        $this->selectedRecipientIds = Recipient::query()
+            ->whereIn('id', $configuration['recipient_ids'])
+            ->pluck('id')
+            ->map(fn (int $id): string => (string) $id)
+            ->all();
+        $this->loadedTemplateId = $template->id;
+        $this->loadedTemplateName = $template->name;
+    }
 }; ?>
 
 <section wire:poll.5s.visible class="w-full">
@@ -369,12 +483,18 @@ new #[Title('Service management')] class extends Component {
         <div class="flex flex-wrap items-start justify-between gap-4">
             <div>
                 <flux:heading size="xl" level="1">{{ __('Services') }}</flux:heading>
-                <flux:subheading size="lg" class="mb-6">{{ __('Create monitored services, set their polling interval and expectation rules, then route alerts through direct recipients, recipient groups, and reusable service groups.') }}</flux:subheading>
+                <flux:subheading size="lg" class="mb-6">{{ __('Create monitored services, set their polling interval and expectation rules, then route alerts to recipients.') }}</flux:subheading>
             </div>
 
-            <flux:button variant="ghost" :href="route('service-groups.index')" wire:navigate>
-                {{ __('Manage service groups') }}
-            </flux:button>
+            <div class="flex flex-wrap items-center gap-3">
+                <flux:button variant="ghost" :href="route('service-templates.index')" wire:navigate>
+                    {{ __('Manage service templates') }}
+                </flux:button>
+
+                <flux:button variant="ghost" :href="route('service-groups.index')" wire:navigate>
+                    {{ __('Manage service groups') }}
+                </flux:button>
+            </div>
         </div>
         <flux:separator variant="subtle" />
     </div>
@@ -411,6 +531,13 @@ new #[Title('Service management')] class extends Component {
 
                     <x-action-message on="service-saved">{{ __('Service saved.') }}</x-action-message>
                 </div>
+
+                @if ($loadedTemplateName !== '')
+                    <div class="mt-6 rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-100">
+                        <div class="font-medium">{{ __('Template loaded: :name', ['name' => $loadedTemplateName]) }}</div>
+                        <p class="mt-1 leading-6 text-sky-800 dark:text-sky-200">{{ __('The service name, expectation, interval, and routing assignments were prefilled from this template. Add the URL, review anything you want to change, and then save the service.') }}</p>
+                    </div>
+                @endif
 
                 <form wire:submit="saveService" class="mt-6 space-y-5">
                     <flux:input wire:model="name" :label="__('Name')" type="text" required placeholder="Marketing site" />
@@ -570,8 +697,8 @@ new #[Title('Service management')] class extends Component {
                     <div class="flex flex-wrap items-center gap-3 pt-2">
                         <flux:button variant="primary" type="submit">{{ $editingServiceId ? __('Save service') : __('Create service') }}</flux:button>
 
-                        @if ($editingServiceId)
-                            <flux:button type="button" variant="ghost" wire:click="cancelServiceEditing">{{ __('Cancel') }}</flux:button>
+                        @if ($editingServiceId || $loadedTemplateName !== '')
+                            <flux:button type="button" variant="ghost" wire:click="cancelServiceEditing">{{ $editingServiceId ? __('Cancel') : __('Clear template') }}</flux:button>
                         @endif
                     </div>
                 </form>
@@ -585,7 +712,10 @@ new #[Title('Service management')] class extends Component {
                     <flux:subheading class="mt-2">{{ __('Review every unique recipient a service resolves to, including exactly whether it comes from a direct assignment, a recipient group, or a service group.') }}</flux:subheading>
                 </div>
 
-                <x-action-message on="service-deleted">{{ __('Service removed.') }}</x-action-message>
+                <div class="flex flex-wrap items-center gap-3">
+                    <x-action-message on="service-template-created">{{ __('Template saved.') }}</x-action-message>
+                    <x-action-message on="service-deleted">{{ __('Service removed.') }}</x-action-message>
+                </div>
             </div>
 
             @if ($this->services->isEmpty())
@@ -646,6 +776,7 @@ new #[Title('Service management')] class extends Component {
                                     </div>
 
                                     <div class="flex flex-wrap items-center gap-2">
+                                        <flux:button type="button" variant="subtle" wire:click="promptTemplateCreation({{ $service->id }})">{{ __('Save as template') }}</flux:button>
                                         <flux:button type="button" variant="ghost" wire:click="editService({{ $service->id }})">{{ __('Edit') }}</flux:button>
                                         <flux:button type="button" variant="danger" wire:click="confirmServiceDeletion({{ $service->id }})">{{ __('Delete') }}</flux:button>
                                     </div>
@@ -769,6 +900,22 @@ new #[Title('Service management')] class extends Component {
             @endif
         </div>
     </div>
+
+    <flux:modal wire:model="showCreateTemplateModal" class="md:w-[28rem]">
+        <div class="space-y-4">
+            <div>
+                <flux:heading size="lg">{{ __('Save as template') }}</flux:heading>
+                <flux:subheading class="mt-2">{{ __('Give this template a name and the current service settings will be saved without the URL.') }}</flux:subheading>
+            </div>
+
+            <flux:input wire:model="templateName" :label="__('Template name')" type="text" required placeholder="Standard website template" />
+
+            <div class="flex flex-wrap justify-end gap-3">
+                <flux:button type="button" variant="ghost" wire:click="cancelTemplateCreation">{{ __('Cancel') }}</flux:button>
+                <flux:button type="button" variant="primary" wire:click="createTemplateFromService">{{ __('Save template') }}</flux:button>
+            </div>
+        </div>
+    </flux:modal>
 
     <flux:modal wire:model="showDeleteConfirmationModal" class="md:w-[28rem]">
         <div class="space-y-4">

@@ -7,6 +7,7 @@ use App\Models\Recipient;
 use App\Models\RecipientGroup;
 use App\Models\Service;
 use App\Models\ServiceGroup;
+use App\Models\ServiceTemplate;
 use App\Models\User;
 use Carbon\CarbonInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -191,6 +192,19 @@ class SystemApiTest extends TestCase
 
         $token = $this->issueApiKey($admin, ['services:read', 'services:write']);
 
+        $serviceTemplate = ServiceTemplate::factory()->create([
+            'name' => 'Marketing site starter',
+            'configuration' => [
+                'name' => 'Marketing Site Template',
+                'interval_seconds' => Service::INTERVAL_3_MINUTES,
+                'expect_type' => Service::EXPECT_TEXT,
+                'expect_value' => 'Healthy',
+                'service_group_ids' => [$serviceGroup->id],
+                'recipient_group_ids' => [$recipientGroup->id],
+                'recipient_ids' => [$recipient->id],
+            ],
+        ]);
+
         $this->withToken($token)
             ->getJson('/api/v1/services?search=Marketing&status=down&service_group_id='.$serviceGroup->id.'&recipient_group_id='.$recipientGroup->id.'&recipient_id='.$recipient->id)
             ->assertOk()
@@ -212,18 +226,15 @@ class SystemApiTest extends TestCase
 
         $createResponse = $this->withToken($token)
             ->postJson('/api/v1/services', [
-                'name' => 'API Service',
+                'template' => $serviceTemplate->name,
                 'url' => 'https://example.com/api',
-                'interval_seconds' => 60,
-                'expect_type' => 'text',
-                'expect_value' => 'Healthy',
-                'service_group_ids' => [$serviceGroup->id],
-                'recipient_group_ids' => [$recipientGroup->id],
-                'recipient_ids' => [$recipient->id],
+                'name' => 'API Service',
             ]);
 
         $createResponse->assertCreated();
         $createdServiceId = $createResponse->json('data.id');
+        $createResponse->assertJsonPath('data.interval_seconds', Service::INTERVAL_3_MINUTES);
+        $createResponse->assertJsonPath('data.expect_type', Service::EXPECT_TEXT);
 
         $this->withToken($token)
             ->patchJson('/api/v1/services/'.$createdServiceId, [
@@ -241,6 +252,93 @@ class SystemApiTest extends TestCase
 
         $this->withToken($token)
             ->deleteJson('/api/v1/services/'.$createdServiceId)
+            ->assertNoContent();
+    }
+
+    public function test_service_template_endpoints_support_search_permissions_and_crud(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $recipient = Recipient::factory()->create();
+        $recipientGroup = RecipientGroup::factory()->create(['name' => 'Operations']);
+        $serviceGroup = ServiceGroup::factory()->create(['name' => 'Production']);
+
+        $existingTemplate = ServiceTemplate::factory()->create([
+            'name' => 'Website starter',
+            'configuration' => [
+                'name' => 'Marketing Site',
+                'interval_seconds' => Service::INTERVAL_1_MINUTE,
+                'expect_type' => Service::EXPECT_TEXT,
+                'expect_value' => 'Healthy',
+                'service_group_ids' => [$serviceGroup->id],
+                'recipient_group_ids' => [$recipientGroup->id],
+                'recipient_ids' => [$recipient->id],
+            ],
+        ]);
+
+        $token = $this->issueApiKey($admin, ['templates:read', 'templates:write']);
+
+        $this->withToken($token)
+            ->getJson('/api/v1/service-templates?search=Website&service_group_id='.$serviceGroup->id.'&recipient_group_id='.$recipientGroup->id.'&recipient_id='.$recipient->id)
+            ->assertOk()
+            ->assertJsonPath('data.0.name', 'Website starter');
+
+        $forbiddenToken = $this->issueApiKey($admin, ['services:read']);
+
+        $this->withToken($forbiddenToken)
+            ->getJson('/api/v1/service-templates')
+            ->assertForbidden()
+            ->assertJson([
+                'message' => 'This API key does not have the required permission [templates:read].',
+            ]);
+
+        $this->withToken($token)
+            ->postJson('/api/v1/service-templates', [
+                'name' => 'Broken template',
+                'service_name' => '',
+                'interval_seconds' => Service::INTERVAL_1_MINUTE,
+                'expect_type' => Service::EXPECT_NONE,
+                'expect_value' => '',
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['serviceName']);
+
+        $createResponse = $this->withToken($token)
+            ->postJson('/api/v1/service-templates', [
+                'name' => 'API service template',
+                'service_name' => 'Billing API',
+                'interval_seconds' => Service::INTERVAL_5_MINUTES,
+                'expect_type' => Service::EXPECT_REGEX,
+                'expect_value' => '/healthy/i',
+                'service_group_ids' => [$serviceGroup->id],
+                'recipient_group_ids' => [$recipientGroup->id],
+                'recipient_ids' => [$recipient->id],
+            ]);
+
+        $createResponse->assertCreated();
+        $createdTemplateId = $createResponse->json('data.id');
+        $createResponse->assertJsonPath('data.service_name', 'Billing API');
+
+        $this->withToken($token)
+            ->getJson('/api/v1/service-templates/'.$createdTemplateId)
+            ->assertOk()
+            ->assertJsonPath('data.name', 'API service template');
+
+        $this->withToken($token)
+            ->patchJson('/api/v1/service-templates/'.$createdTemplateId, [
+                'name' => 'API service template',
+                'service_name' => 'Billing API',
+                'interval_seconds' => Service::INTERVAL_10_MINUTES,
+                'expect_type' => Service::EXPECT_NONE,
+                'expect_value' => '',
+                'service_group_ids' => [$serviceGroup->id],
+                'recipient_group_ids' => [],
+                'recipient_ids' => [],
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.interval_seconds', Service::INTERVAL_10_MINUTES);
+
+        $this->withToken($token)
+            ->deleteJson('/api/v1/service-templates/'.$existingTemplate->id)
             ->assertNoContent();
     }
 

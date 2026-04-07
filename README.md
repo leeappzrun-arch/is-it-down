@@ -2,7 +2,7 @@
 
 ## Overview
 
-Is It Down is a Laravel 13 and Livewire 4 application for managing monitored services and the recipients who should be notified about them. The project currently focuses on authenticated access, role-based administration, recipient management, service management, grouped routing targets, scheduled uptime checks, webhook and email delivery, user/account management, personal API keys, and a versioned REST API for integrations.
+Is It Down is a Laravel 13 and Livewire 4 application for managing monitored services and the recipients who should be notified about them. The project currently focuses on authenticated access, role-based administration, recipient management, service management, service templates, grouped routing targets, scheduled uptime checks, webhook and email delivery, user/account management, personal API keys, and a versioned REST API for integrations.
 
 ## Current Features
 
@@ -10,7 +10,7 @@ Is It Down is a Laravel 13 and Livewire 4 application for managing monitored ser
 
 - Users sign in through Laravel Fortify.
 - Verified users are routed to the dashboard.
-- The dashboard shows a live service-status grid plus high-level totals for recipients, recipient groups, services, service groups, users, and API keys.
+- The dashboard shows a live service-status grid plus high-level totals for recipients, recipient groups, services, templates, service groups, users, and API keys.
 - Admins can open those dashboard stats to jump straight into the matching management screens.
 - Authenticated users can access profile, appearance, and security settings.
 - When Dave is enabled and configured by an admin, authenticated users also get a floating bottom-right chat launcher across the application shell.
@@ -23,7 +23,7 @@ Is It Down is a Laravel 13 and Livewire 4 application for managing monitored ser
 
 ### Role-based access
 
-- `admin` users can manage recipients and users.
+- `admin` users can manage recipients, recipient groups, services, templates, service groups, users, and API keys.
 - `user` accounts can access the authenticated application and their own settings.
 - The system prevents the last remaining admin from being downgraded.
 
@@ -53,6 +53,7 @@ Is It Down is a Laravel 13 and Livewire 4 application for managing monitored ser
 - Create, edit, and delete services.
 - Search the Services page to filter service cards from one input.
 - Configure a service name, URL, polling interval, and optional expectation using either plain text or a regular expression.
+- Save any existing service as a reusable template without its URL.
 - Assign services to one or more service groups.
 - Assign recipients and recipient groups directly to a service.
 - Open the Service Groups page when you want to manage service-group membership and routing from the group side.
@@ -63,6 +64,14 @@ Is It Down is a Laravel 13 and Livewire 4 application for managing monitored ser
 - Include outage duration in recovery notifications so emails and webhook consumers can see how long a service was down before it came back up.
 - Email all admin users if any webhook delivery fails during a status-change notification.
 - Review the effective recipients for a service, including whether each route is direct, comes from a recipient group, or is inherited through a service group.
+
+### Template management
+
+- Create, edit, and delete reusable service templates.
+- Store the same service settings you normally configure on the Services page except for the URL.
+- Save templates directly from the Templates page or create them from an existing service with a name prompt.
+- Start a new service from a template, which pre-fills the service form so only the URL and any final adjustments are needed.
+- Search the Templates page by template name, saved service defaults, or routing assignments.
 
 ### Service group management
 
@@ -86,7 +95,7 @@ Is It Down is a Laravel 13 and Livewire 4 application for managing monitored ser
 - Admins can create personal API keys that are always linked to the account that created them.
 - Admins can search the API Keys page by key details, owners, permissions, and status.
 - Keys support expiration presets of 6 months, 1 year, 2 years, or never.
-- Keys support per-section `read` and `write` permissions, including the new `services` area.
+- Keys support per-section `read` and `write` permissions, including the `templates` area.
 - API keys are stored securely as hashes and the plain-text token is only shown once in a post-create modal.
 - Keys can be revoked without removing the database record.
 
@@ -108,9 +117,11 @@ Is It Down is a Laravel 13 and Livewire 4 application for managing monitored ser
 - Expired, revoked, or unlinked API keys are rejected automatically.
 - `recipients:*` permissions cover recipients and recipient groups.
 - `services:*` permissions cover services and service groups.
+- `templates:*` permissions cover service templates.
 - `users:*` permissions cover user listing and management.
 - Listing endpoints support search plus resource-specific filtering where relevant.
 - Creation endpoints reuse the same validation rules as the matching Livewire management forms.
+- Services can be created from a saved service template by passing a template id or exact template name together with the URL and any optional overrides.
 
 ### In-app documentation
 
@@ -126,11 +137,12 @@ Is It Down is a Laravel 13 and Livewire 4 application for managing monitored ser
 - `/recipients` is the admin recipient management page.
 - `/recipient-groups` is the admin recipient group management page.
 - `/services` is the admin service management page.
+- `/service-templates` is the admin service template management page.
 - `/service-groups` is the admin service group management page.
 - `/users` is the admin user management page.
 - `/api-keys` is the admin API key management page.
 - `/settings/ai-assistant` is the admin Dave configuration page.
-- `/api/v1/*` is the authenticated REST API surface for recipients, recipient groups, services, service groups, and users.
+- `/api/v1/*` is the authenticated REST API surface for recipients, recipient groups, services, service templates, service groups, and users.
 - `/settings/profile`, `/settings/appearance`, and `/settings/security` manage account preferences.
 - `/user-guide`, `/api-documentation`, `/api-playground`, and `/webhook-documentation` provide internal documentation pages.
 
@@ -274,7 +286,7 @@ Running the database seeder provisions two verified accounts for local developme
 - `user@example.com` / `password`
 
 The seeder also creates sample recipient groups, recipients, and personal API keys so the dashboard, management screens, and API have representative data immediately.
-It also seeds service groups and services so the routing views and monitoring status cards have meaningful examples on a fresh install.
+It also seeds service groups, services, and service templates so the routing views, template workflows, and monitoring status cards have meaningful examples on a fresh install.
 
 ## Testing
 

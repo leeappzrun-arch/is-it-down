@@ -24,6 +24,7 @@ new #[Title('User guide')] class extends Component {
             <a href="#recipient-management" class="rounded-lg border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:text-zinc-100">{{ __('Recipient management') }}</a>
             <a href="#recipient-group-management" class="rounded-lg border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:text-zinc-100">{{ __('Recipient group management') }}</a>
             <a href="#service-management" class="rounded-lg border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:text-zinc-100">{{ __('Service management') }}</a>
+            <a href="#template-management" class="rounded-lg border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:text-zinc-100">{{ __('Template management') }}</a>
             <a href="#service-group-management" class="rounded-lg border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:text-zinc-100">{{ __('Service group management') }}</a>
             <a href="#user-management" class="rounded-lg border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:text-zinc-100">{{ __('User management') }}</a>
             <a href="#api-key-management" class="rounded-lg border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:text-zinc-100">{{ __('API key management') }}</a>
@@ -41,7 +42,7 @@ new #[Title('User guide')] class extends Component {
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
                     <p>{{ __('Sign in with your account to access the application. Verified users are taken to the dashboard after login.') }}</p>
                     <p>{{ __('If you are a standard user, your day-to-day actions are currently centered around your account settings and reviewing the in-app guidance pages.') }}</p>
-                    <p>{{ __('If you are an admin, the main navigation will show Monitoring for Dashboard, Recipients, Recipient groups, Services, and Service groups, plus Access for Users and API Keys.') }}</p>
+                    <p>{{ __('If you are an admin, the main navigation will show Monitoring for Dashboard, Recipients, Recipient groups, Services, Service Templates, and Service groups, plus Access for Users and API Keys.') }}</p>
                     <p>{{ __('If an admin has configured Dave, a floating chat launcher will appear in the bottom-right corner of the app so you can ask for help without leaving the page.') }}</p>
                 </div>
             </div>
@@ -49,8 +50,8 @@ new #[Title('User guide')] class extends Component {
             <div id="dashboard" class="scroll-mt-24 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
                 <flux:heading size="lg">{{ __('Dashboard') }}</flux:heading>
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
-                    <p>{{ __('The dashboard is the default landing page after authentication and shows a live service-status grid above the headline totals for recipients, recipient groups, services, service groups, users, and API keys.') }}</p>
-                    <p>{{ __('Admins can select those dashboard cards to move directly into the matching management page for recipients, recipient groups, services, service groups, users, or API keys. Standard users can review the totals but cannot click through to admin-only tools.') }}</p>
+                    <p>{{ __('The dashboard is the default landing page after authentication and shows a live service-status grid above the headline totals for recipients, recipient groups, services, templates, service groups, users, and API keys.') }}</p>
+                    <p>{{ __('Admins can select those dashboard cards to move directly into the matching management page for recipients, recipient groups, services, templates, service groups, users, or API keys. Standard users can review the totals but cannot click through to admin-only tools.') }}</p>
                     <p>{{ __('Use the sidebar to move into administration screens, account settings, and supporting documentation.') }}</p>
                 </div>
             </div>
@@ -90,10 +91,23 @@ new #[Title('User guide')] class extends Component {
                     <p>{{ __('A service is considered down whenever the URL does not respond with HTTP 200, or when a configured text or regex expectation fails to match the response body.') }}</p>
                     <p>{{ __('A service can have direct recipients, direct recipient groups, and one or more service groups attached at the same time.') }}</p>
                     <p>{{ __('Use the sticky search field at the top of the Services page to narrow managed services from a single query.') }}</p>
+                    <p>{{ __('Use the Save as template action on any existing service when you want to capture its non-URL settings into a reusable starting point.') }}</p>
                     <p>{{ __('When you want to manage linked services or routing ingredients from the group side, open the dedicated Service Groups page.') }}</p>
                     <p>{{ __('Each service opens as an accordion so the list stays compact while still exposing the current monitoring state, how long the service has been in that state, the latest reason, the last check time, the next check timer, and the full effective recipient breakdown when you expand a service.') }}</p>
                     <p>{{ __('Recipients are only notified when a service changes state. A service that stays down will not keep sending repeated down alerts on every interval, but a recovery alert is sent once it comes back up and includes how long the outage lasted.') }}</p>
                     <p>{{ __('Editing a service scrolls the form back into view, and deleting a service asks for confirmation before it is removed.') }}</p>
+                </div>
+            </div>
+
+            <div id="template-management" class="scroll-mt-24 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+                <flux:heading size="lg">{{ __('Template management') }}</flux:heading>
+                <flux:subheading class="mt-2">{{ __('Admin only') }}</flux:subheading>
+                <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+                    <p>{{ __('Templates are reusable service blueprints. They store the same service settings you would normally configure on the Services page except for the URL, so you can reuse intervals, expectations, and routing assignments across new services.') }}</p>
+                    <p>{{ __('Each template has its own template name plus a default service name that is copied into the service form when the template is used.') }}</p>
+                    <p>{{ __('You can create templates directly from the Templates page or save one from an existing service by choosing Save as template from the service details.') }}</p>
+                    <p>{{ __('When you choose Create service on a template, the app opens the Services page with the template values prefilled. Add the URL, review the fields, and save when you are ready.') }}</p>
+                    <p>{{ __('Like the other admin pages, templates support sticky search, edit-to-form focus, and delete confirmation before anything is removed.') }}</p>
                 </div>
             </div>
 
@@ -128,7 +142,7 @@ new #[Title('User guide')] class extends Component {
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
                     <p>{{ __('Admins can create API keys from the API Keys page, and every key is automatically linked to the signed-in account that created it.') }}</p>
                     <p>{{ __('The sticky page-level search field filters issued keys by key details, ownership information, permissions, and status so older keys are easier to find.') }}</p>
-                    <p>{{ __('Every key can be given read and write access for each supported application area, including Services, Users, and Recipients.') }}</p>
+                    <p>{{ __('Every key can be given read and write access for each supported application area, including Services, Service Templates, Users, and Recipients.') }}</p>
                     <p>{{ __('Expiration can be set to 6 months, 1 year, 2 years, or never. The plain-text key is only shown once in a confirmation modal when it is created, so it should be copied immediately.') }}</p>
                     <p>{{ __('Keys can be revoked later without deleting the audit trail of who created them and what access they were given.') }}</p>
                 </div>
@@ -151,7 +165,7 @@ new #[Title('User guide')] class extends Component {
                 <flux:heading size="lg">{{ __('API access') }}</flux:heading>
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
                     <p>{{ __('The application now exposes a REST API under `/api/v1`, authenticated with bearer tokens generated from the API Keys page.') }}</p>
-                    <p>{{ __('Read routes and write routes each require the matching API key permissions, and expired or revoked keys stop working immediately.') }}</p>
+                    <p>{{ __('Read routes and write routes each require the matching API key permissions, and expired or revoked keys stop working immediately. The current REST API now includes service-template endpoints and also allows new services to start from a saved template.') }}</p>
                     <p>{{ __('Use the API Documentation page for the full endpoint reference and the API Playground page to test those endpoints against the current environment.') }}</p>
                 </div>
             </div>

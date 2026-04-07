@@ -8,9 +8,11 @@ use App\Concerns\RecipientValidation;
 use App\Concerns\ServiceValidation;
 use App\Models\Recipient;
 use App\Models\Service;
+use App\Models\ServiceTemplate;
 use App\Models\User;
 use App\Support\Recipients\RecipientData;
 use App\Support\Services\ServiceData;
+use App\Support\Services\ServiceTemplateData;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
@@ -120,6 +122,7 @@ class AiAssistantToolExecutor
                         'properties' => [
                             'action' => ['type' => 'string', 'enum' => ['create', 'update', 'delete']],
                             'target' => ['type' => 'string', 'description' => 'Required for update and delete. Use the service id, exact name, or exact URL.'],
+                            'template' => ['type' => 'string', 'description' => 'Optional for create. Use a service template id or exact template name to prefill the new service before applying any overrides.'],
                             'name' => ['type' => 'string'],
                             'url' => ['type' => 'string'],
                             'interval_seconds' => [
@@ -608,20 +611,29 @@ class AiAssistantToolExecutor
      */
     private function createService(array $arguments): array
     {
-        $expectType = (string) Arr::get($arguments, 'expect_type', Service::EXPECT_NONE);
+        try {
+            $templateDefaults = $this->serviceTemplateDefaults(Arr::get($arguments, 'template'));
+        } catch (ValidationException $exception) {
+            return $this->validationFailure($exception);
+        }
+
+        $expectType = (string) Arr::get($arguments, 'expect_type', Arr::get($templateDefaults, 'expectType', Service::EXPECT_NONE));
 
         $payload = [
-            'name' => Arr::get($arguments, 'name'),
+            'name' => Arr::get($arguments, 'name', Arr::get($templateDefaults, 'name')),
             'url' => Arr::get($arguments, 'url'),
-            'intervalSeconds' => Arr::get($arguments, 'interval_seconds', Service::INTERVAL_1_MINUTE),
+            'intervalSeconds' => Arr::get($arguments, 'interval_seconds', Arr::get($templateDefaults, 'intervalSeconds', Service::INTERVAL_1_MINUTE)),
             'expectType' => $expectType,
-            'expectValue' => Arr::get($arguments, 'expect_value', ''),
-            'selectedServiceGroupIds' => $this->normalizeIntegerList(Arr::get($arguments, 'service_group_ids', [])),
-            'selectedRecipientGroupIds' => $this->normalizeIntegerList(Arr::get($arguments, 'recipient_group_ids', [])),
-            'selectedRecipientIds' => $this->normalizeIntegerList(Arr::get($arguments, 'recipient_ids', [])),
+            'expectValue' => Arr::get($arguments, 'expect_value', Arr::get($templateDefaults, 'expectValue', '')),
+            'selectedServiceGroupIds' => $this->normalizeIntegerList(Arr::get($arguments, 'service_group_ids', Arr::get($templateDefaults, 'selectedServiceGroupIds', []))),
+            'selectedRecipientGroupIds' => $this->normalizeIntegerList(Arr::get($arguments, 'recipient_group_ids', Arr::get($templateDefaults, 'selectedRecipientGroupIds', []))),
+            'selectedRecipientIds' => $this->normalizeIntegerList(Arr::get($arguments, 'recipient_ids', Arr::get($templateDefaults, 'selectedRecipientIds', []))),
         ];
 
-        $validator = Validator::make($payload, $this->serviceValidationRules($expectType));
+        $validator = Validator::make(
+            $payload,
+            $this->serviceValidationRules($expectType, requiresName: ! filled(Arr::get($arguments, 'template')))
+        );
 
         if ($validator->fails()) {
             return $this->failureFromValidator($validator);
@@ -805,6 +817,44 @@ class AiAssistantToolExecutor
         );
 
         return $service;
+    }
+
+    /**
+     * Resolve a service template by id or exact name.
+     */
+    private function resolveServiceTemplate(string $identifier): ServiceTemplate
+    {
+        /** @var ServiceTemplate $template */
+        $template = $this->resolveModel(
+            ServiceTemplate::query(),
+            $identifier,
+            ['name'],
+            'service template'
+        );
+
+        return $template;
+    }
+
+    /**
+     * Resolve the template defaults used for service creation.
+     *
+     * @return array<string, mixed>
+     */
+    private function serviceTemplateDefaults(mixed $templateIdentifier): array
+    {
+        if (! is_string($templateIdentifier) && ! is_int($templateIdentifier) && ! is_float($templateIdentifier)) {
+            return [];
+        }
+
+        $trimmedIdentifier = trim((string) $templateIdentifier);
+
+        if ($trimmedIdentifier === '') {
+            return [];
+        }
+
+        $template = $this->resolveServiceTemplate($trimmedIdentifier);
+
+        return ServiceTemplateData::serviceFormState($template->serviceConfiguration());
     }
 
     /**
