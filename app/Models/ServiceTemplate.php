@@ -33,7 +33,7 @@ class ServiceTemplate extends Model
     /**
      * Get the normalized service configuration stored on the template.
      *
-     * @return array{name: string, interval_seconds: int, expect_type: ?string, expect_value: ?string, service_group_ids: array<int, int>, recipient_group_ids: array<int, int>, recipient_ids: array<int, int>}
+     * @return array{name: string, interval_seconds: int, expect_type: ?string, expect_value: ?string, additional_headers: array<int, array{name: string, value: string}>, ssl_expiry_notifications_enabled: bool, service_group_ids: array<int, int>, recipient_group_ids: array<int, int>, recipient_ids: array<int, int>}
      */
     public function serviceConfiguration(): array
     {
@@ -43,7 +43,7 @@ class ServiceTemplate extends Model
     /**
      * Get the form state used to start a new service from this template.
      *
-     * @return array{name: string, url: string, intervalSeconds: int, expectType: string, expectValue: string, selectedServiceGroupIds: array<int, string>, selectedRecipientGroupIds: array<int, string>, selectedRecipientIds: array<int, string>}
+     * @return array{name: string, url: string, intervalSeconds: int, expectType: string, expectValue: string, additionalHeaders: array<int, array{name: string, value: string}>, sslExpiryNotificationsEnabled: bool, selectedServiceGroupIds: array<int, string>, selectedRecipientGroupIds: array<int, string>, selectedRecipientIds: array<int, string>}
      */
     public function serviceFormState(): array
     {
@@ -96,6 +96,38 @@ class ServiceTemplate extends Model
     public function hasExpectation(): bool
     {
         return filled($this->expectValue()) && $this->expectType() !== Service::EXPECT_NONE;
+    }
+
+    /**
+     * Get the configured additional headers stored on the template.
+     *
+     * @return array<int, array{name: string, value: string}>
+     */
+    public function configuredAdditionalHeaders(): array
+    {
+        return $this->serviceConfiguration()['additional_headers'];
+    }
+
+    /**
+     * Get the configured additional header summary.
+     */
+    public function additionalHeadersSummary(): string
+    {
+        $headerCount = count($this->configuredAdditionalHeaders());
+
+        if ($headerCount === 0) {
+            return 'No additional headers';
+        }
+
+        return trim(trans_choice('{1} :count additional header|[2,*] :count additional headers', $headerCount, ['count' => $headerCount]));
+    }
+
+    /**
+     * Determine whether SSL expiry notifications are enabled on the template.
+     */
+    public function sslExpiryNotificationsEnabled(): bool
+    {
+        return $this->serviceConfiguration()['ssl_expiry_notifications_enabled'];
     }
 
     /**

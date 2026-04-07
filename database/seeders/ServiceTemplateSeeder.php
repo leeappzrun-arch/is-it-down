@@ -34,6 +34,10 @@ class ServiceTemplateSeeder extends Seeder
                     'interval_seconds' => Service::INTERVAL_1_MINUTE,
                     'expect_type' => Service::EXPECT_TEXT,
                     'expect_value' => 'All systems operational',
+                    'additional_headers' => [
+                        ['name' => 'X-Monitor', 'value' => 'is-it-down'],
+                    ],
+                    'ssl_expiry_notifications_enabled' => true,
                     'service_group_ids' => [],
                     'recipient_group_ids' => [],
                     'recipient_ids' => [],

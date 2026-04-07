@@ -26,6 +26,8 @@ class ServiceTemplateFactory extends Factory
                 'interval_seconds' => fake()->randomElement(array_keys(Service::intervalOptions())),
                 'expect_type' => fake()->randomElement([null, Service::EXPECT_TEXT, Service::EXPECT_REGEX]),
                 'expect_value' => fake()->randomElement([null, 'All systems operational', '/healthy/i']),
+                'additional_headers' => [],
+                'ssl_expiry_notifications_enabled' => false,
                 'service_group_ids' => [],
                 'recipient_group_ids' => [],
                 'recipient_ids' => [],

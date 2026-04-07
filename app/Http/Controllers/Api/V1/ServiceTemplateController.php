@@ -47,6 +47,10 @@ class ServiceTemplateController extends Controller
                         $configuration['name'],
                         $template->intervalLabel(),
                         $template->expectSummary(),
+                        $template->additionalHeadersSummary(),
+                        $template->sslExpiryNotificationsEnabled() ? 'SSL expiry notifications enabled' : 'SSL expiry notifications disabled',
+                        collect($configuration['additional_headers'])->pluck('name')->implode(' '),
+                        collect($configuration['additional_headers'])->pluck('value')->implode(' '),
                     ])));
 
                     if (! str_contains($haystack, strtolower($search))) {

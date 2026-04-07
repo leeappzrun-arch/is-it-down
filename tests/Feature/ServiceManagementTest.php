@@ -56,6 +56,10 @@ class ServiceManagementTest extends TestCase
             ->set('intervalSeconds', Service::INTERVAL_3_MINUTES)
             ->set('expectType', Service::EXPECT_TEXT)
             ->set('expectValue', 'All systems operational')
+            ->set('additionalHeaders', [
+                ['name' => 'X-Monitor', 'value' => 'is-it-down'],
+            ])
+            ->set('sslExpiryNotificationsEnabled', true)
             ->set('selectedServiceGroupIds', [(string) $serviceGroup->id])
             ->set('selectedRecipientGroupIds', [(string) $recipientGroup->id])
             ->set('selectedRecipientIds', [(string) $recipient->id])
@@ -70,6 +74,8 @@ class ServiceManagementTest extends TestCase
         $this->assertSame(Service::INTERVAL_3_MINUTES, $service->interval_seconds);
         $this->assertSame(Service::EXPECT_TEXT, $service->expect_type);
         $this->assertSame('All systems operational', $service->expect_value);
+        $this->assertSame([['name' => 'X-Monitor', 'value' => 'is-it-down']], $service->configuredAdditionalHeaders());
+        $this->assertTrue($service->ssl_expiry_notifications_enabled);
         $this->assertSame([$serviceGroup->id], $service->groups()->pluck('service_groups.id')->all());
         $this->assertSame([$recipientGroup->id], $service->recipientGroups()->pluck('recipient_groups.id')->all());
         $this->assertSame([$recipient->id], $service->recipients()->pluck('recipients.id')->all());
@@ -127,6 +133,10 @@ class ServiceManagementTest extends TestCase
         $service = Service::factory()->expectsText()->create([
             'name' => 'Marketing site',
             'interval_seconds' => Service::INTERVAL_3_MINUTES,
+            'additional_headers' => [
+                ['name' => 'X-Monitor', 'value' => 'is-it-down'],
+            ],
+            'ssl_expiry_notifications_enabled' => true,
         ]);
 
         $service->groups()->sync([$serviceGroup->id]);
@@ -147,6 +157,8 @@ class ServiceManagementTest extends TestCase
         $this->assertSame(Service::INTERVAL_3_MINUTES, $template->intervalSeconds());
         $this->assertSame(Service::EXPECT_TEXT, $template->expectType());
         $this->assertSame('All systems operational', $template->expectValue());
+        $this->assertSame([['name' => 'X-Monitor', 'value' => 'is-it-down']], $template->configuredAdditionalHeaders());
+        $this->assertTrue($template->sslExpiryNotificationsEnabled());
         $this->assertSame([$serviceGroup->id], $template->selectedServiceGroupIds());
         $this->assertSame([$recipientGroup->id], $template->selectedRecipientGroupIds());
         $this->assertSame([$recipient->id], $template->selectedRecipientIds());
@@ -166,6 +178,10 @@ class ServiceManagementTest extends TestCase
                 'interval_seconds' => Service::INTERVAL_5_MINUTES,
                 'expect_type' => Service::EXPECT_TEXT,
                 'expect_value' => 'All systems operational',
+                'additional_headers' => [
+                    ['name' => 'X-Monitor', 'value' => 'is-it-down'],
+                ],
+                'ssl_expiry_notifications_enabled' => true,
                 'service_group_ids' => [$serviceGroup->id],
                 'recipient_group_ids' => [$recipientGroup->id],
                 'recipient_ids' => [$recipient->id],
@@ -181,6 +197,8 @@ class ServiceManagementTest extends TestCase
             ->assertSet('intervalSeconds', Service::INTERVAL_5_MINUTES)
             ->assertSet('expectType', Service::EXPECT_TEXT)
             ->assertSet('expectValue', 'All systems operational')
+            ->assertSet('additionalHeaders', [['name' => 'X-Monitor', 'value' => 'is-it-down']])
+            ->assertSet('sslExpiryNotificationsEnabled', true)
             ->assertSet('selectedServiceGroupIds', [(string) $serviceGroup->id])
             ->assertSet('selectedRecipientGroupIds', [(string) $recipientGroup->id])
             ->assertSet('selectedRecipientIds', [(string) $recipient->id]);

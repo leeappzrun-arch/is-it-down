@@ -199,6 +199,10 @@ class SystemApiTest extends TestCase
                 'interval_seconds' => Service::INTERVAL_3_MINUTES,
                 'expect_type' => Service::EXPECT_TEXT,
                 'expect_value' => 'Healthy',
+                'additional_headers' => [
+                    ['name' => 'X-Monitor', 'value' => 'is-it-down'],
+                ],
+                'ssl_expiry_notifications_enabled' => true,
                 'service_group_ids' => [$serviceGroup->id],
                 'recipient_group_ids' => [$recipientGroup->id],
                 'recipient_ids' => [$recipient->id],
@@ -235,6 +239,8 @@ class SystemApiTest extends TestCase
         $createdServiceId = $createResponse->json('data.id');
         $createResponse->assertJsonPath('data.interval_seconds', Service::INTERVAL_3_MINUTES);
         $createResponse->assertJsonPath('data.expect_type', Service::EXPECT_TEXT);
+        $createResponse->assertJsonPath('data.additional_headers.0.name', 'X-Monitor');
+        $createResponse->assertJsonPath('data.ssl_expiry_notifications_enabled', true);
 
         $this->withToken($token)
             ->patchJson('/api/v1/services/'.$createdServiceId, [
@@ -243,12 +249,18 @@ class SystemApiTest extends TestCase
                 'interval_seconds' => 300,
                 'expect_type' => 'none',
                 'expect_value' => '',
+                'additional_headers' => [
+                    ['name' => 'X-Environment', 'value' => 'production'],
+                ],
+                'ssl_expiry_notifications_enabled' => true,
                 'service_group_ids' => [$serviceGroup->id],
                 'recipient_group_ids' => [],
                 'recipient_ids' => [],
             ])
             ->assertOk()
-            ->assertJsonPath('data.interval_seconds', 300);
+            ->assertJsonPath('data.interval_seconds', 300)
+            ->assertJsonPath('data.additional_headers.0.name', 'X-Environment')
+            ->assertJsonPath('data.ssl_expiry_notifications_enabled', true);
 
         $this->withToken($token)
             ->deleteJson('/api/v1/services/'.$createdServiceId)
@@ -269,6 +281,10 @@ class SystemApiTest extends TestCase
                 'interval_seconds' => Service::INTERVAL_1_MINUTE,
                 'expect_type' => Service::EXPECT_TEXT,
                 'expect_value' => 'Healthy',
+                'additional_headers' => [
+                    ['name' => 'X-Monitor', 'value' => 'is-it-down'],
+                ],
+                'ssl_expiry_notifications_enabled' => true,
                 'service_group_ids' => [$serviceGroup->id],
                 'recipient_group_ids' => [$recipientGroup->id],
                 'recipient_ids' => [$recipient->id],
@@ -309,6 +325,10 @@ class SystemApiTest extends TestCase
                 'interval_seconds' => Service::INTERVAL_5_MINUTES,
                 'expect_type' => Service::EXPECT_REGEX,
                 'expect_value' => '/healthy/i',
+                'additional_headers' => [
+                    ['name' => 'X-Environment', 'value' => 'production'],
+                ],
+                'ssl_expiry_notifications_enabled' => true,
                 'service_group_ids' => [$serviceGroup->id],
                 'recipient_group_ids' => [$recipientGroup->id],
                 'recipient_ids' => [$recipient->id],
@@ -317,6 +337,8 @@ class SystemApiTest extends TestCase
         $createResponse->assertCreated();
         $createdTemplateId = $createResponse->json('data.id');
         $createResponse->assertJsonPath('data.service_name', 'Billing API');
+        $createResponse->assertJsonPath('data.additional_headers.0.name', 'X-Environment');
+        $createResponse->assertJsonPath('data.ssl_expiry_notifications_enabled', true);
 
         $this->withToken($token)
             ->getJson('/api/v1/service-templates/'.$createdTemplateId)
@@ -330,12 +352,16 @@ class SystemApiTest extends TestCase
                 'interval_seconds' => Service::INTERVAL_10_MINUTES,
                 'expect_type' => Service::EXPECT_NONE,
                 'expect_value' => '',
+                'additional_headers' => [],
+                'ssl_expiry_notifications_enabled' => false,
                 'service_group_ids' => [$serviceGroup->id],
                 'recipient_group_ids' => [],
                 'recipient_ids' => [],
             ])
             ->assertOk()
-            ->assertJsonPath('data.interval_seconds', Service::INTERVAL_10_MINUTES);
+            ->assertJsonPath('data.interval_seconds', Service::INTERVAL_10_MINUTES)
+            ->assertJsonPath('data.additional_headers_count', 0)
+            ->assertJsonPath('data.ssl_expiry_notifications_enabled', false);
 
         $this->withToken($token)
             ->deleteJson('/api/v1/service-templates/'.$existingTemplate->id)

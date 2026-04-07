@@ -5,6 +5,7 @@ namespace App\Http\Requests\Api\V1;
 use App\Concerns\ServiceValidation;
 use App\Models\Service;
 use App\Models\ServiceTemplate;
+use App\Support\Services\ServiceData;
 use App\Support\Services\ServiceTemplateData;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
@@ -36,6 +37,8 @@ class UpsertServiceRequest extends FormRequest
             'intervalSeconds' => $this->input('interval_seconds', $templateDefaults['intervalSeconds'] ?? $this->input('intervalSeconds', Service::INTERVAL_1_MINUTE)),
             'expectType' => $this->input('expect_type', $templateDefaults['expectType'] ?? $this->input('expectType', Service::EXPECT_NONE)),
             'expectValue' => $this->input('expect_value', $templateDefaults['expectValue'] ?? $this->input('expectValue', '')),
+            'additionalHeaders' => ServiceData::normalizeAdditionalHeaders($this->input('additional_headers', $templateDefaults['additionalHeaders'] ?? $this->input('additionalHeaders', []))),
+            'sslExpiryNotificationsEnabled' => $this->input('ssl_expiry_notifications_enabled', $templateDefaults['sslExpiryNotificationsEnabled'] ?? $this->input('sslExpiryNotificationsEnabled', false)),
             'selectedServiceGroupIds' => $this->input('service_group_ids', $templateDefaults['selectedServiceGroupIds'] ?? $this->input('selectedServiceGroupIds', [])),
             'selectedRecipientGroupIds' => $this->input('recipient_group_ids', $templateDefaults['selectedRecipientGroupIds'] ?? $this->input('selectedRecipientGroupIds', [])),
             'selectedRecipientIds' => $this->input('recipient_ids', $templateDefaults['selectedRecipientIds'] ?? $this->input('selectedRecipientIds', [])),

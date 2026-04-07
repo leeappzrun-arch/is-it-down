@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Mail\ServiceSslExpiryWarningMail;
 use App\Mail\ServiceStatusChangedMail;
 use App\Mail\WebhookDeliveryFailedMail;
 use App\Models\Recipient;
@@ -9,6 +10,8 @@ use App\Models\Service;
 use App\Models\User;
 use App\Support\Monitoring\ServiceCheckResult;
 use App\Support\Monitoring\ServiceMonitor;
+use App\Support\Monitoring\SslCertificateInspectionResult;
+use App\Support\Monitoring\SslCertificateInspector;
 use Carbon\CarbonInterface;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
@@ -34,7 +37,7 @@ class MonitorServicesCommand extends Command
     /**
      * Execute the console command.
      */
-    public function handle(ServiceMonitor $serviceMonitor): int
+    public function handle(ServiceMonitor $serviceMonitor, SslCertificateInspector $sslCertificateInspector): int
     {
         $dueServices = Service::query()
             ->with([
@@ -55,7 +58,7 @@ class MonitorServicesCommand extends Command
             ->get();
 
         foreach ($dueServices as $service) {
-            $this->monitorService($service, $serviceMonitor);
+            $this->monitorService($service, $serviceMonitor, $sslCertificateInspector);
         }
 
         $this->info('Checked '.$dueServices->count().' service(s).');
@@ -66,7 +69,7 @@ class MonitorServicesCommand extends Command
     /**
      * Monitor the given service and deliver any required notifications.
      */
-    private function monitorService(Service $service, ServiceMonitor $serviceMonitor): void
+    private function monitorService(Service $service, ServiceMonitor $serviceMonitor, SslCertificateInspector $sslCertificateInspector): void
     {
         $checkedAt = now();
         $previousStatus = $service->current_status;
@@ -86,6 +89,8 @@ class MonitorServicesCommand extends Command
         ])->save();
 
         if (! $this->shouldNotifyRecipients($previousStatus, $result)) {
+            $this->notifySslExpiryIfNeeded($service, $sslCertificateInspector, $checkedAt);
+
             return;
         }
 
@@ -137,6 +142,8 @@ class MonitorServicesCommand extends Command
         if ($webhookFailures !== []) {
             $this->sendWebhookFailureAlert($service, $result, $webhookFailures, $checkedAt);
         }
+
+        $this->notifySslExpiryIfNeeded($service, $sslCertificateInspector, $checkedAt);
     }
 
     /**
@@ -193,6 +200,112 @@ class MonitorServicesCommand extends Command
         }
 
         return $payload;
+    }
+
+    /**
+     * Notify recipients when a service certificate is expiring soon.
+     */
+    private function notifySslExpiryIfNeeded(
+        Service $service,
+        SslCertificateInspector $sslCertificateInspector,
+        CarbonInterface $checkedAt,
+    ): void {
+        if (! $service->ssl_expiry_notifications_enabled || ! $service->usesHttps()) {
+            return;
+        }
+
+        if (
+            $service->last_ssl_expiry_notification_sent_at !== null
+            && $service->last_ssl_expiry_notification_sent_at->copy()->addDay()->isFuture()
+        ) {
+            return;
+        }
+
+        $certificate = $sslCertificateInspector->inspect($service);
+
+        if (! $certificate instanceof SslCertificateInspectionResult || ! $certificate->expiresWithinDays(10, $checkedAt)) {
+            return;
+        }
+
+        $webhookFailures = [];
+        $effectiveRecipientRoutes = $service->effectiveRecipientRoutes();
+
+        if ($effectiveRecipientRoutes->isEmpty()) {
+            return;
+        }
+
+        foreach ($effectiveRecipientRoutes as $route) {
+            /** @var Recipient $recipient */
+            $recipient = $route['recipient'];
+
+            if ($recipient->isMailEndpoint()) {
+                Mail::to($recipient->endpointTarget())->send(new ServiceSslExpiryWarningMail(
+                    service: $service,
+                    certificate: $certificate,
+                    checkedAt: $checkedAt,
+                ));
+
+                continue;
+            }
+
+            $failureReason = $this->deliverWebhookNotification(
+                recipient: $recipient,
+                payload: $this->buildSslExpiryWebhookPayload($service, $certificate, $checkedAt),
+            );
+
+            if ($failureReason === null) {
+                continue;
+            }
+
+            $webhookFailures[] = [
+                'recipient_name' => $recipient->name,
+                'webhook_url' => $recipient->webhookUrl(),
+                'reason' => $failureReason,
+                'authentication' => $recipient->webhookAuthenticationSummary(),
+                'sources' => $route['sources'],
+            ];
+        }
+
+        $service->forceFill([
+            'last_ssl_expiry_notification_sent_at' => $checkedAt,
+        ])->save();
+
+        if ($webhookFailures !== []) {
+            $this->sendWebhookFailureAlert($service, 'ssl_expiring', $webhookFailures, $checkedAt);
+        }
+    }
+
+    /**
+     * Build the JSON payload sent to webhook recipients for SSL expiry warnings.
+     *
+     * @return array<string, mixed>
+     */
+    private function buildSslExpiryWebhookPayload(
+        Service $service,
+        SslCertificateInspectionResult $certificate,
+        CarbonInterface $checkedAt,
+    ): array {
+        return [
+            'event' => 'service.ssl_expiring',
+            'service' => [
+                'id' => $service->id,
+                'name' => $service->name,
+                'url' => $service->url,
+                'interval_seconds' => $service->interval_seconds,
+                'expectation' => $service->hasExpectation()
+                    ? [
+                        'type' => $service->expect_type,
+                        'value' => $service->expect_value,
+                    ]
+                    : null,
+            ],
+            'checked_at' => $checkedAt->toIso8601String(),
+            'ssl' => [
+                'expires_at' => $certificate->expiresAt->toIso8601String(),
+                'days_until_expiry' => $certificate->daysUntilExpiry($checkedAt),
+                'summary' => $certificate->summary($checkedAt),
+            ],
+        ];
     }
 
     /**
@@ -269,7 +382,7 @@ class MonitorServicesCommand extends Command
      */
     private function sendWebhookFailureAlert(
         Service $service,
-        ServiceCheckResult $result,
+        ServiceCheckResult|string $result,
         array $webhookFailures,
         CarbonInterface $checkedAt,
     ): void {
@@ -286,7 +399,7 @@ class MonitorServicesCommand extends Command
 
         Mail::to($adminEmails)->send(new WebhookDeliveryFailedMail(
             service: $service,
-            triggeredStatus: $result->status,
+            triggeredStatus: $result instanceof ServiceCheckResult ? $result->status : $result,
             failures: $webhookFailures,
             checkedAt: $checkedAt,
         ));

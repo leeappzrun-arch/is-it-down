@@ -87,8 +87,10 @@ new #[Title('User guide')] class extends Component {
                 <flux:heading size="lg">{{ __('Service management') }}</flux:heading>
                 <flux:subheading class="mt-2">{{ __('Admin only') }}</flux:subheading>
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
-                    <p>{{ __('Services represent the URLs you want to monitor. Each service includes a name, URL, polling interval, and an optional expectation that can be plain text or a regex pattern.') }}</p>
+                    <p>{{ __('Services represent the URLs you want to monitor. Each service includes a name, URL, polling interval, optional extra request headers, and an optional expectation that can be plain text or a regex pattern.') }}</p>
                     <p>{{ __('A service is considered down whenever the URL does not respond with HTTP 200, or when a configured text or regex expectation fails to match the response body.') }}</p>
+                    <p>{{ __('Additional request headers can be stored per service when a monitored endpoint needs custom authentication or routing metadata during the health check.') }}</p>
+                    <p>{{ __('You can also enable SSL expiry notifications so recipients are warned when an HTTPS certificate is within 10 days of expiry. Those warnings are limited to once every 24 hours for each service.') }}</p>
                     <p>{{ __('A service can have direct recipients, direct recipient groups, and one or more service groups attached at the same time.') }}</p>
                     <p>{{ __('Use the sticky search field at the top of the Services page to narrow managed services from a single query.') }}</p>
                     <p>{{ __('Use the Save as template action on any existing service when you want to capture its non-URL settings into a reusable starting point.') }}</p>
@@ -103,7 +105,7 @@ new #[Title('User guide')] class extends Component {
                 <flux:heading size="lg">{{ __('Template management') }}</flux:heading>
                 <flux:subheading class="mt-2">{{ __('Admin only') }}</flux:subheading>
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
-                    <p>{{ __('Templates are reusable service blueprints. They store the same service settings you would normally configure on the Services page except for the URL, so you can reuse intervals, expectations, and routing assignments across new services.') }}</p>
+                    <p>{{ __('Templates are reusable service blueprints. They store the same service settings you would normally configure on the Services page except for the URL, so you can reuse intervals, expectations, additional headers, SSL expiry defaults, and routing assignments across new services.') }}</p>
                     <p>{{ __('Each template has its own template name plus a default service name that is copied into the service form when the template is used.') }}</p>
                     <p>{{ __('You can create templates directly from the Templates page or save one from an existing service by choosing Save as template from the service details.') }}</p>
                     <p>{{ __('When you choose Create service on a template, the app opens the Services page with the template values prefilled. Add the URL, review the fields, and save when you are ready.') }}</p>
@@ -166,6 +168,7 @@ new #[Title('User guide')] class extends Component {
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
                     <p>{{ __('The application now exposes a REST API under `/api/v1`, authenticated with bearer tokens generated from the API Keys page.') }}</p>
                     <p>{{ __('Read routes and write routes each require the matching API key permissions, and expired or revoked keys stop working immediately. The current REST API now includes service-template endpoints and also allows new services to start from a saved template.') }}</p>
+                    <p>{{ __('Service and template payloads now support `additional_headers` and `ssl_expiry_notifications_enabled`, so external systems can configure the same request options available in the UI.') }}</p>
                     <p>{{ __('Use the API Documentation page for the full endpoint reference and the API Playground page to test those endpoints against the current environment.') }}</p>
                 </div>
             </div>

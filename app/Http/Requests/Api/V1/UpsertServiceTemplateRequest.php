@@ -4,6 +4,7 @@ namespace App\Http\Requests\Api\V1;
 
 use App\Concerns\ServiceValidation;
 use App\Models\Service;
+use App\Support\Services\ServiceData;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpsertServiceTemplateRequest extends FormRequest
@@ -29,6 +30,8 @@ class UpsertServiceTemplateRequest extends FormRequest
             'intervalSeconds' => $this->input('interval_seconds', $this->input('intervalSeconds', Service::INTERVAL_1_MINUTE)),
             'expectType' => $this->input('expect_type', $this->input('expectType', Service::EXPECT_NONE)),
             'expectValue' => $this->input('expect_value', $this->input('expectValue', '')),
+            'additionalHeaders' => ServiceData::normalizeAdditionalHeaders($this->input('additional_headers', $this->input('additionalHeaders', []))),
+            'sslExpiryNotificationsEnabled' => $this->input('ssl_expiry_notifications_enabled', $this->input('sslExpiryNotificationsEnabled', false)),
             'selectedServiceGroupIds' => $this->input('service_group_ids', $this->input('selectedServiceGroupIds', [])),
             'selectedRecipientGroupIds' => $this->input('recipient_group_ids', $this->input('selectedRecipientGroupIds', [])),
             'selectedRecipientIds' => $this->input('recipient_ids', $this->input('selectedRecipientIds', [])),

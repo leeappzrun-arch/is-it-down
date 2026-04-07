@@ -52,7 +52,8 @@ Is It Down is a Laravel 13 and Livewire 4 application for managing monitored ser
 
 - Create, edit, and delete services.
 - Search the Services page to filter service cards from one input.
-- Configure a service name, URL, polling interval, and optional expectation using either plain text or a regular expression.
+- Configure a service name, URL, polling interval, optional extra request headers, and an optional expectation using either plain text or a regular expression.
+- Enable SSL expiry notifications per service to warn recipients when an HTTPS certificate is within 10 days of expiry, with those alerts limited to once every 24 hours per service.
 - Save any existing service as a reusable template without its URL.
 - Assign services to one or more service groups.
 - Assign recipients and recipient groups directly to a service.
@@ -68,7 +69,7 @@ Is It Down is a Laravel 13 and Livewire 4 application for managing monitored ser
 ### Template management
 
 - Create, edit, and delete reusable service templates.
-- Store the same service settings you normally configure on the Services page except for the URL.
+- Store the same service settings you normally configure on the Services page except for the URL, including extra request headers and the SSL expiry notification default.
 - Save templates directly from the Templates page or create them from an existing service with a name prompt.
 - Start a new service from a template, which pre-fills the service form so only the URL and any final adjustments are needed.
 - Search the Templates page by template name, saved service defaults, or routing assignments.
@@ -122,6 +123,7 @@ Is It Down is a Laravel 13 and Livewire 4 application for managing monitored ser
 - Listing endpoints support search plus resource-specific filtering where relevant.
 - Creation endpoints reuse the same validation rules as the matching Livewire management forms.
 - Services can be created from a saved service template by passing a template id or exact template name together with the URL and any optional overrides.
+- Service and template payloads support `additional_headers` plus `ssl_expiry_notifications_enabled` so integrations can manage custom check headers and SSL warning behavior.
 
 ### In-app documentation
 

@@ -22,6 +22,9 @@ class ServiceResource extends JsonResource
             'interval_label' => $this->intervalLabel(),
             'expect_type' => $this->expect_type,
             'expect_value' => $this->expect_value,
+            'additional_headers' => $this->configuredAdditionalHeaders(),
+            'additional_headers_count' => count($this->configuredAdditionalHeaders()),
+            'ssl_expiry_notifications_enabled' => (bool) $this->ssl_expiry_notifications_enabled,
             'current_status' => $this->current_status,
             'monitoring_status_label' => $this->monitoringStatusLabel(),
             'last_response_code' => $this->last_response_code,
@@ -29,6 +32,7 @@ class ServiceResource extends JsonResource
             'last_checked_at' => $this->last_checked_at?->toIso8601String(),
             'next_check_at' => $this->next_check_at?->toIso8601String(),
             'last_status_changed_at' => $this->last_status_changed_at?->toIso8601String(),
+            'last_ssl_expiry_notification_sent_at' => $this->last_ssl_expiry_notification_sent_at?->toIso8601String(),
             'groups' => $this->whenLoaded('groups', fn (): array => $this->groups
                 ->map(fn ($group): array => [
                     'id' => $group->id,

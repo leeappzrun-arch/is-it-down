@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Services\ServiceData;
 use Carbon\CarbonInterface;
 use Database\Factories\ServiceFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -17,6 +18,8 @@ use Illuminate\Support\Str;
     'interval_seconds',
     'expect_type',
     'expect_value',
+    'additional_headers',
+    'ssl_expiry_notifications_enabled',
 ])]
 class Service extends Model
 {
@@ -106,10 +109,13 @@ class Service extends Model
     {
         return [
             'interval_seconds' => 'integer',
+            'additional_headers' => 'array',
+            'ssl_expiry_notifications_enabled' => 'boolean',
             'last_response_code' => 'integer',
             'last_checked_at' => 'datetime',
             'next_check_at' => 'datetime',
             'last_status_changed_at' => 'datetime',
+            'last_ssl_expiry_notification_sent_at' => 'datetime',
         ];
     }
 
@@ -127,6 +133,56 @@ class Service extends Model
     public function hasExpectation(): bool
     {
         return filled($this->expect_value) && $this->expect_type !== self::EXPECT_NONE;
+    }
+
+    /**
+     * Get the configured additional headers.
+     *
+     * @return array<int, array{name: string, value: string}>
+     */
+    public function configuredAdditionalHeaders(): array
+    {
+        return ServiceData::normalizeAdditionalHeaders($this->additional_headers);
+    }
+
+    /**
+     * Determine whether the service has additional headers configured.
+     */
+    public function hasAdditionalHeaders(): bool
+    {
+        return $this->configuredAdditionalHeaders() !== [];
+    }
+
+    /**
+     * Get the additional headers keyed for the HTTP client.
+     *
+     * @return array<string, string>
+     */
+    public function requestHeaders(): array
+    {
+        return ServiceData::requestHeaders($this->additional_headers);
+    }
+
+    /**
+     * Get the configured additional header summary.
+     */
+    public function additionalHeadersSummary(): string
+    {
+        $headerCount = count($this->configuredAdditionalHeaders());
+
+        if ($headerCount === 0) {
+            return 'No additional headers';
+        }
+
+        return trim(trans_choice('{1} :count additional header|[2,*] :count additional headers', $headerCount, ['count' => $headerCount]));
+    }
+
+    /**
+     * Determine whether the service uses HTTPS.
+     */
+    public function usesHttps(): bool
+    {
+        return Str::startsWith(Str::lower($this->url), 'https://');
     }
 
     /**

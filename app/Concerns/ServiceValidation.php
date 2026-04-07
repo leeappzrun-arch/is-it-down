@@ -84,6 +84,10 @@ trait ServiceValidation
                     }
                 },
             ],
+            'additionalHeaders' => ['array'],
+            'additionalHeaders.*.name' => ['required', 'string', 'max:255'],
+            'additionalHeaders.*.value' => ['required', 'string', 'max:65535'],
+            'sslExpiryNotificationsEnabled' => ['boolean'],
             'selectedServiceGroupIds' => ['array'],
             'selectedServiceGroupIds.*' => ['integer', Rule::exists('service_groups', 'id')],
             'selectedRecipientGroupIds' => ['array'],
@@ -125,6 +129,10 @@ trait ServiceValidation
                     }
                 },
             ],
+            'additionalHeaders' => ['array'],
+            'additionalHeaders.*.name' => ['required', 'string', 'max:255'],
+            'additionalHeaders.*.value' => ['required', 'string', 'max:65535'],
+            'sslExpiryNotificationsEnabled' => ['boolean'],
             'selectedServiceGroupIds' => ['array'],
             'selectedServiceGroupIds.*' => ['integer', Rule::exists('service_groups', 'id')],
             'selectedRecipientGroupIds' => ['array'],

@@ -11,7 +11,7 @@ class ServiceTemplateData
      * Build the persistence payload for a service template.
      *
      * @param  array<string, mixed>  $validated
-     * @return array{name: string, configuration: array{name: string, interval_seconds: int, expect_type: ?string, expect_value: ?string, service_group_ids: array<int, int>, recipient_group_ids: array<int, int>, recipient_ids: array<int, int>}}
+     * @return array{name: string, configuration: array{name: string, interval_seconds: int, expect_type: ?string, expect_value: ?string, additional_headers: array<int, array{name: string, value: string}>, ssl_expiry_notifications_enabled: bool, service_group_ids: array<int, int>, recipient_group_ids: array<int, int>, recipient_ids: array<int, int>}}
      */
     public static function payload(array $validated): array
     {
@@ -24,7 +24,7 @@ class ServiceTemplateData
     /**
      * Build the persistence payload for a service-derived template.
      *
-     * @return array{name: string, configuration: array{name: string, interval_seconds: int, expect_type: ?string, expect_value: ?string, service_group_ids: array<int, int>, recipient_group_ids: array<int, int>, recipient_ids: array<int, int>}}
+     * @return array{name: string, configuration: array{name: string, interval_seconds: int, expect_type: ?string, expect_value: ?string, additional_headers: array<int, array{name: string, value: string}>, ssl_expiry_notifications_enabled: bool, service_group_ids: array<int, int>, recipient_group_ids: array<int, int>, recipient_ids: array<int, int>}}
      */
     public static function payloadFromService(Service $service, string $templateName): array
     {
@@ -37,6 +37,8 @@ class ServiceTemplateData
                 'interval_seconds' => $service->interval_seconds,
                 'expect_type' => $service->expect_type,
                 'expect_value' => $service->expect_value,
+                'additional_headers' => $service->configuredAdditionalHeaders(),
+                'ssl_expiry_notifications_enabled' => $service->ssl_expiry_notifications_enabled,
                 'service_group_ids' => $service->groups->pluck('id')->all(),
                 'recipient_group_ids' => $service->recipientGroups->pluck('id')->all(),
                 'recipient_ids' => $service->recipients->pluck('id')->all(),
@@ -47,7 +49,7 @@ class ServiceTemplateData
     /**
      * Normalize a template configuration payload.
      *
-     * @return array{name: string, interval_seconds: int, expect_type: ?string, expect_value: ?string, service_group_ids: array<int, int>, recipient_group_ids: array<int, int>, recipient_ids: array<int, int>}
+     * @return array{name: string, interval_seconds: int, expect_type: ?string, expect_value: ?string, additional_headers: array<int, array{name: string, value: string}>, ssl_expiry_notifications_enabled: bool, service_group_ids: array<int, int>, recipient_group_ids: array<int, int>, recipient_ids: array<int, int>}
      */
     public static function normalizeConfiguration(mixed $configuration): array
     {
@@ -67,6 +69,8 @@ class ServiceTemplateData
             'interval_seconds' => self::normalizeInterval(Arr::get($configuration, 'interval_seconds', Service::INTERVAL_1_MINUTE)),
             'expect_type' => $expectType === Service::EXPECT_NONE ? null : $expectType,
             'expect_value' => $expectType === Service::EXPECT_NONE || $expectValue === '' ? null : $expectValue,
+            'additional_headers' => ServiceData::normalizeAdditionalHeaders(Arr::get($configuration, 'additional_headers', [])),
+            'ssl_expiry_notifications_enabled' => filter_var(Arr::get($configuration, 'ssl_expiry_notifications_enabled', false), FILTER_VALIDATE_BOOL),
             'service_group_ids' => self::normalizeIdList(Arr::get($configuration, 'service_group_ids', [])),
             'recipient_group_ids' => self::normalizeIdList(Arr::get($configuration, 'recipient_group_ids', [])),
             'recipient_ids' => self::normalizeIdList(Arr::get($configuration, 'recipient_ids', [])),
@@ -77,7 +81,7 @@ class ServiceTemplateData
      * Build the service form state from a stored template configuration.
      *
      * @param  array<string, mixed>  $configuration
-     * @return array{name: string, url: string, intervalSeconds: int, expectType: string, expectValue: string, selectedServiceGroupIds: array<int, string>, selectedRecipientGroupIds: array<int, string>, selectedRecipientIds: array<int, string>}
+     * @return array{name: string, url: string, intervalSeconds: int, expectType: string, expectValue: string, additionalHeaders: array<int, array{name: string, value: string}>, sslExpiryNotificationsEnabled: bool, selectedServiceGroupIds: array<int, string>, selectedRecipientGroupIds: array<int, string>, selectedRecipientIds: array<int, string>}
      */
     public static function serviceFormState(array $configuration): array
     {
@@ -89,6 +93,8 @@ class ServiceTemplateData
             'intervalSeconds' => $configuration['interval_seconds'],
             'expectType' => $configuration['expect_type'] ?? Service::EXPECT_NONE,
             'expectValue' => $configuration['expect_value'] ?? '',
+            'additionalHeaders' => $configuration['additional_headers'],
+            'sslExpiryNotificationsEnabled' => $configuration['ssl_expiry_notifications_enabled'],
             'selectedServiceGroupIds' => array_map(fn (int $id): string => (string) $id, $configuration['service_group_ids']),
             'selectedRecipientGroupIds' => array_map(fn (int $id): string => (string) $id, $configuration['recipient_group_ids']),
             'selectedRecipientIds' => array_map(fn (int $id): string => (string) $id, $configuration['recipient_ids']),
@@ -99,7 +105,7 @@ class ServiceTemplateData
      * Build the normalized configuration from validated template form data.
      *
      * @param  array<string, mixed>  $validated
-     * @return array{name: string, interval_seconds: int, expect_type: ?string, expect_value: ?string, service_group_ids: array<int, int>, recipient_group_ids: array<int, int>, recipient_ids: array<int, int>}
+     * @return array{name: string, interval_seconds: int, expect_type: ?string, expect_value: ?string, additional_headers: array<int, array{name: string, value: string}>, ssl_expiry_notifications_enabled: bool, service_group_ids: array<int, int>, recipient_group_ids: array<int, int>, recipient_ids: array<int, int>}
      */
     private static function configuration(array $validated): array
     {
@@ -108,6 +114,8 @@ class ServiceTemplateData
             'interval_seconds' => $validated['intervalSeconds'] ?? Service::INTERVAL_1_MINUTE,
             'expect_type' => $validated['expectType'] ?? Service::EXPECT_NONE,
             'expect_value' => $validated['expectValue'] ?? '',
+            'additional_headers' => $validated['additionalHeaders'] ?? [],
+            'ssl_expiry_notifications_enabled' => $validated['sslExpiryNotificationsEnabled'] ?? false,
             'service_group_ids' => $validated['selectedServiceGroupIds'] ?? [],
             'recipient_group_ids' => $validated['selectedRecipientGroupIds'] ?? [],
             'recipient_ids' => $validated['selectedRecipientIds'] ?? [],
