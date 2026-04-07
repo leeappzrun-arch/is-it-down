@@ -413,7 +413,7 @@ new #[Title('Recipient management')] class extends Component {
                     </div>
                 @endif
 
-                <div class="space-y-3">
+                <div class="space-y-3 rounded-xl border border-zinc-200 bg-zinc-50 p-4 sm:p-5 dark:border-zinc-700 dark:bg-zinc-950/40">
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div>
                             <flux:heading>{{ __('Groups') }}</flux:heading>

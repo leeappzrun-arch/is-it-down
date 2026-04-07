@@ -275,7 +275,7 @@ new #[Title('Service group management')] class extends Component {
                 <form wire:submit="saveServiceGroup" class="mt-6 space-y-5">
                     <flux:input wire:model="groupName" :label="__('Group name')" type="text" required placeholder="Production" />
 
-                    <div class="space-y-3">
+                    <div class="space-y-3 rounded-xl border border-zinc-200 bg-zinc-50 p-4 sm:p-5 dark:border-zinc-700 dark:bg-zinc-950/40">
                         <div class="flex flex-wrap items-start justify-between gap-3">
                             <div>
                                 <flux:heading>{{ __('Services') }}</flux:heading>
@@ -313,7 +313,7 @@ new #[Title('Service group management')] class extends Component {
                         @endif
                     </div>
 
-                    <div class="space-y-3">
+                    <div class="space-y-3 rounded-xl border border-zinc-200 bg-zinc-50 p-4 sm:p-5 dark:border-zinc-700 dark:bg-zinc-950/40">
                         <div>
                             <flux:heading>{{ __('Recipient groups') }}</flux:heading>
                             <flux:subheading class="mt-1">{{ __('Every recipient inside these groups becomes available to any linked service.') }}</flux:subheading>
@@ -342,7 +342,7 @@ new #[Title('Service group management')] class extends Component {
                         @endif
                     </div>
 
-                    <div class="space-y-3">
+                    <div class="space-y-3 rounded-xl border border-zinc-200 bg-zinc-50 p-4 sm:p-5 dark:border-zinc-700 dark:bg-zinc-950/40">
                         <div>
                             <flux:heading>{{ __('Direct recipients') }}</flux:heading>
                             <flux:subheading class="mt-1">{{ __('Attach one-off recipients that should always travel with this service group.') }}</flux:subheading>
