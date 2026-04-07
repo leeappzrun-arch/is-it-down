@@ -68,6 +68,10 @@ select:focus[data-flux-control] {
     @apply outline-hidden ring-2 ring-accent ring-offset-2 ring-offset-accent-foreground;
 }
 
+[data-flux-button].bg-transparent {
+    @apply bg-zinc-800/[0.035] hover:bg-zinc-800/[0.06] dark:bg-white/[0.08] dark:hover:bg-white/[0.14];
+}
+
 /* \[:where(&)\]:size-4 {
     @apply size-4;
 } */
