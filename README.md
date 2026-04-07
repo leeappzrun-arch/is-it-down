@@ -153,6 +153,7 @@ Release tags also publish versioned images. For example, pushing Git tag `v1.2.3
 - `ghcr.io/leeappzrun-arch/is-it-down:1`
 
 The image already includes a production `.env` with non-sensitive defaults for the app name, production mode, SQLite, database-backed sessions/cache/queue, stderr logging, and the scheduler loop. Any values you pass from your own Compose `.env` file override those baked-in defaults.
+The runtime image also declares `/var/www/html/database/data` as a Docker volume, so SQLite data and the generated `app.key` survive ordinary container recreation during image updates. Using your own bind mount or named volume is still recommended so you control where that data lives.
 
 If the app sits behind Cloudflare Tunnel, Zero Trust, or another reverse proxy that terminates HTTPS before the container, keep `APP_URL` set to the public `https://...` address. The application trusts standard forwarded proxy headers so Livewire update requests, generated URLs, and redirects continue to use HTTPS.
 
@@ -228,6 +229,8 @@ To upgrade to the newest published build, run:
 docker compose pull
 docker compose up -d
 ```
+
+That update flow recreates the container and then runs `app:prepare-container` against the existing persisted SQLite database, so Laravel only applies any new migrations that have not run yet. Your existing data remains in place unless you deliberately remove the mapped or anonymous volume, such as with `docker compose down -v`.
 
 ## Local Development
 

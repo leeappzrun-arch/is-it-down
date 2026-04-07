@@ -53,6 +53,8 @@ COPY .env.docker /var/www/html/.env
 RUN chmod +x /var/www/html/docker-entrypoint.sh \
     && chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/database
 
+VOLUME ["/var/www/html/database/data"]
+
 EXPOSE 80
 
 ENTRYPOINT ["/var/www/html/docker-entrypoint.sh"]
