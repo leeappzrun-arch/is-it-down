@@ -229,7 +229,7 @@ new #[Title('Service group management')] class extends Component {
         <div class="flex flex-wrap items-start justify-between gap-4">
             <div>
                 <flux:heading size="xl" level="1">{{ __('Service groups') }}</flux:heading>
-                <flux:subheading size="lg" class="mb-6">{{ __('Create reusable service routing bundles, link them to services, and manage their routing ingredients from the group side.') }}</flux:subheading>
+                <flux:subheading size="lg" class="mb-6">{{ __('Create reusable service groups, and optionally attached Recipient Groups and Recipients to them.') }}</flux:subheading>
             </div>
 
             <flux:button variant="ghost" :href="route('services.index')" wire:navigate>
@@ -386,7 +386,7 @@ new #[Title('Service group management')] class extends Component {
             <div class="flex flex-wrap items-start justify-between gap-4">
                 <div>
                     <flux:heading size="lg">{{ __('Managed service groups') }}</flux:heading>
-                    <flux:subheading class="mt-2">{{ __('Review the reusable bundles available to services and keep their linked services and routing ingredients up to date.') }}</flux:subheading>
+                    <flux:subheading class="mt-2">{{ __('Review the reusable bundles available to services and keep their linked services and recipients up to date.') }}</flux:subheading>
                 </div>
 
                 <x-action-message on="service-group-deleted">{{ __('Service group removed.') }}</x-action-message>
