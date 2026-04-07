@@ -287,7 +287,7 @@ new #[Title('Recipient group management')] class extends Component {
             <div class="flex flex-wrap items-start justify-between gap-4">
                 <div>
                     <flux:heading size="lg">{{ __('Managed recipient groups') }}</flux:heading>
-                    <flux:subheading class="mt-2">{{ __('Review current membership, then update group names or recipient assignments when routing needs change.') }}</flux:subheading>
+                    <flux:subheading class="mt-2">{{ __('Recipient groups can be assigned to Service Groups or directly to Services.') }}</flux:subheading>
                 </div>
 
                 <x-action-message on="group-deleted">{{ __('Group removed.') }}</x-action-message>
