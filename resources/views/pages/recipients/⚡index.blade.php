@@ -317,7 +317,7 @@ new #[Title('Recipient management')] class extends Component {
                     </div>
 
                     <div class="min-w-0">
-                        <label for="endpointType" class="mb-2 block text-sm font-medium text-zinc-800 dark:text-zinc-100">{{ __('Protocol') }}</label>
+                        <label for="endpointType" class="mb-1 block text-sm font-medium text-zinc-800 dark:text-zinc-100">{{ __('Protocol') }}</label>
                         <select
                             id="endpointType"
                             wire:model.live="endpointType"
