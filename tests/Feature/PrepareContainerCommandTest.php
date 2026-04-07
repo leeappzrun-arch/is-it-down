@@ -103,6 +103,20 @@ class PrepareContainerCommandTest extends TestCase
         $this->assertSame('Existing User', $user->name);
     }
 
+    public function test_runtime_dockerfile_declares_the_persistent_app_data_volume(): void
+    {
+        $dockerfile = File::get(base_path('Dockerfile'));
+
+        $this->assertStringContainsString(
+            'VOLUME ["/var/www/html/database/data"]',
+            $dockerfile
+        );
+
+        $this->assertTrue(
+            Str::contains($dockerfile, 'APP_DATA_PATH=/var/www/html/database/data')
+        );
+    }
+
     /**
      * Point the application at a temporary SQLite runtime database.
      */
