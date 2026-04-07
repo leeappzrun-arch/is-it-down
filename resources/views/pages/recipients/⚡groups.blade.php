@@ -234,7 +234,7 @@ new #[Title('Recipient group management')] class extends Component {
                 <form wire:submit="saveGroup" class="mt-6 space-y-5">
                     <flux:input wire:model="groupName" :label="__('Group name')" type="text" required placeholder="Operations" />
 
-                    <div class="space-y-3">
+                    <div class="space-y-3 rounded-xl border border-zinc-200 bg-zinc-50 p-4 sm:p-5 dark:border-zinc-700 dark:bg-zinc-950/40">
                         <div class="flex flex-wrap items-start justify-between gap-3">
                             <div>
                                 <flux:heading>{{ __('Recipients') }}</flux:heading>
@@ -287,7 +287,7 @@ new #[Title('Recipient group management')] class extends Component {
             <div class="flex flex-wrap items-start justify-between gap-4">
                 <div>
                     <flux:heading size="lg">{{ __('Managed recipient groups') }}</flux:heading>
-                    <flux:subheading class="mt-2">{{ __('Review current membership, then update group names or recipient assignments when routing needs change.') }}</flux:subheading>
+                    <flux:subheading class="mt-2">{{ __('Recipient groups can be assigned to Service Groups or directly to Services.') }}</flux:subheading>
                 </div>
 
                 <x-action-message on="group-deleted">{{ __('Group removed.') }}</x-action-message>

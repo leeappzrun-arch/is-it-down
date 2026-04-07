@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Livewire\AiAssistant\Widget;
 use App\Models\AiAssistantSetting;
 use App\Models\Service;
+use App\Models\ServiceTemplate;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -199,6 +200,75 @@ class AiAssistantWidgetTest extends TestCase
             ->set('draft', 'Why is Billing API down?')
             ->call('sendMessage')
             ->assertSet('messages.2.content', 'Billing API is currently down and the latest check received HTTP 503.');
+    }
+
+    public function test_admin_users_can_create_a_service_from_a_template_through_the_ai_widget(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $template = ServiceTemplate::factory()->create([
+            'name' => 'Marketing site starter',
+            'configuration' => [
+                'name' => 'Marketing Site',
+                'interval_seconds' => Service::INTERVAL_3_MINUTES,
+                'expect_type' => Service::EXPECT_TEXT,
+                'expect_value' => 'Healthy',
+                'service_group_ids' => [],
+                'recipient_group_ids' => [],
+                'recipient_ids' => [],
+            ],
+        ]);
+
+        AiAssistantSetting::factory()->configured()->create([
+            'settings_key' => AiAssistantSetting::DEFAULT_SETTINGS_KEY,
+        ]);
+
+        Http::fake([
+            'https://api.openai.com/v1/chat/completions' => Http::sequence()
+                ->push([
+                    'choices' => [[
+                        'message' => [
+                            'role' => 'assistant',
+                            'content' => '',
+                            'tool_calls' => [[
+                                'id' => 'call_create_service_from_template',
+                                'type' => 'function',
+                                'function' => [
+                                    'name' => 'manage_service',
+                                    'arguments' => json_encode([
+                                        'action' => 'create',
+                                        'template' => $template->name,
+                                        'url' => 'https://example.com/status',
+                                        'name' => 'Marketing Status',
+                                    ]),
+                                ],
+                            ]],
+                        ],
+                    ]],
+                ])
+                ->push([
+                    'choices' => [[
+                        'message' => [
+                            'role' => 'assistant',
+                            'content' => 'Marketing Status has been created from the Marketing site starter template.',
+                        ],
+                    ]],
+                ]),
+        ]);
+
+        $this->actingAs($admin);
+
+        Livewire::test(Widget::class)
+            ->set('draft', 'Create a service from the Marketing site starter template.')
+            ->call('sendMessage')
+            ->assertSet('messages.2.content', 'Marketing Status has been created from the Marketing site starter template.');
+
+        $this->assertDatabaseHas('services', [
+            'name' => 'Marketing Status',
+            'url' => 'https://example.com/status',
+            'interval_seconds' => Service::INTERVAL_3_MINUTES,
+            'expect_type' => Service::EXPECT_TEXT,
+            'expect_value' => 'Healthy',
+        ]);
     }
 
     public function test_widget_state_persists_between_component_mounts(): void

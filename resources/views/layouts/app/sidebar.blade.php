@@ -19,6 +19,9 @@
                         <flux:sidebar.item icon="layers-2" :href="route('services.index')" :current="request()->routeIs('services.index')" wire:navigate>
                             {{ __('Services') }}
                         </flux:sidebar.item>
+                        <flux:sidebar.item icon="bookmark-square" :href="route('service-templates.index')" :current="request()->routeIs('service-templates.*')" wire:navigate>
+                            {{ __('Service Templates') }}
+                        </flux:sidebar.item>
                         <flux:sidebar.item icon="layers" :href="route('service-groups.index')" :current="request()->routeIs('service-groups.*')" wire:navigate>
                             {{ __('Service groups') }}
                         </flux:sidebar.item>
@@ -108,6 +111,9 @@
                             </flux:menu.item>
                             <flux:menu.item :href="route('services.index')" icon="cpu-chip" wire:navigate>
                                 {{ __('Services') }}
+                            </flux:menu.item>
+                            <flux:menu.item :href="route('service-templates.index')" icon="bookmark-square" wire:navigate>
+                                {{ __('Service Templates') }}
                             </flux:menu.item>
                             <flux:menu.item :href="route('service-groups.index')" icon="cpu-chip" wire:navigate>
                                 {{ __('Service groups') }}

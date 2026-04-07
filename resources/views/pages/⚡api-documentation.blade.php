@@ -75,8 +75,8 @@ new #[Title('API documentation')] class extends Component {
             <div id="permissions" class="scroll-mt-24 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
                 <flux:heading size="lg">{{ __('Permissions') }}</flux:heading>
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
-                    <p>{{ __('Each API key permission follows the `resource:action` format. The current API surface uses `recipients:*`, `services:*`, and `users:*` permissions, with read routes requiring `:read` and mutating routes requiring `:write`.') }}</p>
-                    <p>{{ __('Recipient groups share the `recipients` permission family, and service groups share the `services` permission family so the API stays aligned with the admin UI permission matrix.') }}</p>
+                    <p>{{ __('Each API key permission follows the `resource:action` format. The current published REST API uses `recipients:*`, `services:*`, `templates:*`, and `users:*` permissions, with read routes requiring `:read` and mutating routes requiring `:write`.') }}</p>
+                    <p>{{ __('Recipient groups share the `recipients` permission family, and service groups share the `services` permission family. Service templates have their own `templates` permission family because they can be managed directly over the API and used as defaults when creating services.') }}</p>
                     <p>{{ __('When new functionality or permission areas are added, the endpoints, docs, playground catalog, tests, and API key permission registry should be updated in the same change.') }}</p>
                 </div>
             </div>
@@ -86,6 +86,7 @@ new #[Title('API documentation')] class extends Component {
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
                     <p>{{ __('Use the API Playground page to pick any documented endpoint, review its request contract, paste an API key, and send a real request against this environment.') }}</p>
                     <p>{{ __('The playground shares the same endpoint catalog as this page so the dropdown documentation and this reference stay in sync.') }}</p>
+                    <p>{{ __('Service and template examples include the current `additional_headers` array format plus the `ssl_expiry_notifications_enabled` flag so integrations can mirror the UI exactly.') }}</p>
                     <p>
                         <a href="{{ route('api-playground') }}" class="font-medium text-sky-600 hover:text-sky-500 dark:text-sky-400 dark:hover:text-sky-300">{{ __('Visit the API Playground') }}</a>
                          to get started or test out requests without needing a separate REST client.

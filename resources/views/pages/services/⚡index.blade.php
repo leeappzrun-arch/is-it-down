@@ -5,8 +5,11 @@ use App\Models\Recipient;
 use App\Models\RecipientGroup;
 use App\Models\Service;
 use App\Models\ServiceGroup;
+use App\Models\ServiceTemplate;
 use App\Support\Services\ServiceData;
+use App\Support\Services\ServiceTemplateData;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -28,6 +31,11 @@ new #[Title('Service management')] class extends Component {
 
     public string $expectValue = '';
 
+    /** @var array<int, array{name: string, value: string}> */
+    public array $additionalHeaders = [];
+
+    public bool $sslExpiryNotificationsEnabled = false;
+
     /** @var array<int, string> */
     public array $selectedServiceGroupIds = [];
 
@@ -36,6 +44,16 @@ new #[Title('Service management')] class extends Component {
 
     /** @var array<int, string> */
     public array $selectedRecipientIds = [];
+
+    public bool $showCreateTemplateModal = false;
+
+    public ?int $templateSourceServiceId = null;
+
+    public string $templateName = '';
+
+    public ?int $loadedTemplateId = null;
+
+    public string $loadedTemplateName = '';
 
     public bool $showDeleteConfirmationModal = false;
 
@@ -51,6 +69,12 @@ new #[Title('Service management')] class extends Component {
     public function mount(): void
     {
         abort_unless(auth()->user()?->isAdmin(), 403);
+
+        $templateId = (int) request()->integer('template');
+
+        if ($templateId > 0) {
+            $this->applyTemplate($templateId);
+        }
     }
 
     /**
@@ -86,6 +110,10 @@ new #[Title('Service management')] class extends Component {
                     $service->url,
                     $service->intervalLabel(),
                     $service->expectSummary(),
+                    $service->additionalHeadersSummary(),
+                    $service->ssl_expiry_notifications_enabled ? 'SSL expiry notifications enabled' : 'SSL expiry notifications disabled',
+                    collect($service->configuredAdditionalHeaders())->pluck('name')->all(),
+                    collect($service->configuredAdditionalHeaders())->pluck('value')->all(),
                     $service->monitoringStatusLabel(),
                     $service->statusDurationSummary(),
                     $service->monitoringReasonSummary(),
@@ -167,6 +195,8 @@ new #[Title('Service management')] class extends Component {
      */
     public function saveService(): void
     {
+        $this->additionalHeaders = ServiceData::normalizeAdditionalHeaders($this->additionalHeaders);
+
         $validated = $this->validate($this->serviceRules());
 
         $service = Service::query()->updateOrCreate(
@@ -191,12 +221,16 @@ new #[Title('Service management')] class extends Component {
             ->with(['groups:id', 'recipientGroups:id', 'recipients:id'])
             ->findOrFail($serviceId);
 
+        $this->loadedTemplateId = null;
+        $this->loadedTemplateName = '';
         $this->editingServiceId = $service->id;
         $this->name = $service->name;
         $this->url = $service->url;
         $this->intervalSeconds = $service->interval_seconds;
         $this->expectType = $service->expect_type ?? Service::EXPECT_NONE;
         $this->expectValue = $service->expect_value ?? '';
+        $this->additionalHeaders = $service->configuredAdditionalHeaders();
+        $this->sslExpiryNotificationsEnabled = (bool) $service->ssl_expiry_notifications_enabled;
         $this->selectedServiceGroupIds = $service->groups->pluck('id')->map(fn (int $id): string => (string) $id)->all();
         $this->selectedRecipientGroupIds = $service->recipientGroups->pluck('id')->map(fn (int $id): string => (string) $id)->all();
         $this->selectedRecipientIds = $service->recipients->pluck('id')->map(fn (int $id): string => (string) $id)->all();
@@ -224,6 +258,53 @@ new #[Title('Service management')] class extends Component {
     }
 
     /**
+     * Prompt to create a template from an existing service.
+     */
+    public function promptTemplateCreation(int $serviceId): void
+    {
+        $service = Service::query()->findOrFail($serviceId);
+
+        $this->templateSourceServiceId = $service->id;
+        $this->templateName = $service->name.' template';
+        $this->showCreateTemplateModal = true;
+        $this->resetValidation();
+    }
+
+    /**
+     * Cancel template creation from a service.
+     */
+    public function cancelTemplateCreation(): void
+    {
+        $this->resetTemplateCreationState();
+    }
+
+    /**
+     * Create a template from the selected service.
+     */
+    public function createTemplateFromService(): void
+    {
+        $validated = $this->validate([
+            'templateName' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('service_templates', 'name'),
+            ],
+        ]);
+
+        $service = Service::query()
+            ->with(['groups:id', 'recipientGroups:id', 'recipients:id'])
+            ->findOrFail($this->templateSourceServiceId);
+
+        ServiceTemplate::query()->create(
+            ServiceTemplateData::payloadFromService($service, (string) $validated['templateName'])
+        );
+
+        $this->resetTemplateCreationState();
+        $this->dispatch('service-template-created');
+    }
+
+    /**
      * Update the form when the expectation mode changes.
      */
     public function updatedExpectType(string $expectType): void
@@ -233,6 +314,27 @@ new #[Title('Service management')] class extends Component {
         }
 
         $this->resetValidation();
+    }
+
+    /**
+     * Add an additional request header row.
+     */
+    public function addAdditionalHeader(): void
+    {
+        $this->additionalHeaders[] = [
+            'name' => '',
+            'value' => '',
+        ];
+    }
+
+    /**
+     * Remove an additional request header row.
+     */
+    public function removeAdditionalHeader(int $index): void
+    {
+        unset($this->additionalHeaders[$index]);
+
+        $this->additionalHeaders = array_values($this->additionalHeaders);
     }
 
     /**
@@ -287,13 +389,28 @@ new #[Title('Service management')] class extends Component {
             'name',
             'url',
             'expectValue',
+            'additionalHeaders',
             'selectedServiceGroupIds',
             'selectedRecipientGroupIds',
             'selectedRecipientIds',
+            'loadedTemplateId',
+            'loadedTemplateName',
         ]);
 
         $this->intervalSeconds = Service::INTERVAL_1_MINUTE;
         $this->expectType = Service::EXPECT_NONE;
+        $this->sslExpiryNotificationsEnabled = false;
+        $this->resetValidation();
+    }
+
+    /**
+     * Reset the template-creation modal state.
+     */
+    private function resetTemplateCreationState(): void
+    {
+        $this->showCreateTemplateModal = false;
+        $this->templateSourceServiceId = null;
+        $this->templateName = '';
         $this->resetValidation();
     }
 
@@ -362,6 +479,41 @@ new #[Title('Service management')] class extends Component {
 
         return $haystack->contains($search);
     }
+
+    /**
+     * Apply a saved template to the service form.
+     */
+    private function applyTemplate(int $templateId): void
+    {
+        $template = ServiceTemplate::query()->findOrFail($templateId);
+        $configuration = $template->serviceConfiguration();
+
+        $this->resetServiceForm();
+        $this->name = $configuration['name'];
+        $this->url = '';
+        $this->intervalSeconds = $configuration['interval_seconds'];
+        $this->expectType = $configuration['expect_type'] ?? Service::EXPECT_NONE;
+        $this->expectValue = $configuration['expect_value'] ?? '';
+        $this->additionalHeaders = $configuration['additional_headers'];
+        $this->sslExpiryNotificationsEnabled = $configuration['ssl_expiry_notifications_enabled'];
+        $this->selectedServiceGroupIds = ServiceGroup::query()
+            ->whereIn('id', $configuration['service_group_ids'])
+            ->pluck('id')
+            ->map(fn (int $id): string => (string) $id)
+            ->all();
+        $this->selectedRecipientGroupIds = RecipientGroup::query()
+            ->whereIn('id', $configuration['recipient_group_ids'])
+            ->pluck('id')
+            ->map(fn (int $id): string => (string) $id)
+            ->all();
+        $this->selectedRecipientIds = Recipient::query()
+            ->whereIn('id', $configuration['recipient_ids'])
+            ->pluck('id')
+            ->map(fn (int $id): string => (string) $id)
+            ->all();
+        $this->loadedTemplateId = $template->id;
+        $this->loadedTemplateName = $template->name;
+    }
 }; ?>
 
 <section wire:poll.5s.visible class="w-full">
@@ -369,12 +521,18 @@ new #[Title('Service management')] class extends Component {
         <div class="flex flex-wrap items-start justify-between gap-4">
             <div>
                 <flux:heading size="xl" level="1">{{ __('Services') }}</flux:heading>
-                <flux:subheading size="lg" class="mb-6">{{ __('Create monitored services, set their polling interval and expectation rules, then route alerts through direct recipients, recipient groups, and reusable service groups.') }}</flux:subheading>
+                <flux:subheading size="lg" class="mb-6">{{ __('Create monitored services, set their polling interval and expectation rules, then route alerts to recipients.') }}</flux:subheading>
             </div>
 
-            <flux:button variant="ghost" :href="route('service-groups.index')" wire:navigate>
-                {{ __('Manage service groups') }}
-            </flux:button>
+            <div class="flex flex-wrap items-center gap-3">
+                <flux:button variant="ghost" :href="route('service-templates.index')" wire:navigate>
+                    {{ __('Manage service templates') }}
+                </flux:button>
+
+                <flux:button variant="ghost" :href="route('service-groups.index')" wire:navigate>
+                    {{ __('Manage service groups') }}
+                </flux:button>
+            </div>
         </div>
         <flux:separator variant="subtle" />
     </div>
@@ -411,6 +569,13 @@ new #[Title('Service management')] class extends Component {
 
                     <x-action-message on="service-saved">{{ __('Service saved.') }}</x-action-message>
                 </div>
+
+                @if ($loadedTemplateName !== '')
+                    <div class="mt-6 rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-100">
+                        <div class="font-medium">{{ __('Template loaded: :name', ['name' => $loadedTemplateName]) }}</div>
+                        <p class="mt-1 leading-6 text-sky-800 dark:text-sky-200">{{ __('The service name, expectation, interval, and routing assignments were prefilled from this template. Add the URL, review anything you want to change, and then save the service.') }}</p>
+                    </div>
+                @endif
 
                 <form wire:submit="saveService" class="mt-6 space-y-5">
                     <flux:input wire:model="name" :label="__('Name')" type="text" required placeholder="Marketing site" />
@@ -470,7 +635,64 @@ new #[Title('Service management')] class extends Component {
                         @endif
                     </div>
 
-                    <div class="space-y-3">
+                    <div class="space-y-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-950/40">
+                        <div class="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                                <flux:heading>{{ __('Request options') }}</flux:heading>
+                                <flux:subheading class="mt-1">{{ __('Optionally send extra headers with each check and watch for SSL certificates that are within 10 days of expiry.') }}</flux:subheading>
+                            </div>
+
+                            <flux:button type="button" variant="subtle" size="sm" wire:click="addAdditionalHeader">
+                                {{ __('Add header') }}
+                            </flux:button>
+                        </div>
+
+                        @if ($additionalHeaders === [])
+                            <p class="rounded-lg border border-dashed border-zinc-300 px-4 py-3 text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">{{ __('No extra headers will be sent unless you add them here.') }}</p>
+                        @else
+                            <div class="space-y-3">
+                                @foreach ($additionalHeaders as $index => $header)
+                                    <div wire:key="service-additional-header-{{ $index }}" class="grid gap-3 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] dark:border-zinc-700 dark:bg-zinc-950">
+                                        <flux:input wire:model="additionalHeaders.{{ $index }}.name" :label="__('Header name')" type="text" placeholder="X-Environment" />
+                                        <flux:input wire:model="additionalHeaders.{{ $index }}.value" :label="__('Header value')" type="text" placeholder="production" />
+
+                                        <div class="flex items-end">
+                                            <flux:button type="button" variant="ghost" wire:click="removeAdditionalHeader({{ $index }})">
+                                                {{ __('Remove') }}
+                                            </flux:button>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
+
+                        @error('additionalHeaders.*.name')
+                            <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                        @enderror
+
+                        @error('additionalHeaders.*.value')
+                            <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                        @enderror
+
+                        <label class="flex items-start gap-3 rounded-xl border border-zinc-200 bg-white px-4 py-4 text-sm text-zinc-800 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100">
+                            <input
+                                wire:model="sslExpiryNotificationsEnabled"
+                                type="checkbox"
+                                class="mt-1 h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+                            >
+
+                            <span class="min-w-0">
+                                <span class="block font-medium">{{ __('SSL expiry notifications') }}</span>
+                                <span class="mt-1 block text-xs leading-5 text-zinc-500 dark:text-zinc-400">{{ __('Send an alert when the service SSL certificate expires within 10 days. These warnings are limited to at most one notification every 24 hours per service.') }}</span>
+                            </span>
+                        </label>
+
+                        @error('sslExpiryNotificationsEnabled')
+                            <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div class="space-y-3 rounded-xl border border-zinc-200 bg-zinc-50 p-4 sm:p-5 dark:border-zinc-700 dark:bg-zinc-950/40">
                         <div class="flex flex-wrap items-start justify-between gap-3">
                             <div>
                             <flux:heading>{{ __('Service groups') }}</flux:heading>
@@ -509,7 +731,7 @@ new #[Title('Service management')] class extends Component {
                         @endif
                     </div>
 
-                    <div class="space-y-3">
+                    <div class="space-y-3 rounded-xl border border-zinc-200 bg-zinc-50 p-4 sm:p-5 dark:border-zinc-700 dark:bg-zinc-950/40">
                         <div>
                             <flux:heading>{{ __('Recipient groups') }}</flux:heading>
                             <flux:subheading class="mt-1">{{ __('Assign reusable recipient groups directly to this service.') }}</flux:subheading>
@@ -538,7 +760,7 @@ new #[Title('Service management')] class extends Component {
                         @endif
                     </div>
 
-                    <div class="space-y-3">
+                    <div class="space-y-3 rounded-xl border border-zinc-200 bg-zinc-50 p-4 sm:p-5 dark:border-zinc-700 dark:bg-zinc-950/40">
                         <div>
                             <flux:heading>{{ __('Direct recipients') }}</flux:heading>
                             <flux:subheading class="mt-1">{{ __('Add recipients directly when they should be routed to this service even without a group.') }}</flux:subheading>
@@ -570,8 +792,8 @@ new #[Title('Service management')] class extends Component {
                     <div class="flex flex-wrap items-center gap-3 pt-2">
                         <flux:button variant="primary" type="submit">{{ $editingServiceId ? __('Save service') : __('Create service') }}</flux:button>
 
-                        @if ($editingServiceId)
-                            <flux:button type="button" variant="ghost" wire:click="cancelServiceEditing">{{ __('Cancel') }}</flux:button>
+                        @if ($editingServiceId || $loadedTemplateName !== '')
+                            <flux:button type="button" variant="ghost" wire:click="cancelServiceEditing">{{ $editingServiceId ? __('Cancel') : __('Clear template') }}</flux:button>
                         @endif
                     </div>
                 </form>
@@ -585,7 +807,10 @@ new #[Title('Service management')] class extends Component {
                     <flux:subheading class="mt-2">{{ __('Review every unique recipient a service resolves to, including exactly whether it comes from a direct assignment, a recipient group, or a service group.') }}</flux:subheading>
                 </div>
 
-                <x-action-message on="service-deleted">{{ __('Service removed.') }}</x-action-message>
+                <div class="flex flex-wrap items-center gap-3">
+                    <x-action-message on="service-template-created">{{ __('Template saved.') }}</x-action-message>
+                    <x-action-message on="service-deleted">{{ __('Service removed.') }}</x-action-message>
+                </div>
             </div>
 
             @if ($this->services->isEmpty())
@@ -613,6 +838,10 @@ new #[Title('Service management')] class extends Component {
                                             <span class="rounded-full px-3 py-1 font-medium {{ $service->monitoringStatusClasses() }}">{{ __($service->monitoringStatusLabel()) }}</span>
                                             <span class="rounded-full bg-sky-100 px-3 py-1 font-medium text-sky-700 dark:bg-sky-500/15 dark:text-sky-300">{{ $service->intervalLabel() }}</span>
                                             <span class="rounded-full bg-zinc-200 px-3 py-1 font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">{{ $service->expectSummary() }}</span>
+                                            <span class="rounded-full bg-violet-100 px-3 py-1 font-medium text-violet-700 dark:bg-violet-500/15 dark:text-violet-300">{{ $service->additionalHeadersSummary() }}</span>
+                                            @if ($service->ssl_expiry_notifications_enabled)
+                                                <span class="rounded-full bg-cyan-100 px-3 py-1 font-medium text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-300">{{ __('SSL expiry alerts on') }}</span>
+                                            @endif
                                             <span class="rounded-full bg-emerald-100 px-3 py-1 font-medium text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
                                                 {{ trans_choice('{1} :count unique recipient|[2,*] :count unique recipients', $effectiveRecipients->count(), ['count' => $effectiveRecipients->count()]) }}
                                             </span>
@@ -646,6 +875,7 @@ new #[Title('Service management')] class extends Component {
                                     </div>
 
                                     <div class="flex flex-wrap items-center gap-2">
+                                        <flux:button type="button" variant="subtle" wire:click="promptTemplateCreation({{ $service->id }})">{{ __('Save as template') }}</flux:button>
                                         <flux:button type="button" variant="ghost" wire:click="editService({{ $service->id }})">{{ __('Edit') }}</flux:button>
                                         <flux:button type="button" variant="danger" wire:click="confirmServiceDeletion({{ $service->id }})">{{ __('Delete') }}</flux:button>
                                     </div>
@@ -690,6 +920,37 @@ new #[Title('Service management')] class extends Component {
                                     <div class="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
                                         <div class="text-sm font-medium text-zinc-900 dark:text-zinc-100">{{ __('Latest reason') }}</div>
                                         <div class="mt-3 text-sm text-zinc-600 dark:text-zinc-300">{{ $service->monitoringReasonSummary() }}</div>
+                                    </div>
+                                </div>
+
+                                <div class="grid gap-4 lg:grid-cols-2">
+                                    <div class="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
+                                        <div class="text-sm font-medium text-zinc-900 dark:text-zinc-100">{{ __('Additional headers') }}</div>
+
+                                        @if (! $service->hasAdditionalHeaders())
+                                            <div class="mt-3 text-sm text-zinc-500 dark:text-zinc-400">{{ __('No additional headers configured') }}</div>
+                                        @else
+                                            <div class="mt-3 flex flex-wrap gap-2">
+                                                @foreach ($service->configuredAdditionalHeaders() as $header)
+                                                    <span wire:key="service-header-chip-{{ $service->id }}-{{ md5($header['name'].'-'.$header['value']) }}" class="rounded-full bg-violet-100 px-3 py-1 text-xs font-medium text-violet-700 dark:bg-violet-500/15 dark:text-violet-300">
+                                                        {{ $header['name'] }}: {{ $header['value'] }}
+                                                    </span>
+                                                @endforeach
+                                            </div>
+                                        @endif
+                                    </div>
+
+                                    <div class="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
+                                        <div class="text-sm font-medium text-zinc-900 dark:text-zinc-100">{{ __('SSL expiry alerts') }}</div>
+                                        <div class="mt-3 text-sm text-zinc-600 dark:text-zinc-300">
+                                            {{ $service->ssl_expiry_notifications_enabled ? __('Enabled for HTTPS certificate warnings within 10 days of expiry') : __('Disabled') }}
+                                        </div>
+
+                                        @if ($service->last_ssl_expiry_notification_sent_at)
+                                            <div class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                                                {{ __('Last SSL warning sent :time', ['time' => $service->last_ssl_expiry_notification_sent_at->diffForHumans()]) }}
+                                            </div>
+                                        @endif
                                     </div>
                                 </div>
 
@@ -769,6 +1030,22 @@ new #[Title('Service management')] class extends Component {
             @endif
         </div>
     </div>
+
+    <flux:modal wire:model="showCreateTemplateModal" class="md:w-[28rem]">
+        <div class="space-y-4">
+            <div>
+                <flux:heading size="lg">{{ __('Save as template') }}</flux:heading>
+                <flux:subheading class="mt-2">{{ __('Give this template a name and the current service settings will be saved without the URL.') }}</flux:subheading>
+            </div>
+
+            <flux:input wire:model="templateName" :label="__('Template name')" type="text" required placeholder="Standard website template" />
+
+            <div class="flex flex-wrap justify-end gap-3">
+                <flux:button type="button" variant="ghost" wire:click="cancelTemplateCreation">{{ __('Cancel') }}</flux:button>
+                <flux:button type="button" variant="primary" wire:click="createTemplateFromService">{{ __('Save template') }}</flux:button>
+            </div>
+        </div>
+    </flux:modal>
 
     <flux:modal wire:model="showDeleteConfirmationModal" class="md:w-[28rem]">
         <div class="space-y-4">

@@ -32,15 +32,24 @@ trait ServiceValidation
      *
      * @return array<string, array<int, mixed>>
      */
-    protected function serviceValidationRules(string $expectType): array
+    protected function serviceValidationRules(string $expectType, bool $requiresName = true, bool $requiresUrl = true): array
     {
         return [
-            'name' => ['required', 'string', 'max:255'],
+            'name' => [Rule::requiredIf($requiresName), 'nullable', 'string', 'max:255'],
             'url' => [
-                'required',
+                Rule::requiredIf($requiresUrl),
+                'nullable',
                 'string',
                 'max:2048',
-                function (string $attribute, mixed $value, \Closure $fail): void {
+                function (string $attribute, mixed $value, \Closure $fail) use ($requiresUrl): void {
+                    if (blank($value)) {
+                        if ($requiresUrl) {
+                            $fail(__('Service URLs must use the format example.com/status or https://example.com/status.'));
+                        }
+
+                        return;
+                    }
+
                     if (! is_string($value)) {
                         $fail(__('The URL must be a string.'));
 
@@ -75,6 +84,55 @@ trait ServiceValidation
                     }
                 },
             ],
+            'additionalHeaders' => ['array'],
+            'additionalHeaders.*.name' => ['required', 'string', 'max:255'],
+            'additionalHeaders.*.value' => ['required', 'string', 'max:65535'],
+            'sslExpiryNotificationsEnabled' => ['boolean'],
+            'selectedServiceGroupIds' => ['array'],
+            'selectedServiceGroupIds.*' => ['integer', Rule::exists('service_groups', 'id')],
+            'selectedRecipientGroupIds' => ['array'],
+            'selectedRecipientGroupIds.*' => ['integer', Rule::exists('recipient_groups', 'id')],
+            'selectedRecipientIds' => ['array'],
+            'selectedRecipientIds.*' => ['integer', Rule::exists('recipients', 'id')],
+        ];
+    }
+
+    /**
+     * Get the validation rules for service template upserts.
+     *
+     * @return array<string, array<int, mixed>>
+     */
+    protected function serviceTemplateValidationRules(string $expectType, ?int $serviceTemplateId = null): array
+    {
+        return [
+            'templateName' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('service_templates', 'name')->ignore($serviceTemplateId),
+            ],
+            'serviceName' => ['required', 'string', 'max:255'],
+            'intervalSeconds' => ['required', 'integer', Rule::in(array_keys($this->serviceIntervalOptions()))],
+            'expectType' => ['required', Rule::in(array_keys($this->serviceExpectationOptions()))],
+            'expectValue' => [
+                Rule::requiredIf(fn (): bool => $expectType !== Service::EXPECT_NONE),
+                'nullable',
+                'string',
+                'max:65535',
+                function (string $attribute, mixed $value, \Closure $fail) use ($expectType): void {
+                    if ($expectType !== Service::EXPECT_REGEX || blank($value)) {
+                        return;
+                    }
+
+                    if (! is_string($value) || @preg_match($value, '') === false) {
+                        $fail(__('Regular expressions must be valid PHP patterns including delimiters, for example /healthy/i.'));
+                    }
+                },
+            ],
+            'additionalHeaders' => ['array'],
+            'additionalHeaders.*.name' => ['required', 'string', 'max:255'],
+            'additionalHeaders.*.value' => ['required', 'string', 'max:65535'],
+            'sslExpiryNotificationsEnabled' => ['boolean'],
             'selectedServiceGroupIds' => ['array'],
             'selectedServiceGroupIds.*' => ['integer', Rule::exists('service_groups', 'id')],
             'selectedRecipientGroupIds' => ['array'],

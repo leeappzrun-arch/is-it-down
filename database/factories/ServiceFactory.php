@@ -23,12 +23,15 @@ class ServiceFactory extends Factory
             'interval_seconds' => fake()->randomElement(array_keys(Service::intervalOptions())),
             'expect_type' => null,
             'expect_value' => null,
+            'additional_headers' => [],
+            'ssl_expiry_notifications_enabled' => false,
             'current_status' => null,
             'last_response_code' => null,
             'last_check_reason' => null,
             'last_checked_at' => null,
             'next_check_at' => null,
             'last_status_changed_at' => null,
+            'last_ssl_expiry_notification_sent_at' => null,
         ];
     }
 

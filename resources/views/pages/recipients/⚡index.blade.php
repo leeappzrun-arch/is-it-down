@@ -293,30 +293,31 @@ new #[Title('Recipient management')] class extends Component {
         />
     </div>
 
-    <div class="space-y-6">
-        <div
-            x-data="{ highlight: false, timeout: null, focusForm() { this.$el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' }); this.$nextTick(() => this.$el.querySelector('input, select, textarea, button')?.focus({ preventScroll: true })); this.highlight = true; if (this.timeout) { clearTimeout(this.timeout); } this.timeout = setTimeout(() => { this.highlight = false }, 2200); } }"
-            x-on:focus-form.window="if ($event.detail.form === 'recipient') { focusForm() }"
-            :class="{ 'ring-2 ring-sky-400/70 ring-offset-2 ring-offset-white shadow-lg shadow-sky-500/10 animate-pulse dark:ring-sky-300/60 dark:ring-offset-zinc-900': highlight }"
-            class="min-w-0 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm transition-all duration-300 sm:p-6 dark:border-zinc-700 dark:bg-zinc-900"
-        >
-            <div class="flex flex-wrap items-start justify-between gap-4">
-                <div>
-                    <flux:heading size="lg">{{ $editingRecipientId ? __('Edit recipient') : __('Create recipient') }}</flux:heading>
-                    <flux:subheading class="mt-2">{{ __('Choose how the destination should be contacted, then enter the mailbox or webhook target without the internal storage prefix.') }}</flux:subheading>
+    <div class="grid gap-6 xl:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]">
+        <div class="min-w-0 space-y-6">
+            <div
+                x-data="{ highlight: false, timeout: null, focusForm() { this.$el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' }); this.$nextTick(() => this.$el.querySelector('input, select, textarea, button')?.focus({ preventScroll: true })); this.highlight = true; if (this.timeout) { clearTimeout(this.timeout); } this.timeout = setTimeout(() => { this.highlight = false }, 2200); } }"
+                x-on:focus-form.window="if ($event.detail.form === 'recipient') { focusForm() }"
+                :class="{ 'ring-2 ring-sky-400/70 ring-offset-2 ring-offset-white shadow-lg shadow-sky-500/10 animate-pulse dark:ring-sky-300/60 dark:ring-offset-zinc-900': highlight }"
+                class="min-w-0 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm transition-all duration-300 sm:p-6 dark:border-zinc-700 dark:bg-zinc-900"
+            >
+                <div class="flex flex-wrap items-start justify-between gap-4">
+                    <div>
+                        <flux:heading size="lg">{{ $editingRecipientId ? __('Edit recipient') : __('Create recipient') }}</flux:heading>
+                        <flux:subheading class="mt-2">{{ __('Choose how the destination should be contacted, then enter the mailbox or webhook target without the internal storage prefix.') }}</flux:subheading>
+                    </div>
+
+                    <x-action-message on="recipient-saved">{{ __('Recipient saved.') }}</x-action-message>
                 </div>
 
-                <x-action-message on="recipient-saved">{{ __('Recipient saved.') }}</x-action-message>
-            </div>
-
-            <form wire:submit="saveRecipient" class="mt-6 min-w-0 space-y-6">
+                <form wire:submit="saveRecipient" class="mt-6 min-w-0 space-y-6">
                 <div class="grid gap-4 md:grid-cols-2">
                     <div class="min-w-0">
                         <flux:input wire:model="name" :label="__('Name')" type="text" required />
                     </div>
 
                     <div class="min-w-0">
-                        <label for="endpointType" class="mb-2 block text-sm font-medium text-zinc-800 dark:text-zinc-100">{{ __('Protocol') }}</label>
+                        <label for="endpointType" class="mb-1 block text-sm font-medium text-zinc-800 dark:text-zinc-100">{{ __('Protocol') }}</label>
                         <select
                             id="endpointType"
                             wire:model.live="endpointType"
@@ -413,7 +414,7 @@ new #[Title('Recipient management')] class extends Component {
                     </div>
                 @endif
 
-                <div class="space-y-3">
+                <div class="space-y-3 rounded-xl border border-zinc-200 bg-zinc-50 p-4 sm:p-5 dark:border-zinc-700 dark:bg-zinc-950/40">
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div>
                             <flux:heading>{{ __('Groups') }}</flux:heading>
@@ -454,18 +455,19 @@ new #[Title('Recipient management')] class extends Component {
                     @endif
                 </div>
 
-                <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
-                    <flux:button variant="primary" type="submit" class="w-full sm:w-auto">
-                        {{ $editingRecipientId ? __('Save recipient') : __('Create recipient') }}
-                    </flux:button>
-
-                    @if ($editingRecipientId)
-                        <flux:button type="button" variant="ghost" wire:click="cancelRecipientEditing" class="w-full sm:w-auto">
-                            {{ __('Cancel') }}
+                    <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
+                        <flux:button variant="primary" type="submit" class="w-full sm:w-auto">
+                            {{ $editingRecipientId ? __('Save recipient') : __('Create recipient') }}
                         </flux:button>
-                    @endif
-                </div>
-            </form>
+
+                        @if ($editingRecipientId)
+                            <flux:button type="button" variant="ghost" wire:click="cancelRecipientEditing" class="w-full sm:w-auto">
+                                {{ __('Cancel') }}
+                            </flux:button>
+                        @endif
+                    </div>
+                </form>
+            </div>
         </div>
 
         <div class="min-w-0 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-6 dark:border-zinc-700 dark:bg-zinc-900">
@@ -508,7 +510,6 @@ new #[Title('Recipient management')] class extends Component {
                                             <span class="inline-flex w-fit rounded-full px-3 py-1 text-xs font-medium {{ $recipient->isMailEndpoint() ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300' : 'bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300' }}">
                                                 {{ __($recipient->endpointTypeLabel()) }}
                                             </span>
-                                            <span class="break-all text-zinc-600 dark:text-zinc-300">{{ $recipient->endpointTarget() }}</span>
                                         </div>
                                     </td>
                                     <td class="py-4 pe-4 text-zinc-600 dark:text-zinc-300">

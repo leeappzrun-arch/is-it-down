@@ -7,6 +7,7 @@ use App\Models\Recipient;
 use App\Models\RecipientGroup;
 use App\Models\Service;
 use App\Models\ServiceGroup;
+use App\Models\ServiceTemplate;
 use App\Models\User;
 use App\Support\ApiKeyPermissions;
 use Database\Seeders\DatabaseSeeder;
@@ -37,6 +38,7 @@ class DatabaseSeederTest extends TestCase
         $this->assertDatabaseCount('recipients', 3);
         $this->assertDatabaseCount('service_groups', 2);
         $this->assertDatabaseCount('services', 2);
+        $this->assertDatabaseCount('service_templates', 2);
         $this->assertDatabaseCount('api_keys', 2);
         $this->assertDatabaseCount('ai_assistant_settings', 1);
 
@@ -45,19 +47,24 @@ class DatabaseSeederTest extends TestCase
         $leadershipGroup = RecipientGroup::query()->where('name', 'Leadership')->first();
         $productionGroup = ServiceGroup::query()->where('name', 'Production')->first();
         $marketingSite = Service::query()->where('name', 'Marketing Site')->first();
+        $marketingTemplate = ServiceTemplate::query()->where('name', 'Marketing site starter')->first();
         $this->assertNotNull($operationsInbox);
         $this->assertNotNull($operationsGroup);
         $this->assertNotNull($leadershipGroup);
         $this->assertNotNull($productionGroup);
         $this->assertNotNull($marketingSite);
+        $this->assertNotNull($marketingTemplate);
         $this->assertSame(
             [$leadershipGroup->id, $operationsGroup->id],
             $operationsInbox->groups()->orderBy('recipient_groups.name')->pluck('recipient_groups.id')->all(),
         );
         $this->assertSame([$productionGroup->id], $marketingSite->groups()->where('service_groups.name', 'Production')->pluck('service_groups.id')->all());
         $this->assertSame(Service::EXPECT_TEXT, $marketingSite->expect_type);
+        $this->assertSame('Marketing Site', $marketingTemplate->serviceName());
         $this->assertFalse(AiAssistantSetting::current()->is_enabled);
         $this->assertContains(ApiKeyPermissions::permission('services', 'read'), ApiKeyPermissions::all());
         $this->assertContains(ApiKeyPermissions::permission('services', 'write'), ApiKeyPermissions::all());
+        $this->assertContains(ApiKeyPermissions::permission('templates', 'read'), ApiKeyPermissions::all());
+        $this->assertContains(ApiKeyPermissions::permission('templates', 'write'), ApiKeyPermissions::all());
     }
 }

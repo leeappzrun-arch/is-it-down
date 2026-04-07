@@ -25,8 +25,10 @@ class DocumentationPagesTest extends TestCase
         $response->assertSeeText('On this page');
         $response->assertSeeText('Recipient management');
         $response->assertSeeText('Service management');
+        $response->assertSeeText('Template management');
         $response->assertSee('href="#getting-started"', false);
         $response->assertSee('href="#service-management"', false);
+        $response->assertSee('href="#template-management"', false);
         $response->assertSee('xl:grid-cols-2', false);
     }
 

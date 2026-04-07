@@ -5,6 +5,7 @@ use App\Models\Recipient;
 use App\Models\RecipientGroup;
 use App\Models\Service;
 use App\Models\ServiceGroup;
+use App\Models\ServiceTemplate;
 use App\Models\User;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
@@ -58,6 +59,12 @@ new #[Title('Dashboard')] class extends Component {
                 'value' => Service::query()->count(),
                 'description' => 'Monitored service endpoints',
                 'href' => $isAdmin ? route('services.index') : null,
+            ],
+            [
+                'label' => 'Templates',
+                'value' => ServiceTemplate::query()->count(),
+                'description' => 'Reusable service blueprints',
+                'href' => $isAdmin ? route('service-templates.index') : null,
             ],
             [
                 'label' => 'Service groups',

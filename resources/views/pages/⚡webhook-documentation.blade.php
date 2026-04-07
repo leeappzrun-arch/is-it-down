@@ -35,6 +35,7 @@ new #[Title('Webhook documentation')] class extends Component {
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
                     <p>{{ __('Webhook recipients are created and maintained from the Recipients page by admin users.') }}</p>
                     <p>{{ __('Webhook alerts are delivered when a monitored service changes state, such as going down or coming back up.') }}</p>
+                    <p>{{ __('Webhook recipients can also receive SSL expiry warnings when a service has that option enabled and its HTTPS certificate is within 10 days of expiry.') }}</p>
                     <p>{{ __('This page documents how webhook destinations are configured, validated, stored, secured, and what payload shape is currently sent by the monitoring scheduler.') }}</p>
                 </div>
             </div>
@@ -62,8 +63,10 @@ new #[Title('Webhook documentation')] class extends Component {
             <div id="payload-shape" class="scroll-mt-24 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
                 <flux:heading size="lg">{{ __('Payload shape') }}</flux:heading>
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
-                    <p>{{ __('Webhook payloads are sent as JSON and include the event name, service details, the new status, the previous status, the check timestamp, the HTTP response code when available, and the reason the service was considered up or down.') }}</p>
+                    <p>{{ __('Webhook payloads are sent as JSON and include the event name plus the relevant service details for that alert type.') }}</p>
+                    <p>{{ __('Status-change events include the new status, the previous status, the check timestamp, the HTTP response code when available, and the reason the service was considered up or down.') }}</p>
                     <p>{{ __('When a service recovers, the payload also includes a `downtime_duration` object so downstream systems can see how long the outage lasted.') }}</p>
+                    <p>{{ __('SSL-expiry events use the `service.ssl_expiring` event name and include an `ssl` object with the certificate expiry timestamp, signed days remaining, and a human-readable summary.') }}</p>
                     <p>{{ __('The `service.expectation` object is included when the service uses a text or regex expectation, which helps downstream systems understand why a response body was treated as healthy or unhealthy.') }}</p>
                     <p>{{ __('A representative payload looks like this:') }}</p>
                     <pre class="overflow-x-auto rounded-xl bg-zinc-950 p-4 text-xs leading-6 text-zinc-100"><code>{
@@ -108,7 +111,7 @@ new #[Title('Webhook documentation')] class extends Component {
                     <p>{{ __('Webhook recipients can be assigned to one or more recipient groups during creation or editing from the Recipients page, or by managing membership from the Recipient Groups page.') }}</p>
                     <p>{{ __('Admins can edit an existing webhook recipient from the Recipients management table, which scrolls the form into view and reloads the saved authentication state.') }}</p>
                     <p>{{ __('Deleting a webhook recipient uses the same confirmation modal as other management actions so removal is never immediate from the table row.') }}</p>
-                    <p>{{ __('If any webhook delivery fails during a status-change alert, every admin user receives an email describing which webhook failed and why.') }}</p>
+                    <p>{{ __('If any webhook delivery fails during a status-change alert or an SSL-expiry warning, every admin user receives an email describing which webhook failed and why.') }}</p>
                 </div>
             </div>
 

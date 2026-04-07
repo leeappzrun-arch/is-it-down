@@ -40,6 +40,7 @@ This project has domain-specific skills available. You MUST activate the relevan
 - Use descriptive names for variables and methods. For example, `isRegisteredForDiscounts`, not `discount()`.
 - Check for existing components to reuse before writing a new one.
 - For Livewire forms with conditional sections controlled by a select, radio, checkbox, toggle, or similar input, use explicit state fields and `wire:model.live` on the controlling input so dependent UI appears immediately.
+- For new or updated forms, wrap relationship-management sections (for example groups, recipients, services, or other linked records) in the same bordered panel pattern used by the service form expectation block so related assignments are visually separated from the rest of the form.
 - For admin or management pages that render lists, tables, or result cards, add a search input near the top of the page that filters the rendered results.
 - When you add a page-level search input, use the existing sticky search pattern so it stays visible while the user scrolls and gains a stronger drop shadow only after it becomes stuck. Match the Services, Recipients, and API Documentation pages unless the user asks for a different behavior.
 - For admin or management pages with inline Edit actions, dispatch a browser event after loading the record and scroll the relevant form into view with a brief highlight or pulse so it is obvious what is being edited.

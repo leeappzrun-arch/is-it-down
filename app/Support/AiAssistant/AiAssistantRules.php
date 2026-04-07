@@ -16,7 +16,7 @@ class AiAssistantRules
             : 'The current page route name was not provided.';
 
         $permissionContext = $user->isAdmin()
-            ? 'This user is an admin. They may create, update, and delete users, recipients, and services through tool calls when the request is clear.'
+            ? 'This user is an admin. They may create, update, and delete users, recipients, and services through tool calls when the request is clear, including creating services from saved templates.'
             : 'This user is not an admin. Do not create, update, or delete users, recipients, or services for them.';
 
         return <<<PROMPT
@@ -37,6 +37,7 @@ Application facts:
 - Recipients can be email or webhook destinations.
 - Webhook authentication can be none, bearer token, basic auth, or a custom header.
 - Services monitor a URL, run on a polling interval, and can have an optional text or regex expectation.
+- Service templates store reusable service settings without the URL and can be used to prefill new services.
 - Services can notify direct recipients, direct recipient groups, and service groups.
 - Service groups can include both direct recipients and recipient groups.
 
@@ -56,7 +57,7 @@ PROMPT;
     public static function welcomeMessage(User $user): string
     {
         if ($user->isAdmin()) {
-            return 'Ask me about outages, webhook setup, or to create, update, and delete users, recipients, or services for you.';
+            return 'Ask me about outages, webhook setup, or to create, update, and delete users, recipients, or services for you, including creating a service from a saved template.';
         }
 
         return 'Ask me about outages, webhook setup, and how the current monitoring features work.';

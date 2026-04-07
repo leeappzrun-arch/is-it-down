@@ -15,9 +15,15 @@ class ServiceMonitor
     public function check(Service $service): ServiceCheckResult
     {
         try {
-            $response = Http::accept('*/*')
+            $request = Http::accept('*/*')
                 ->connectTimeout(5)
-                ->timeout(10)
+                ->timeout(10);
+
+            if ($service->hasAdditionalHeaders()) {
+                $request = $request->withHeaders($service->requestHeaders());
+            }
+
+            $response = $request
                 ->get($service->url);
         } catch (Throwable $throwable) {
             return new ServiceCheckResult(
