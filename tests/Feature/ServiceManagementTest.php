@@ -376,7 +376,32 @@ class ServiceManagementTest extends TestCase
 
         $response->assertOk();
         $response->assertSeeText('Latest screenshot');
-        $response->assertSeeText('Failed response headers');
+        $response->assertDontSeeText('Failed response headers');
+    }
+
+    public function test_service_page_accordions_failed_response_headers_inside_downtime_history(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $service = Service::factory()->create([
+            'name' => 'Billing API',
+            'url' => 'https://billing.example.com/status',
+        ]);
+
+        ServiceDowntime::factory()->create([
+            'service_id' => $service->id,
+            'started_at' => now()->subMinutes(30),
+            'ended_at' => now()->subMinutes(20),
+            'latest_response_headers' => [
+                ['name' => 'Content-Type', 'value' => 'text/html; charset=UTF-8'],
+                ['name' => 'Server', 'value' => 'nginx'],
+            ],
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('services.index'));
+
+        $response->assertOk();
+        $response->assertSeeText('Latest failed response headers');
+        $response->assertSeeText('Toggle');
         $response->assertSeeText('Content-Type');
         $response->assertSeeText('nginx');
     }

@@ -869,8 +869,8 @@ new #[Title('Service management')] class extends Component {
                                         </div>
                                     </div>
 
-                                    <div class="flex items-center gap-3 text-sm text-zinc-500 dark:text-zinc-400">
-                                        <span class="font-medium">{{ __('Monitoring and routing details') }}</span>
+                                    <div class="flex w-full items-center justify-between gap-3 text-sm text-zinc-500 dark:text-zinc-400 sm:w-auto sm:flex-col sm:items-end sm:justify-start sm:text-right">
+                                        <span class="font-medium leading-5">{{ __('Monitoring and routing details') }}</span>
                                         <span class="rounded-full border border-zinc-300 px-3 py-1 text-xs font-medium uppercase tracking-[0.2em] dark:border-zinc-600">
                                             {{ __('Expand') }}
                                         </span>
@@ -934,20 +934,6 @@ new #[Title('Service management')] class extends Component {
                                         @php($latestScreenshotUrl = $service->latestScreenshotUrl())
                                         <div class="text-sm font-medium text-zinc-900 dark:text-zinc-100">{{ __('Latest reason') }}</div>
                                         <div class="mt-3 text-sm text-zinc-600 dark:text-zinc-300">{{ $service->last_check_reason ?? __('Awaiting the first monitoring check.') }}</div>
-
-                                        @if ($service->hasLastResponseHeaders())
-                                            <div class="mt-4">
-                                                <div class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">{{ __('Failed response headers') }}</div>
-                                                <div class="mt-2 space-y-2">
-                                                    @foreach ($service->lastResponseHeaders() as $header)
-                                                        <div wire:key="service-last-response-header-{{ $service->id }}-{{ md5($header['name'].'-'.$header['value']) }}" class="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs text-zinc-700 dark:border-zinc-700 dark:bg-zinc-950/40 dark:text-zinc-200">
-                                                            <span class="font-medium text-zinc-900 dark:text-zinc-100">{{ $header['name'] }}:</span>
-                                                            <span class="break-all">{{ $header['value'] }}</span>
-                                                        </div>
-                                                    @endforeach
-                                                </div>
-                                            </div>
-                                        @endif
 
                                         @if ($latestScreenshotUrl)
                                             <div class="mt-4">
@@ -1145,21 +1131,27 @@ new #[Title('Service management')] class extends Component {
                                                                 <strong class="text-zinc-900 dark:text-zinc-100">{{ __('Recovered because:') }}</strong>
                                                                 {{ $downtime->recovery_reason }}
                                                             </div>
-                                                        @endif
-                                                    </div>
+                                                    @endif
+                                                </div>
 
                                                     @if ($downtime->latestResponseHeaders() !== [])
-                                                        <div class="mt-3">
-                                                            <div class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">{{ __('Latest failed response headers') }}</div>
-                                                            <div class="mt-2 space-y-2">
+                                                        <details class="mt-3 rounded-xl border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-950/40">
+                                                            <summary class="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium text-zinc-900 [&::-webkit-details-marker]:hidden dark:text-zinc-100">
+                                                                <span>{{ __('Latest failed response headers') }}</span>
+                                                                <span class="rounded-full border border-zinc-300 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.2em] text-zinc-500 dark:border-zinc-600 dark:text-zinc-400">
+                                                                    {{ __('Toggle') }}
+                                                                </span>
+                                                            </summary>
+
+                                                            <div class="mt-3 space-y-2">
                                                                 @foreach ($downtime->latestResponseHeaders() as $header)
-                                                                    <div wire:key="downtime-response-header-{{ $downtime->id }}-{{ md5($header['name'].'-'.$header['value']) }}" class="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs text-zinc-700 dark:border-zinc-700 dark:bg-zinc-950/40 dark:text-zinc-200">
+                                                                    <div wire:key="downtime-response-header-{{ $downtime->id }}-{{ md5($header['name'].'-'.$header['value']) }}" class="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200">
                                                                         <span class="font-medium text-zinc-900 dark:text-zinc-100">{{ $header['name'] }}:</span>
                                                                         <span class="break-all">{{ $header['value'] }}</span>
                                                                     </div>
                                                                 @endforeach
                                                             </div>
-                                                        </div>
+                                                        </details>
                                                     @endif
 
                                                     @if ($downtime->ai_summary)
