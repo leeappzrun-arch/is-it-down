@@ -12,6 +12,7 @@ use App\Models\ServiceTemplate;
 use App\Models\User;
 use Carbon\CarbonInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class SystemApiTest extends TestCase
@@ -267,7 +268,7 @@ class SystemApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.0.name', 'Marketing Site')
             ->assertJsonPath('data.0.last_response_headers.0.name', 'Content-Type')
-            ->assertJsonPath('data.0.latest_screenshot_url', '/storage/service-screenshots/service-1.png');
+            ->assertJsonPath('data.0.latest_screenshot_url', Storage::disk('public')->url('service-screenshots/service-1.png'));
 
         $this->withToken($token)
             ->postJson('/api/v1/services', [
