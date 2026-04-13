@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'monitoring' => [
+        'failure_retry_delay_seconds' => env('MONITORING_FAILURE_RETRY_DELAY_SECONDS', 3),
+        'downtime_screenshot_disk' => env('MONITORING_DOWNTIME_SCREENSHOT_DISK', 'public'),
+        'downtime_screenshot_directory' => env('MONITORING_DOWNTIME_SCREENSHOT_DIRECTORY', 'downtime-screenshots'),
+    ],
+
 ];

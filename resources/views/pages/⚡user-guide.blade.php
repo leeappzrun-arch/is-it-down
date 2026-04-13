@@ -50,8 +50,9 @@ new #[Title('User guide')] class extends Component {
             <div id="dashboard" class="scroll-mt-24 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
                 <flux:heading size="lg">{{ __('Dashboard') }}</flux:heading>
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
-                    <p>{{ __('The dashboard is the default landing page after authentication and shows a live service-status grid above the headline totals for recipients, recipient groups, services, templates, service groups, users, and API keys.') }}</p>
+                    <p>{{ __('The dashboard is the default landing page after authentication and shows a live service-status grid above the headline totals for recipients, recipient groups, services, downtime incidents, templates, service groups, users, and API keys.') }}</p>
                     <p>{{ __('Admins can select those dashboard cards to move directly into the matching management page for recipients, recipient groups, services, templates, service groups, users, or API keys. Standard users can review the totals but cannot click through to admin-only tools.') }}</p>
+                    <p>{{ __('Service cards now also surface the rolling 30-day uptime percentage so recurring issues stand out without leaving the dashboard.') }}</p>
                     <p>{{ __('Use the sidebar to move into administration screens, account settings, and supporting documentation.') }}</p>
                 </div>
             </div>
@@ -64,6 +65,7 @@ new #[Title('User guide')] class extends Component {
                     <p>{{ __('Choose `Email` or `Webhook` from the protocol selector, then enter the address or target without the internal prefix.') }}</p>
                     <p>{{ __('Email destinations are stored internally as `mailto://name@example.com`, while webhooks are stored as `webhook://example.com/path` or `webhook://https://example.com/path`.') }}</p>
                     <p>{{ __('Webhook recipients can be configured with no authentication, bearer token authentication, basic authentication, or a custom header, and the matching fields appear as soon as you choose the authentication type.') }}</p>
+                    <p>{{ __('Webhook recipients can also store zero or more additional headers. Those headers are sent with every webhook notification, which is useful for tenant routing, internal auth gateways, or environment tagging.') }}</p>
                     <p>{{ __('Use the Webhook Documentation page for a dedicated reference on supported destination formats, authentication options, and the details that should stay aligned with future webhook delivery work.') }}</p>
                     <p>{{ __('Recipients can belong to multiple groups, which makes it easier to organise related delivery targets together.') }}</p>
                     <p>{{ __('Use the sticky search field at the top of the Recipients page to filter the recipient table without changing the form selections on the page.') }}</p>
@@ -89,13 +91,16 @@ new #[Title('User guide')] class extends Component {
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
                     <p>{{ __('Services represent the URLs you want to monitor. Each service includes a name, URL, polling interval, optional extra request headers, and an optional expectation that can be plain text or a regex pattern.') }}</p>
                     <p>{{ __('A service is considered down whenever the URL does not respond with HTTP 200, or when a configured text or regex expectation fails to match the response body.') }}</p>
+                    <p>{{ __('To reduce false positives, the monitor now pauses briefly and retries one failed check before the service is classified as down. The attempt count is recorded with the resulting downtime entry.') }}</p>
                     <p>{{ __('Additional request headers can be stored per service when a monitored endpoint needs custom authentication or routing metadata during the health check.') }}</p>
                     <p>{{ __('You can also enable SSL expiry notifications so recipients are warned when an HTTPS certificate is within 10 days of expiry. Those warnings are limited to once every 24 hours for each service.') }}</p>
                     <p>{{ __('A service can have direct recipients, direct recipient groups, and one or more service groups attached at the same time.') }}</p>
                     <p>{{ __('Use the sticky search field at the top of the Services page to narrow managed services from a single query.') }}</p>
                     <p>{{ __('Use the Save as template action on any existing service when you want to capture its non-URL settings into a reusable starting point.') }}</p>
                     <p>{{ __('When you want to manage linked services or routing ingredients from the group side, open the dedicated Service Groups page.') }}</p>
-                    <p>{{ __('Each service opens as an accordion so the list stays compact while still exposing the current monitoring state, how long the service has been in that state, the latest reason, the last check time, the next check timer, and the full effective recipient breakdown when you expand a service.') }}</p>
+                    <p>{{ __('Each service opens as an accordion so the list stays compact while still exposing the current monitoring state, how long the service has been in that state, the latest reason, the last check time, the next check timer, rolling 30-day uptime, recent downtime incidents, and the full effective recipient breakdown when you expand a service.') }}</p>
+                    <p>{{ __('Downtime history records keep the start reason, latest reason, recovery reason, response codes, retry count, and timestamps so you can look back at what happened later.') }}</p>
+                    <p>{{ __('When a website can still be reached but the check fails, Is It Down can capture a screenshot of the page and store it against the downtime record. If Dave is enabled, the system can also store a short AI analysis of what the failure likely means.') }}</p>
                     <p>{{ __('Recipients are only notified when a service changes state. A service that stays down will not keep sending repeated down alerts on every interval, but a recovery alert is sent once it comes back up and includes how long the outage lasted.') }}</p>
                     <p>{{ __('Editing a service scrolls the form back into view, and deleting a service asks for confirmation before it is removed.') }}</p>
                 </div>
@@ -157,8 +162,9 @@ new #[Title('User guide')] class extends Component {
                     <p>{{ __('Dave appears as a floating button in the bottom-right corner of the application, but only after an admin has enabled it and added valid provider settings.') }}</p>
                     <p>{{ __('Admins can reach the Dave configuration from the Settings area.') }}</p>
                     <p>{{ __('If you close the chat and open it again later, or move to another page, the current conversation should stay available during the same browser session.') }}</p>
-                    <p>{{ __('Standard users can use Dave for guidance about outages, monitoring state, and the way the current system works.') }}</p>
-                    <p>{{ __('Admins can additionally use Dave to create, edit, and delete users, recipients, and services when the request is clear enough to act on safely.') }}</p>
+                    <p>{{ __('Standard users can use Dave for guidance about outages, monitoring state, downtime history, live website checks, and sending a test email to confirm the application mail settings are working.') }}</p>
+                    <p>{{ __('Admins can additionally use Dave to create, edit, and delete users, recipients, and services when the request is clear enough to act on safely, and can send test emails to another address when needed.') }}</p>
+                    <p>{{ __('When a website outage is recorded and Dave is enabled, the system can ask Dave for a short explanation of the likely issue and include that summary in the downtime history and notifications.') }}</p>
                     <p>{{ __('If Dave cannot act because something is ambiguous or your account lacks permission, it should explain that clearly instead of pretending the change happened.') }}</p>
                 </div>
             </div>
@@ -167,8 +173,9 @@ new #[Title('User guide')] class extends Component {
                 <flux:heading size="lg">{{ __('API access') }}</flux:heading>
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
                     <p>{{ __('The application now exposes a REST API under `/api/v1`, authenticated with bearer tokens generated from the API Keys page.') }}</p>
-                    <p>{{ __('Read routes and write routes each require the matching API key permissions, and expired or revoked keys stop working immediately. The current REST API now includes service-template endpoints and also allows new services to start from a saved template.') }}</p>
-                    <p>{{ __('Service and template payloads now support `additional_headers` and `ssl_expiry_notifications_enabled`, so external systems can configure the same request options available in the UI.') }}</p>
+                    <p>{{ __('Read routes and write routes each require the matching API key permissions, and expired or revoked keys stop working immediately. The current REST API now includes service-template endpoints, downtime history endpoints, and also allows new services to start from a saved template.') }}</p>
+                    <p>{{ __('Service and template payloads now support `additional_headers` and `ssl_expiry_notifications_enabled`, while recipient payloads also support `additional_headers` for outbound webhook customization.') }}</p>
+                    <p>{{ __('Service responses now include uptime and downtime context, and dedicated downtime-history endpoints expose incident timelines, screenshots, retry counts, and Dave summaries when available.') }}</p>
                     <p>{{ __('Use the API Documentation page for the full endpoint reference and the API Playground page to test those endpoints against the current environment.') }}</p>
                 </div>
             </div>

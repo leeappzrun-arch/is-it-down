@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Services\ServiceData;
 use Database\Factories\RecipientFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -18,6 +19,7 @@ use Illuminate\Support\Str;
     'webhook_auth_token',
     'webhook_auth_header_name',
     'webhook_auth_header_value',
+    'additional_headers',
 ])]
 class Recipient extends Model
 {
@@ -83,6 +85,7 @@ class Recipient extends Model
     protected function casts(): array
     {
         return [
+            'additional_headers' => 'array',
             'webhook_auth_password' => 'encrypted',
             'webhook_auth_token' => 'encrypted',
             'webhook_auth_header_value' => 'encrypted',
@@ -154,5 +157,47 @@ class Recipient extends Model
             self::WEBHOOK_AUTH_HEADER => 'Custom header',
             default => 'No authentication',
         };
+    }
+
+    /**
+     * Get the configured additional webhook headers.
+     *
+     * @return array<int, array{name: string, value: string}>
+     */
+    public function configuredAdditionalHeaders(): array
+    {
+        return ServiceData::normalizeAdditionalHeaders($this->additional_headers);
+    }
+
+    /**
+     * Determine whether additional webhook headers are configured.
+     */
+    public function hasAdditionalHeaders(): bool
+    {
+        return $this->configuredAdditionalHeaders() !== [];
+    }
+
+    /**
+     * Get the additional webhook headers keyed for the HTTP client.
+     *
+     * @return array<string, string>
+     */
+    public function requestHeaders(): array
+    {
+        return ServiceData::requestHeaders($this->additional_headers);
+    }
+
+    /**
+     * Get the configured additional-header summary.
+     */
+    public function additionalHeadersSummary(): string
+    {
+        $headerCount = count($this->configuredAdditionalHeaders());
+
+        if ($headerCount === 0) {
+            return 'No additional headers';
+        }
+
+        return trim(trans_choice('{1} :count additional header|[2,*] :count additional headers', $headerCount, ['count' => $headerCount]));
     }
 }

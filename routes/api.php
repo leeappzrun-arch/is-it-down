@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\RecipientController;
 use App\Http\Controllers\Api\V1\RecipientGroupController;
 use App\Http\Controllers\Api\V1\ServiceController;
+use App\Http\Controllers\Api\V1\ServiceDowntimeController;
 use App\Http\Controllers\Api\V1\ServiceGroupController;
 use App\Http\Controllers\Api\V1\ServiceTemplateController;
 use App\Http\Controllers\Api\V1\UserController;
@@ -31,6 +32,14 @@ Route::prefix('v1')
         Route::apiResource('services', ServiceController::class)
             ->only(['index', 'show'])
             ->middleware('api.permission:services,read');
+
+        Route::get('services/{service}/downtimes', [ServiceDowntimeController::class, 'index'])
+            ->name('services.downtimes.index')
+            ->middleware('api.permission:history,read');
+
+        Route::get('service-downtimes/{serviceDowntime}', [ServiceDowntimeController::class, 'show'])
+            ->name('service-downtimes.show')
+            ->middleware('api.permission:history,read');
 
         Route::apiResource('services', ServiceController::class)
             ->only(['store', 'update', 'destroy'])

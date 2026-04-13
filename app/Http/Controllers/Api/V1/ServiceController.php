@@ -41,6 +41,7 @@ class ServiceController extends Controller
                 'groups:id,name',
                 'recipientGroups:id,name',
                 'recipients:id,name,endpoint',
+                'currentDowntime',
             ])
             ->orderBy('name')
             ->orderBy('url')
@@ -111,7 +112,7 @@ class ServiceController extends Controller
         $service->recipients()->sync($validated['selectedRecipientIds'] ?? []);
 
         return (new ServiceResource(
-            $service->load(['groups:id,name', 'recipientGroups:id,name', 'recipients:id,name,endpoint'])
+            $service->load(['groups:id,name', 'recipientGroups:id,name', 'recipients:id,name,endpoint', 'currentDowntime', 'downtimes'])
         ))->response()->setStatusCode(Response::HTTP_CREATED);
     }
 
@@ -121,7 +122,7 @@ class ServiceController extends Controller
     public function show(Service $service): ServiceResource
     {
         return new ServiceResource(
-            $service->load(['groups:id,name', 'recipientGroups:id,name', 'recipients:id,name,endpoint'])
+            $service->load(['groups:id,name', 'recipientGroups:id,name', 'recipients:id,name,endpoint', 'currentDowntime', 'downtimes'])
         );
     }
 
@@ -141,7 +142,7 @@ class ServiceController extends Controller
         $service->recipients()->sync($validated['selectedRecipientIds'] ?? []);
 
         return new ServiceResource(
-            $service->load(['groups:id,name', 'recipientGroups:id,name', 'recipients:id,name,endpoint'])
+            $service->load(['groups:id,name', 'recipientGroups:id,name', 'recipients:id,name,endpoint', 'currentDowntime', 'downtimes'])
         );
     }
 

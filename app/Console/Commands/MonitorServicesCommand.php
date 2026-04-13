@@ -7,8 +7,10 @@ use App\Mail\ServiceStatusChangedMail;
 use App\Mail\WebhookDeliveryFailedMail;
 use App\Models\Recipient;
 use App\Models\Service;
+use App\Models\ServiceDowntime;
 use App\Models\User;
 use App\Support\Monitoring\ServiceCheckResult;
+use App\Support\Monitoring\ServiceDowntimeRecorder;
 use App\Support\Monitoring\ServiceMonitor;
 use App\Support\Monitoring\SslCertificateInspectionResult;
 use App\Support\Monitoring\SslCertificateInspector;
@@ -37,17 +39,21 @@ class MonitorServicesCommand extends Command
     /**
      * Execute the console command.
      */
-    public function handle(ServiceMonitor $serviceMonitor, SslCertificateInspector $sslCertificateInspector): int
-    {
+    public function handle(
+        ServiceMonitor $serviceMonitor,
+        ServiceDowntimeRecorder $serviceDowntimeRecorder,
+        SslCertificateInspector $sslCertificateInspector,
+    ): int {
         $dueServices = Service::query()
             ->with([
-                'recipients:id,name,endpoint,webhook_auth_type,webhook_auth_username,webhook_auth_password,webhook_auth_token,webhook_auth_header_name,webhook_auth_header_value',
+                'recipients:id,name,endpoint,webhook_auth_type,webhook_auth_username,webhook_auth_password,webhook_auth_token,webhook_auth_header_name,webhook_auth_header_value,additional_headers',
                 'recipientGroups:id,name',
-                'recipientGroups.recipients:id,name,endpoint,webhook_auth_type,webhook_auth_username,webhook_auth_password,webhook_auth_token,webhook_auth_header_name,webhook_auth_header_value',
+                'recipientGroups.recipients:id,name,endpoint,webhook_auth_type,webhook_auth_username,webhook_auth_password,webhook_auth_token,webhook_auth_header_name,webhook_auth_header_value,additional_headers',
                 'groups:id,name',
-                'groups.recipients:id,name,endpoint,webhook_auth_type,webhook_auth_username,webhook_auth_password,webhook_auth_token,webhook_auth_header_name,webhook_auth_header_value',
+                'groups.recipients:id,name,endpoint,webhook_auth_type,webhook_auth_username,webhook_auth_password,webhook_auth_token,webhook_auth_header_name,webhook_auth_header_value,additional_headers',
                 'groups.recipientGroups:id,name',
-                'groups.recipientGroups.recipients:id,name,endpoint,webhook_auth_type,webhook_auth_username,webhook_auth_password,webhook_auth_token,webhook_auth_header_name,webhook_auth_header_value',
+                'groups.recipientGroups.recipients:id,name,endpoint,webhook_auth_type,webhook_auth_username,webhook_auth_password,webhook_auth_token,webhook_auth_header_name,webhook_auth_header_value,additional_headers',
+                'downtimes',
             ])
             ->where(function ($query): void {
                 $query
@@ -58,7 +64,7 @@ class MonitorServicesCommand extends Command
             ->get();
 
         foreach ($dueServices as $service) {
-            $this->monitorService($service, $serviceMonitor, $sslCertificateInspector);
+            $this->monitorService($service, $serviceMonitor, $serviceDowntimeRecorder, $sslCertificateInspector);
         }
 
         $this->info('Checked '.$dueServices->count().' service(s).');
@@ -69,14 +75,15 @@ class MonitorServicesCommand extends Command
     /**
      * Monitor the given service and deliver any required notifications.
      */
-    private function monitorService(Service $service, ServiceMonitor $serviceMonitor, SslCertificateInspector $sslCertificateInspector): void
-    {
+    private function monitorService(
+        Service $service,
+        ServiceMonitor $serviceMonitor,
+        ServiceDowntimeRecorder $serviceDowntimeRecorder,
+        SslCertificateInspector $sslCertificateInspector,
+    ): void {
         $checkedAt = now();
         $previousStatus = $service->current_status;
         $result = $serviceMonitor->check($service);
-        $downtimeDurationSeconds = $this->downtimeDurationSeconds($service, $previousStatus, $result->status, $checkedAt);
-        $downtimeDurationSummary = $this->downtimeDurationSummary($service, $previousStatus, $result->status, $checkedAt);
-
         $statusChanged = $previousStatus !== $result->status;
 
         $service->forceFill([
@@ -87,6 +94,8 @@ class MonitorServicesCommand extends Command
             'next_check_at' => $checkedAt->copy()->addSeconds($service->interval_seconds),
             'last_status_changed_at' => $statusChanged ? $checkedAt : $service->last_status_changed_at,
         ])->save();
+
+        $downtime = $serviceDowntimeRecorder->record($service, $previousStatus, $result, $checkedAt);
 
         if (! $this->shouldNotifyRecipients($previousStatus, $result)) {
             $this->notifySslExpiryIfNeeded($service, $sslCertificateInspector, $checkedAt);
@@ -108,7 +117,7 @@ class MonitorServicesCommand extends Command
                     reason: $result->reason,
                     responseCode: $result->responseCode,
                     checkedAt: $checkedAt,
-                    downtimeDurationSummary: $downtimeDurationSummary,
+                    downtime: $downtime,
                 ));
 
                 continue;
@@ -121,8 +130,7 @@ class MonitorServicesCommand extends Command
                     result: $result,
                     previousStatus: $previousStatus,
                     checkedAt: $checkedAt,
-                    downtimeDurationSeconds: $downtimeDurationSeconds,
-                    downtimeDurationSummary: $downtimeDurationSummary,
+                    downtime: $downtime,
                 ),
             );
 
@@ -168,8 +176,7 @@ class MonitorServicesCommand extends Command
         ServiceCheckResult $result,
         ?string $previousStatus,
         CarbonInterface $checkedAt,
-        ?int $downtimeDurationSeconds,
-        ?string $downtimeDurationSummary,
+        ?ServiceDowntime $downtime,
     ): array {
         $payload = [
             'event' => 'service.status_changed',
@@ -190,13 +197,11 @@ class MonitorServicesCommand extends Command
             'checked_at' => $checkedAt->toIso8601String(),
             'response_code' => $result->responseCode,
             'reason' => $result->reason,
+            'attempt_count' => $result->attemptCount,
         ];
 
-        if ($downtimeDurationSummary !== null) {
-            $payload['downtime_duration'] = [
-                'seconds' => $downtimeDurationSeconds,
-                'human' => $downtimeDurationSummary,
-            ];
+        if ($downtime instanceof ServiceDowntime) {
+            $payload['downtime'] = $this->buildDowntimePayload($downtime);
         }
 
         return $payload;
@@ -309,35 +314,31 @@ class MonitorServicesCommand extends Command
     }
 
     /**
-     * Get the downtime duration in seconds for recovery notifications.
+     * Build the structured downtime payload for mail and webhook delivery.
+     *
+     * @return array<string, mixed>
      */
-    private function downtimeDurationSeconds(
-        Service $service,
-        ?string $previousStatus,
-        string $currentStatus,
-        CarbonInterface $checkedAt,
-    ): ?int {
-        if ($previousStatus !== Service::STATUS_DOWN || $currentStatus !== Service::STATUS_UP) {
-            return null;
+    private function buildDowntimePayload(ServiceDowntime $downtime): array
+    {
+        $payload = [
+            'id' => $downtime->id,
+            'started_at' => $downtime->started_at->toIso8601String(),
+            'ended_at' => $downtime->ended_at?->toIso8601String(),
+            'started_reason' => $downtime->started_reason,
+            'latest_reason' => $downtime->latest_reason,
+            'recovery_reason' => $downtime->recovery_reason,
+            'screenshot_url' => $downtime->screenshotUrl(),
+            'ai_summary' => $downtime->ai_summary,
+        ];
+
+        if (! $downtime->isOngoing()) {
+            $payload['duration'] = [
+                'seconds' => $downtime->durationInSeconds($downtime->ended_at),
+                'human' => $downtime->durationSummary($downtime->ended_at),
+            ];
         }
 
-        return $service->statusDurationInSeconds($checkedAt);
-    }
-
-    /**
-     * Get the downtime duration summary for recovery notifications.
-     */
-    private function downtimeDurationSummary(
-        Service $service,
-        ?string $previousStatus,
-        string $currentStatus,
-        CarbonInterface $checkedAt,
-    ): ?string {
-        if ($previousStatus !== Service::STATUS_DOWN || $currentStatus !== Service::STATUS_UP) {
-            return null;
-        }
-
-        return $service->statusDurationSummary($checkedAt);
+        return $payload;
     }
 
     /**
@@ -349,7 +350,8 @@ class MonitorServicesCommand extends Command
             $request = Http::acceptJson()
                 ->asJson()
                 ->connectTimeout(5)
-                ->timeout(10);
+                ->timeout(10)
+                ->withHeaders($recipient->requestHeaders());
 
             $request = match ($recipient->webhook_auth_type) {
                 Recipient::WEBHOOK_AUTH_BASIC => $request->withBasicAuth(

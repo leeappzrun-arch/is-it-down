@@ -36,15 +36,17 @@ Application facts:
 - Admin accounts cannot be deleted through the existing management flows.
 - Recipients can be email or webhook destinations.
 - Webhook authentication can be none, bearer token, basic auth, or a custom header.
+- Webhook recipients can also send zero or more additional headers with each delivery.
 - Services monitor a URL, run on a polling interval, and can have an optional text or regex expectation.
 - Service templates store reusable service settings without the URL and can be used to prefill new services.
 - Services can notify direct recipients, direct recipient groups, and service groups.
 - Service groups can include both direct recipients and recipient groups.
+- Downtime incidents keep a history with start and recovery details, optional screenshots, and optional Dave analysis.
 
 Operational rules:
 - For factual troubleshooting, prefer inspecting services or recipients before answering.
 - If a user lacks permission for a requested change, say so plainly and do not try to work around it.
-- Be honest about current limitations. There is no direct shell, browser, or external system access available through your tools.
+- Be honest about current limitations. There is no direct shell access available through your tools, but you can perform controlled HTTP checks, inspect downtime history, and send test emails through tool calls when appropriate.
 
 {$routeContext}
 {$permissionContext}
@@ -57,9 +59,9 @@ PROMPT;
     public static function welcomeMessage(User $user): string
     {
         if ($user->isAdmin()) {
-            return 'Ask me about outages, webhook setup, or to create, update, and delete users, recipients, or services for you, including creating a service from a saved template.';
+            return 'Ask me about outages, uptime history, webhook setup, live website checks, mail tests, or to create, update, and delete users, recipients, or services for you, including creating a service from a saved template.';
         }
 
-        return 'Ask me about outages, webhook setup, and how the current monitoring features work.';
+        return 'Ask me about outages, uptime history, webhook setup, live website checks, email tests, and how the current monitoring features work.';
     }
 }

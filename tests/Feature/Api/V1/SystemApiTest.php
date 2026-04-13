@@ -6,6 +6,7 @@ use App\Models\ApiKey;
 use App\Models\Recipient;
 use App\Models\RecipientGroup;
 use App\Models\Service;
+use App\Models\ServiceDowntime;
 use App\Models\ServiceGroup;
 use App\Models\ServiceTemplate;
 use App\Models\User;
@@ -99,6 +100,9 @@ class SystemApiTest extends TestCase
                 'name' => 'Operations webhook',
                 'endpoint_type' => 'webhook',
                 'endpoint_target' => 'example.com/hooks/ops',
+                'additional_headers' => [
+                    ['name' => 'X-Environment', 'value' => 'production'],
+                ],
                 'webhook_auth_type' => 'bearer',
                 'webhook_auth_token' => 'secret-token',
                 'group_ids' => [$group->id],
@@ -107,6 +111,7 @@ class SystemApiTest extends TestCase
         $response->assertCreated();
         $response->assertJsonPath('data.name', 'Operations webhook');
         $response->assertJsonPath('data.endpoint_type', 'webhook');
+        $response->assertJsonPath('data.additional_headers.0.name', 'X-Environment');
 
         $recipientId = $response->json('data.id');
 
@@ -125,6 +130,44 @@ class SystemApiTest extends TestCase
             ])
             ->assertOk()
             ->assertJsonPath('data.endpoint_type', 'mail');
+    }
+
+    public function test_downtime_history_endpoints_require_history_permissions_and_return_records(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $service = Service::factory()->create([
+            'name' => 'Billing API',
+            'url' => 'https://billing.example.com/status',
+        ]);
+
+        $downtime = ServiceDowntime::factory()->create([
+            'service_id' => $service->id,
+            'started_at' => now()->subMinutes(10),
+            'ended_at' => now()->subMinutes(5),
+            'ai_summary' => 'The upstream returned 503 responses.',
+        ]);
+
+        $token = $this->issueApiKey($admin, ['history:read']);
+
+        $this->withToken($token)
+            ->getJson('/api/v1/services/'.$service->id.'/downtimes?status=resolved')
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $downtime->id)
+            ->assertJsonPath('data.0.ai_summary', 'The upstream returned 503 responses.');
+
+        $this->withToken($token)
+            ->getJson('/api/v1/service-downtimes/'.$downtime->id)
+            ->assertOk()
+            ->assertJsonPath('data.service.name', 'Billing API');
+
+        $forbiddenToken = $this->issueApiKey($admin, ['services:read']);
+
+        $this->withToken($forbiddenToken)
+            ->getJson('/api/v1/services/'.$service->id.'/downtimes')
+            ->assertForbidden()
+            ->assertJson([
+                'message' => 'This API key does not have the required permission [history:read].',
+            ]);
     }
 
     public function test_recipient_group_endpoints_support_crud(): void

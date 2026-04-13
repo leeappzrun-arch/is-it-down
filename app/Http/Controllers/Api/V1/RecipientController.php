@@ -42,6 +42,7 @@ class RecipientController extends Controller
                         ->where('name', 'like', '%'.$search.'%')
                         ->orWhere('endpoint', 'like', '%'.$search.'%')
                         ->orWhere('webhook_auth_type', 'like', '%'.$search.'%')
+                        ->orWhere('additional_headers', 'like', '%'.$search.'%')
                         ->orWhereHas('groups', function ($groupQuery) use ($search): void {
                             $groupQuery->where('name', 'like', '%'.$search.'%');
                         });

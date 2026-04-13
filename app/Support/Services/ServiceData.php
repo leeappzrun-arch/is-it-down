@@ -49,6 +49,7 @@ class ServiceData
     public static function requestHeaders(mixed $value): array
     {
         return collect(self::normalizeAdditionalHeaders($value))
+            ->filter(fn (array $header): bool => $header['name'] !== '')
             ->mapWithKeys(fn (array $header): array => [$header['name'] => $header['value']])
             ->all();
     }

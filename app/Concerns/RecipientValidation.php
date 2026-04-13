@@ -87,6 +87,19 @@ trait RecipientValidation
             ],
             'selectedGroupIds' => ['array'],
             'selectedGroupIds.*' => ['integer', Rule::exists('recipient_groups', 'id')],
+            'additionalHeaders' => ['array'],
+            'additionalHeaders.*.name' => [
+                Rule::requiredIf(fn (): bool => $endpointType === Recipient::TYPE_WEBHOOK),
+                'nullable',
+                'string',
+                'max:255',
+            ],
+            'additionalHeaders.*.value' => [
+                Rule::requiredIf(fn (): bool => $endpointType === Recipient::TYPE_WEBHOOK),
+                'nullable',
+                'string',
+                'max:65535',
+            ],
             'webhookAuthType' => [
                 Rule::requiredIf(fn (): bool => $endpointType === Recipient::TYPE_WEBHOOK),
                 Rule::in(Recipient::webhookAuthTypes()),

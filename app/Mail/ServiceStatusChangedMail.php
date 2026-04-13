@@ -3,6 +3,7 @@
 namespace App\Mail;
 
 use App\Models\Service;
+use App\Models\ServiceDowntime;
 use Carbon\CarbonInterface;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
@@ -22,7 +23,7 @@ class ServiceStatusChangedMail extends Mailable
         public string $reason,
         public ?int $responseCode,
         public CarbonInterface $checkedAt,
-        public ?string $downtimeDurationSummary = null,
+        public ?ServiceDowntime $downtime = null,
     ) {}
 
     /**
@@ -54,6 +55,15 @@ class ServiceStatusChangedMail extends Mailable
      */
     public function attachments(): array
     {
-        return [];
+        if (! $this->downtime instanceof ServiceDowntime || ! $this->downtime->hasScreenshot()) {
+            return [];
+        }
+
+        return [
+            Attachment::fromStorageDisk(
+                (string) $this->downtime->screenshot_disk,
+                (string) $this->downtime->screenshot_path,
+            )->as('service-downtime-'.$this->downtime->id.'.png'),
+        ];
     }
 }

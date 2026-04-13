@@ -10,7 +10,7 @@ Is It Down is a Laravel 13 and Livewire 4 application for managing monitored ser
 
 - Users sign in through Laravel Fortify.
 - Verified users are routed to the dashboard.
-- The dashboard shows a live service-status grid plus high-level totals for recipients, recipient groups, services, templates, service groups, users, and API keys.
+- The dashboard shows a live service-status grid plus high-level totals for recipients, recipient groups, services, downtime incidents, templates, service groups, users, and API keys.
 - Admins can open those dashboard stats to jump straight into the matching management screens.
 - Authenticated users can access profile, appearance, and security settings.
 - When Dave is enabled and configured by an admin, authenticated users also get a floating bottom-right chat launcher across the application shell.
@@ -32,6 +32,7 @@ Is It Down is a Laravel 13 and Livewire 4 application for managing monitored ser
 - Create, edit, and delete recipients.
 - Search the Recipients page to quickly filter recipient rows.
 - Choose `Email` or `Webhook` in the UI while the application stores `mailto://` and `webhook://` endpoints internally.
+- Add zero or more extra webhook headers per recipient when downstream systems need custom metadata on every webhook delivery.
 - Configure webhook authentication as:
   - none
   - bearer token
@@ -60,9 +61,12 @@ Is It Down is a Laravel 13 and Livewire 4 application for managing monitored ser
 - Open the Service Groups page when you want to manage service-group membership and routing from the group side.
 - Track the latest monitoring status, how long the service has been in that state, the last reason, the last check time, and a live next-check timer from the Services page.
 - Mark a service as down when the response is not HTTP 200 or when a configured text or regex expectation does not match the response body.
+- Retry one failed check after a short pause before classifying the service as down, which helps reduce false positives caused by brief network or origin blips.
 - Notify assigned recipients only when the service changes state, so repeated down checks do not resend the same alert until the service recovers.
+- Record downtime incidents with start and recovery reasons, response codes, retry attempt counts, screenshots, and optional Dave-generated outage analysis.
+- Show 30-day uptime percentages plus recent downtime history directly on the Services page and the dashboard.
 - Deliver email alerts to `mailto://` recipients and JSON payloads to `webhook://` recipients using the authentication method saved on each webhook recipient.
-- Include outage duration in recovery notifications so emails and webhook consumers can see how long a service was down before it came back up.
+- Include structured downtime context in status-change notifications so emails and webhook consumers can see outage duration, screenshots, and AI analysis when available.
 - Email all admin users if any webhook delivery fails during a status-change notification.
 - Review the effective recipients for a service, including whether each route is direct, comes from a recipient group, or is inherited through a service group.
 
@@ -107,8 +111,9 @@ Is It Down is a Laravel 13 and Livewire 4 application for managing monitored ser
 - Dave stays hidden until an admin enables it and saves a provider URL, model, and API key.
 - Dave appears as a floating chat launcher in the bottom-right corner of authenticated pages.
 - Conversations stay open across closes and page navigation for the current browser session.
-- Standard users can ask Dave for help with monitoring and outage questions.
-- Admins can also ask Dave to create, update, and delete users, recipients, and services.
+- Standard users can ask Dave for help with monitoring and outage questions, inspect downtime history, run a live website check, and send a test email to themselves.
+- Admins can also ask Dave to create, update, and delete users, recipients, and services, and can send mail-setting test messages to another target email address when needed.
+- When Dave is enabled and a website-style check fails after connecting successfully, the monitoring flow can ask Dave for a short explanation of what the failure might mean and include that in notifications and downtime records.
 - The assistant rules and management tool guidance are centralized in `app/Support/AiAssistant/AiAssistantRules.php` and `app/Support/AiAssistant/AiAssistantToolExecutor.php`, which should be updated when new features or management flows are added.
 
 ### REST API
@@ -118,12 +123,16 @@ Is It Down is a Laravel 13 and Livewire 4 application for managing monitored ser
 - Expired, revoked, or unlinked API keys are rejected automatically.
 - `recipients:*` permissions cover recipients and recipient groups.
 - `services:*` permissions cover services and service groups.
+- `history:*` permissions cover downtime history endpoints.
 - `templates:*` permissions cover service templates.
 - `users:*` permissions cover user listing and management.
 - Listing endpoints support search plus resource-specific filtering where relevant.
 - Creation endpoints reuse the same validation rules as the matching Livewire management forms.
 - Services can be created from a saved service template by passing a template id or exact template name together with the URL and any optional overrides.
 - Service and template payloads support `additional_headers` plus `ssl_expiry_notifications_enabled` so integrations can manage custom check headers and SSL warning behavior.
+- Recipient payloads support `additional_headers` so webhook consumers can receive custom headers without hard-coding them elsewhere.
+- Service responses now expose uptime history metadata, current downtime details, and recent downtime incidents.
+- Downtime history endpoints expose screenshots, retry counts, and Dave outage summaries for integrations.
 
 ### In-app documentation
 
@@ -167,7 +176,7 @@ Release tags also publish versioned images. For example, pushing Git tag `v1.2.3
 - `ghcr.io/leeappzrun-arch/is-it-down:1`
 
 The image already includes a production `.env` with non-sensitive defaults for the app name, production mode, SQLite, database-backed sessions/cache/queue, stderr logging, and the scheduler loop. Any values you pass from your own Compose `.env` file override those baked-in defaults.
-The runtime image also declares `/var/www/html/database/data` as a Docker volume, so SQLite data and the generated `app.key` survive ordinary container recreation during image updates. Using your own bind mount or named volume is still recommended so you control where that data lives.
+The runtime image also declares `/var/www/html/database/data` and `/var/www/html/storage/app/public` as Docker volumes, so SQLite data, the generated `app.key`, and captured downtime screenshots survive ordinary container recreation during image updates. Using your own bind mounts or named volumes is still recommended so you control where that data lives.
 
 If the app sits behind Cloudflare Tunnel, Zero Trust, or another reverse proxy that terminates HTTPS before the container, keep `APP_URL` set to the public `https://...` address. The application trusts standard forwarded proxy headers so Livewire update requests, generated URLs, and redirects continue to use HTTPS.
 
@@ -185,6 +194,7 @@ services:
       - "${APP_PORT:-8080}:80"
     volumes:
       - "${APP_DATA_DIR:-./data}:/var/www/html/database/data"
+      - "${APP_STORAGE_DIR:-./storage}:/var/www/html/storage/app/public"
 ```
 
 Create a matching `.env` file beside it:
@@ -192,6 +202,7 @@ Create a matching `.env` file beside it:
 ```dotenv
 APP_PORT=8080
 APP_DATA_DIR=./data
+APP_STORAGE_DIR=./storage
 APP_URL=http://localhost:8080
 
 MAIL_MAILER="smtp"
@@ -205,6 +216,10 @@ MAIL_FROM_NAME="${APP_NAME}"
 INITIAL_ADMIN_NAME=Admin User
 INITIAL_ADMIN_EMAIL=admin@example.com
 INITIAL_ADMIN_PASSWORD=change-this-password
+
+MONITORING_FAILURE_RETRY_DELAY_SECONDS=3
+MONITORING_DOWNTIME_SCREENSHOT_DISK=public
+MONITORING_DOWNTIME_SCREENSHOT_DIRECTORY=downtime-screenshots
 ```
 
 Then start the application with:
@@ -219,11 +234,13 @@ On the first boot the container will:
 - generate and persist an `APP_KEY` in `app.key` inside that same data directory when you have not supplied one yourself
 - run the Laravel migrations
 - create the initial admin account from `INITIAL_ADMIN_*` when you provide those values
+- create the public storage symlink used for captured downtime screenshots
 - start the Laravel scheduler loop so monitoring continues to run inside the same container
 
 To change the public port, update `APP_PORT` in your `.env` file.
 
 To move the persistent data somewhere else on the host, update `APP_DATA_DIR`.
+To store captured downtime screenshots somewhere else on the host, update `APP_STORAGE_DIR`.
 To stay on a fixed release instead of tracking new builds, change the image tag in `docker-compose.yml`, for example:
 
 ```yaml
@@ -244,7 +261,7 @@ docker compose pull
 docker compose up -d
 ```
 
-That update flow recreates the container and then runs `app:prepare-container` against the existing persisted SQLite database, so Laravel only applies any new migrations that have not run yet. Your existing data remains in place unless you deliberately remove the mapped or anonymous volume, such as with `docker compose down -v`.
+That update flow recreates the container and then runs `app:prepare-container` against the existing persisted SQLite database, so Laravel only applies any new migrations that have not run yet. Your existing data and stored downtime screenshots remain in place unless you deliberately remove the mapped or anonymous volumes, such as with `docker compose down -v`.
 
 ## Local Development
 
@@ -288,7 +305,7 @@ Running the database seeder provisions two verified accounts for local developme
 - `user@example.com` / `password`
 
 The seeder also creates sample recipient groups, recipients, and personal API keys so the dashboard, management screens, and API have representative data immediately.
-It also seeds service groups, services, and service templates so the routing views, template workflows, and monitoring status cards have meaningful examples on a fresh install.
+It also seeds service groups, services, service templates, recipient webhook headers, and example downtime history so the routing views, uptime cards, and outage history features have meaningful examples on a fresh install.
 
 ## Testing
 

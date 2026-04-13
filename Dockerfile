@@ -36,12 +36,18 @@ RUN npm ci \
 FROM php:8.4-apache-bookworm AS runtime
 
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public \
-    APP_DATA_PATH=/var/www/html/database/data
+    APP_DATA_PATH=/var/www/html/database/data \
+    LARAVEL_SCREENSHOT_DRIVER=browsershot \
+    LARAVEL_SCREENSHOT_NODE_BINARY=/usr/bin/node \
+    LARAVEL_SCREENSHOT_NODE_MODULES_PATH=/opt/browsershot/node_modules \
+    LARAVEL_SCREENSHOT_NO_SANDBOX=true
 
 RUN apt-get update \
-    && apt-get install -y libicu-dev libzip-dev libsqlite3-dev \
+    && apt-get install -y libicu-dev libzip-dev libsqlite3-dev nodejs npm \
     && docker-php-ext-install intl pdo_sqlite zip opcache \
     && a2enmod rewrite headers expires \
+    && mkdir -p /opt/browsershot \
+    && npm install --prefix /opt/browsershot puppeteer \
     && sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/000-default.conf /etc/apache2/apache2.conf \
     && rm -rf /var/lib/apt/lists/*
 
@@ -53,7 +59,7 @@ COPY .env.docker /var/www/html/.env
 RUN chmod +x /var/www/html/docker-entrypoint.sh \
     && chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/database
 
-VOLUME ["/var/www/html/database/data"]
+VOLUME ["/var/www/html/database/data", "/var/www/html/storage/app/public"]
 
 EXPOSE 80
 

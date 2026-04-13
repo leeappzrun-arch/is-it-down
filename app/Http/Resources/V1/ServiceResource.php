@@ -27,12 +27,17 @@ class ServiceResource extends JsonResource
             'ssl_expiry_notifications_enabled' => (bool) $this->ssl_expiry_notifications_enabled,
             'current_status' => $this->current_status,
             'monitoring_status_label' => $this->monitoringStatusLabel(),
+            'uptime_percentage_last_30_days' => $this->uptimePercentageForDays(30),
             'last_response_code' => $this->last_response_code,
             'last_check_reason' => $this->last_check_reason,
             'last_checked_at' => $this->last_checked_at?->toIso8601String(),
             'next_check_at' => $this->next_check_at?->toIso8601String(),
             'last_status_changed_at' => $this->last_status_changed_at?->toIso8601String(),
             'last_ssl_expiry_notification_sent_at' => $this->last_ssl_expiry_notification_sent_at?->toIso8601String(),
+            'current_downtime' => $this->whenLoaded('currentDowntime', fn (): ?array => $this->currentDowntime === null ? null : (new ServiceDowntimeResource($this->currentDowntime))->toArray($request)),
+            'recent_downtimes' => $this->whenLoaded('downtimes', fn (): array => $this->recentDowntimes()
+                ->map(fn ($downtime): array => (new ServiceDowntimeResource($downtime))->toArray($request))
+                ->all()),
             'groups' => $this->whenLoaded('groups', fn (): array => $this->groups
                 ->map(fn ($group): array => [
                     'id' => $group->id,

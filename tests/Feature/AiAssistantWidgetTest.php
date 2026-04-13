@@ -3,12 +3,15 @@
 namespace Tests\Feature;
 
 use App\Livewire\AiAssistant\Widget;
+use App\Mail\MailConfigurationTestMail;
 use App\Models\AiAssistantSetting;
 use App\Models\Service;
+use App\Models\ServiceDowntime;
 use App\Models\ServiceTemplate;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -269,6 +272,115 @@ class AiAssistantWidgetTest extends TestCase
             'expect_type' => Service::EXPECT_TEXT,
             'expect_value' => 'Healthy',
         ]);
+    }
+
+    public function test_users_can_ask_dave_to_send_a_test_email(): void
+    {
+        Mail::fake();
+
+        $user = User::factory()->create([
+            'email' => 'user@example.com',
+        ]);
+
+        AiAssistantSetting::factory()->configured()->create([
+            'settings_key' => AiAssistantSetting::DEFAULT_SETTINGS_KEY,
+        ]);
+
+        Http::fake([
+            'https://api.openai.com/v1/chat/completions' => Http::sequence()
+                ->push([
+                    'choices' => [[
+                        'message' => [
+                            'role' => 'assistant',
+                            'content' => '',
+                            'tool_calls' => [[
+                                'id' => 'call_send_test_email',
+                                'type' => 'function',
+                                'function' => [
+                                    'name' => 'send_test_email',
+                                    'arguments' => json_encode([]),
+                                ],
+                            ]],
+                        ],
+                    ]],
+                ])
+                ->push([
+                    'choices' => [[
+                        'message' => [
+                            'role' => 'assistant',
+                            'content' => 'I sent a test email to user@example.com.',
+                        ],
+                    ]],
+                ]),
+        ]);
+
+        $this->actingAs($user);
+
+        Livewire::test(Widget::class)
+            ->set('draft', 'Send me a test email.')
+            ->call('sendMessage')
+            ->assertSet('messages.2.content', 'I sent a test email to user@example.com.');
+
+        Mail::assertSent(MailConfigurationTestMail::class, fn (MailConfigurationTestMail $mail): bool => $mail->hasTo('user@example.com'));
+    }
+
+    public function test_standard_users_can_ask_dave_about_downtime_history(): void
+    {
+        $user = User::factory()->create();
+
+        $service = Service::factory()->currentlyUp()->create([
+            'name' => 'Billing API',
+            'url' => 'https://billing.example.com',
+        ]);
+
+        ServiceDowntime::factory()->create([
+            'service_id' => $service->id,
+            'started_at' => now()->subHours(2),
+            'ended_at' => now()->subHour()->subMinutes(50),
+            'started_reason' => 'Expected HTTP 200 response but received 503.',
+            'recovery_reason' => 'Received an HTTP 200 response.',
+        ]);
+
+        AiAssistantSetting::factory()->configured()->create([
+            'settings_key' => AiAssistantSetting::DEFAULT_SETTINGS_KEY,
+        ]);
+
+        Http::fake([
+            'https://api.openai.com/v1/chat/completions' => Http::sequence()
+                ->push([
+                    'choices' => [[
+                        'message' => [
+                            'role' => 'assistant',
+                            'content' => '',
+                            'tool_calls' => [[
+                                'id' => 'call_inspect_downtime_history',
+                                'type' => 'function',
+                                'function' => [
+                                    'name' => 'inspect_downtime_history',
+                                    'arguments' => json_encode([
+                                        'identifier' => 'Billing API',
+                                    ]),
+                                ],
+                            ]],
+                        ],
+                    ]],
+                ])
+                ->push([
+                    'choices' => [[
+                        'message' => [
+                            'role' => 'assistant',
+                            'content' => 'Billing API had a brief outage recently and its 30-day uptime history is available.',
+                        ],
+                    ]],
+                ]),
+        ]);
+
+        $this->actingAs($user);
+
+        Livewire::test(Widget::class)
+            ->set('draft', 'Show me the downtime history for Billing API.')
+            ->call('sendMessage')
+            ->assertSet('messages.2.content', 'Billing API had a brief outage recently and its 30-day uptime history is available.');
     }
 
     public function test_widget_state_persists_between_component_mounts(): void

@@ -160,7 +160,7 @@ new #[Title('API playground')] class extends Component {
         <div class="space-y-6">
             <div class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
                 <flux:heading size="lg">{{ __('Request setup') }}</flux:heading>
-                <flux:subheading class="mt-2">{{ __('Start from the endpoint dropdown, then adjust the path or example payload as needed. Service and template examples include request headers and SSL-expiry options when those fields are supported.') }}</flux:subheading>
+                <flux:subheading class="mt-2">{{ __('Start from the endpoint dropdown, then adjust the path or example payload as needed. Service, template, and recipient examples include the current additional-header fields, and the downtime endpoints let you inspect the stored outage history directly.') }}</flux:subheading>
 
                 <div class="mt-6 space-y-4">
                     <div>

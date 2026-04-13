@@ -3,6 +3,7 @@
 namespace App\Support\Recipients;
 
 use App\Models\Recipient;
+use App\Support\Services\ServiceData;
 use Illuminate\Support\Str;
 
 class RecipientData
@@ -41,6 +42,7 @@ class RecipientData
             'webhook_auth_header_value' => $isWebhookEndpoint && $webhookAuthType === Recipient::WEBHOOK_AUTH_HEADER
                 ? (string) ($validated['webhookAuthHeaderValue'] ?? '')
                 : null,
+            'additional_headers' => $isWebhookEndpoint ? ServiceData::normalizeAdditionalHeaders($validated['additionalHeaders'] ?? []) : [],
         ];
     }
 

@@ -6,16 +6,21 @@ use App\Concerns\PasswordValidationRules;
 use App\Concerns\ProfileValidationRules;
 use App\Concerns\RecipientValidation;
 use App\Concerns\ServiceValidation;
+use App\Mail\MailConfigurationTestMail;
 use App\Models\Recipient;
 use App\Models\Service;
+use App\Models\ServiceDowntime;
 use App\Models\ServiceTemplate;
 use App\Models\User;
+use App\Support\Monitoring\OutageAnalyzer;
+use App\Support\Monitoring\ServiceMonitor;
 use App\Support\Recipients\RecipientData;
 use App\Support\Services\ServiceData;
 use App\Support\Services\ServiceTemplateData;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
@@ -27,6 +32,11 @@ class AiAssistantToolExecutor
     use ProfileValidationRules;
     use RecipientValidation;
     use ServiceValidation;
+
+    public function __construct(
+        private readonly ServiceMonitor $serviceMonitor,
+        private readonly OutageAnalyzer $outageAnalyzer,
+    ) {}
 
     /**
      * Get the tool definitions made available to the provider.
@@ -50,6 +60,61 @@ class AiAssistantToolExecutor
                             ],
                         ],
                         'required' => ['identifier'],
+                        'additionalProperties' => false,
+                    ],
+                ],
+            ],
+            [
+                'type' => 'function',
+                'function' => [
+                    'name' => 'inspect_downtime_history',
+                    'description' => 'Inspect the recent downtime history and uptime percentage for a service by id, exact name, or exact URL.',
+                    'parameters' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'identifier' => [
+                                'type' => 'string',
+                                'description' => 'The service id, exact service name, or exact service URL.',
+                            ],
+                            'limit' => [
+                                'type' => 'integer',
+                                'minimum' => 1,
+                                'maximum' => 10,
+                            ],
+                        ],
+                        'required' => ['identifier'],
+                        'additionalProperties' => false,
+                    ],
+                ],
+            ],
+            [
+                'type' => 'function',
+                'function' => [
+                    'name' => 'check_website_status',
+                    'description' => 'Perform a live HTTP check against any website URL and explain the result, including Dave analysis when it appears down.',
+                    'parameters' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'url' => ['type' => 'string'],
+                            'expect_type' => ['type' => 'string', 'enum' => array_keys(Service::expectTypes())],
+                            'expect_value' => ['type' => 'string'],
+                        ],
+                        'required' => ['url'],
+                        'additionalProperties' => false,
+                    ],
+                ],
+            ],
+            [
+                'type' => 'function',
+                'function' => [
+                    'name' => 'send_test_email',
+                    'description' => 'Send a test email using the application mail settings. Standard users may send to their own email address; admins may specify another recipient email.',
+                    'parameters' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'recipient_email' => ['type' => 'string'],
+                        ],
+                        'required' => [],
                         'additionalProperties' => false,
                     ],
                 ],
@@ -102,6 +167,18 @@ class AiAssistantToolExecutor
                             'webhook_auth_token' => ['type' => 'string'],
                             'webhook_auth_header_name' => ['type' => 'string'],
                             'webhook_auth_header_value' => ['type' => 'string'],
+                            'additional_headers' => [
+                                'type' => 'array',
+                                'items' => [
+                                    'type' => 'object',
+                                    'properties' => [
+                                        'name' => ['type' => 'string'],
+                                        'value' => ['type' => 'string'],
+                                    ],
+                                    'required' => ['name', 'value'],
+                                    'additionalProperties' => false,
+                                ],
+                            ],
                             'group_ids' => [
                                 'type' => 'array',
                                 'items' => ['type' => 'integer'],
@@ -134,6 +211,19 @@ class AiAssistantToolExecutor
                                 'enum' => array_keys(Service::expectTypes()),
                             ],
                             'expect_value' => ['type' => 'string'],
+                            'additional_headers' => [
+                                'type' => 'array',
+                                'items' => [
+                                    'type' => 'object',
+                                    'properties' => [
+                                        'name' => ['type' => 'string'],
+                                        'value' => ['type' => 'string'],
+                                    ],
+                                    'required' => ['name', 'value'],
+                                    'additionalProperties' => false,
+                                ],
+                            ],
+                            'ssl_expiry_notifications_enabled' => ['type' => 'boolean'],
                             'service_group_ids' => [
                                 'type' => 'array',
                                 'items' => ['type' => 'integer'],
@@ -183,6 +273,13 @@ class AiAssistantToolExecutor
     {
         return match ($toolName) {
             'inspect_service' => $this->inspectService($user, (string) Arr::get($arguments, 'identifier', '')),
+            'inspect_downtime_history' => $this->inspectDowntimeHistory($user, (string) Arr::get($arguments, 'identifier', ''), (int) Arr::get($arguments, 'limit', 5)),
+            'check_website_status' => $this->checkWebsiteStatus(
+                (string) Arr::get($arguments, 'url', ''),
+                (string) Arr::get($arguments, 'expect_type', Service::EXPECT_NONE),
+                (string) Arr::get($arguments, 'expect_value', ''),
+            ),
+            'send_test_email' => $this->sendTestEmail($user, Arr::get($arguments, 'recipient_email')),
             'manage_user' => $this->manageUser($user, $arguments),
             'manage_recipient' => $this->manageRecipient($user, $arguments),
             'manage_service' => $this->manageService($user, $arguments),
@@ -209,6 +306,8 @@ class AiAssistantToolExecutor
             'recipientGroups:id,name',
             'recipientGroups.recipients:id,name,endpoint',
             'recipients:id,name,endpoint',
+            'currentDowntime',
+            'downtimes',
         ]);
 
         $payload = [
@@ -227,6 +326,11 @@ class AiAssistantToolExecutor
                 'next_check_at' => $service->next_check_at?->toIso8601String(),
                 'next_check_summary' => $service->nextCheckSummary(),
                 'status_duration' => $service->statusDurationSummary(),
+                'uptime_percentage_last_30_days' => $service->uptimePercentageForDays(30),
+                'current_downtime' => $service->currentDowntime === null ? null : $this->downtimeSummary($service->currentDowntime),
+                'recent_downtimes' => $service->recentDowntimes()
+                    ->map(fn (ServiceDowntime $downtime): array => $this->downtimeSummary($downtime))
+                    ->all(),
             ],
         ];
 
@@ -244,6 +348,107 @@ class AiAssistantToolExecutor
         }
 
         return $payload;
+    }
+
+    /**
+     * Inspect the recent downtime history for a service.
+     *
+     * @return array<string, mixed>
+     */
+    private function inspectDowntimeHistory(User $user, string $identifier, int $limit = 5): array
+    {
+        try {
+            $service = $this->resolveService($identifier);
+        } catch (ValidationException $exception) {
+            return $this->validationFailure($exception);
+        }
+
+        $service->load('downtimes');
+        $limit = max(1, min(10, $limit));
+
+        return [
+            'ok' => true,
+            'service' => [
+                'id' => $service->id,
+                'name' => $service->name,
+                'url' => $service->url,
+                'uptime_percentage_last_24_hours' => $service->uptimePercentageForDays(1),
+                'uptime_percentage_last_7_days' => $service->uptimePercentageForDays(7),
+                'uptime_percentage_last_30_days' => $service->uptimePercentageForDays(30),
+                'recent_downtimes' => $service->recentDowntimes($limit)
+                    ->map(fn (ServiceDowntime $downtime): array => $this->downtimeSummary($downtime))
+                    ->all(),
+            ],
+        ];
+    }
+
+    /**
+     * Perform a live website check.
+     *
+     * @return array<string, mixed>
+     */
+    private function checkWebsiteStatus(string $url, string $expectType, string $expectValue): array
+    {
+        $normalizedUrl = ServiceData::normalizeUrl($url);
+
+        if ($normalizedUrl === '' || ! filter_var($normalizedUrl, FILTER_VALIDATE_URL)) {
+            return $this->failure('Provide a valid website URL.');
+        }
+
+        $temporaryService = new Service([
+            'name' => 'Manual website check',
+            'url' => $normalizedUrl,
+            'interval_seconds' => Service::INTERVAL_1_MINUTE,
+            'expect_type' => $expectType === Service::EXPECT_NONE ? null : $expectType,
+            'expect_value' => $expectType === Service::EXPECT_NONE ? null : $expectValue,
+            'additional_headers' => [],
+            'ssl_expiry_notifications_enabled' => false,
+        ]);
+
+        $result = $this->serviceMonitor->check($temporaryService);
+        $analysis = $result->status === Service::STATUS_DOWN
+            ? $this->outageAnalyzer->analyze($temporaryService, $result)
+            : null;
+
+        return [
+            'ok' => true,
+            'status' => $result->status,
+            'url' => $normalizedUrl,
+            'reason' => $result->reason,
+            'response_code' => $result->responseCode,
+            'attempt_count' => $result->attemptCount,
+            'response_excerpt' => $result->bodyExcerpt,
+            'analysis' => $analysis,
+        ];
+    }
+
+    /**
+     * Send a test email using the configured mailer.
+     *
+     * @return array<string, mixed>
+     */
+    private function sendTestEmail(User $user, mixed $recipientEmail): array
+    {
+        $targetEmail = is_string($recipientEmail) && trim($recipientEmail) !== ''
+            ? trim($recipientEmail)
+            : (string) $user->email;
+
+        if ($targetEmail === '' || ! filter_var($targetEmail, FILTER_VALIDATE_EMAIL)) {
+            return $this->failure('Provide a valid recipient email address.');
+        }
+
+        if (! $user->isAdmin() && $targetEmail !== $user->email) {
+            return $this->failure('You may only send a test email to your own address.');
+        }
+
+        Mail::to($targetEmail)->send(new MailConfigurationTestMail(now()));
+
+        return [
+            'ok' => true,
+            'message' => 'Test email sent successfully.',
+            'recipient_email' => $targetEmail,
+            'mailer' => config('mail.default'),
+        ];
     }
 
     /**
@@ -277,6 +482,7 @@ class AiAssistantToolExecutor
                 'endpoint_type' => $recipient->endpointType(),
                 'endpoint_target' => $recipient->endpointTarget(),
                 'authentication' => $recipient->webhookAuthenticationSummary(),
+                'additional_headers' => $recipient->configuredAdditionalHeaders(),
                 'groups' => $recipient->groups->pluck('name')->all(),
                 'services' => $recipient->services->pluck('name')->all(),
                 'service_groups' => $recipient->serviceGroups->pluck('name')->all(),
@@ -500,6 +706,7 @@ class AiAssistantToolExecutor
             'webhookAuthToken' => Arr::get($arguments, 'webhook_auth_token', ''),
             'webhookAuthHeaderName' => Arr::get($arguments, 'webhook_auth_header_name', ''),
             'webhookAuthHeaderValue' => Arr::get($arguments, 'webhook_auth_header_value', ''),
+            'additionalHeaders' => ServiceData::normalizeAdditionalHeaders(Arr::get($arguments, 'additional_headers', [])),
         ];
 
         $validator = Validator::make($payload, $this->recipientValidationRules($endpointType, $webhookAuthType));
@@ -555,6 +762,9 @@ class AiAssistantToolExecutor
             'webhookAuthToken' => Arr::get($arguments, 'webhook_auth_token', $recipient->webhook_auth_token ?? ''),
             'webhookAuthHeaderName' => Arr::get($arguments, 'webhook_auth_header_name', $recipient->webhook_auth_header_name ?? ''),
             'webhookAuthHeaderValue' => Arr::get($arguments, 'webhook_auth_header_value', $recipient->webhook_auth_header_value ?? ''),
+            'additionalHeaders' => ServiceData::normalizeAdditionalHeaders(
+                Arr::get($arguments, 'additional_headers', $recipient->configuredAdditionalHeaders())
+            ),
         ];
 
         $validator = Validator::make($payload, $this->recipientValidationRules($endpointType, $webhookAuthType));
@@ -625,6 +835,8 @@ class AiAssistantToolExecutor
             'intervalSeconds' => Arr::get($arguments, 'interval_seconds', Arr::get($templateDefaults, 'intervalSeconds', Service::INTERVAL_1_MINUTE)),
             'expectType' => $expectType,
             'expectValue' => Arr::get($arguments, 'expect_value', Arr::get($templateDefaults, 'expectValue', '')),
+            'additionalHeaders' => ServiceData::normalizeAdditionalHeaders(Arr::get($arguments, 'additional_headers', Arr::get($templateDefaults, 'additionalHeaders', []))),
+            'sslExpiryNotificationsEnabled' => (bool) Arr::get($arguments, 'ssl_expiry_notifications_enabled', Arr::get($templateDefaults, 'sslExpiryNotificationsEnabled', false)),
             'selectedServiceGroupIds' => $this->normalizeIntegerList(Arr::get($arguments, 'service_group_ids', Arr::get($templateDefaults, 'selectedServiceGroupIds', []))),
             'selectedRecipientGroupIds' => $this->normalizeIntegerList(Arr::get($arguments, 'recipient_group_ids', Arr::get($templateDefaults, 'selectedRecipientGroupIds', []))),
             'selectedRecipientIds' => $this->normalizeIntegerList(Arr::get($arguments, 'recipient_ids', Arr::get($templateDefaults, 'selectedRecipientIds', []))),
@@ -682,6 +894,8 @@ class AiAssistantToolExecutor
             'intervalSeconds' => Arr::get($arguments, 'interval_seconds', $service->interval_seconds),
             'expectType' => $expectType,
             'expectValue' => Arr::get($arguments, 'expect_value', $service->expect_value ?? ''),
+            'additionalHeaders' => ServiceData::normalizeAdditionalHeaders(Arr::get($arguments, 'additional_headers', $service->configuredAdditionalHeaders())),
+            'sslExpiryNotificationsEnabled' => (bool) Arr::get($arguments, 'ssl_expiry_notifications_enabled', $service->ssl_expiry_notifications_enabled),
             'selectedServiceGroupIds' => $this->normalizeIntegerList(
                 Arr::get($arguments, 'service_group_ids', $service->groups()->pluck('service_groups.id')->all())
             ),
@@ -985,6 +1199,7 @@ class AiAssistantToolExecutor
             'endpoint_type' => $recipient->endpointType(),
             'endpoint_target' => $recipient->endpointTarget(),
             'authentication' => $recipient->webhookAuthenticationSummary(),
+            'additional_headers' => $recipient->configuredAdditionalHeaders(),
             'groups' => $recipient->groups->pluck('name')->all(),
         ];
     }
@@ -1002,9 +1217,31 @@ class AiAssistantToolExecutor
             'url' => $service->url,
             'interval' => $service->intervalLabel(),
             'expectation' => $service->expectSummary(),
+            'uptime_percentage_last_30_days' => $service->uptimePercentageForDays(30),
             'service_groups' => $service->groups->pluck('name')->all(),
             'recipient_groups' => $service->recipientGroups->pluck('name')->all(),
             'recipients' => $service->recipients->pluck('name')->all(),
+        ];
+    }
+
+    /**
+     * Build a downtime summary for tool results.
+     *
+     * @return array<string, mixed>
+     */
+    private function downtimeSummary(ServiceDowntime $downtime): array
+    {
+        return [
+            'id' => $downtime->id,
+            'started_at' => $downtime->started_at?->toIso8601String(),
+            'ended_at' => $downtime->ended_at?->toIso8601String(),
+            'is_ongoing' => $downtime->isOngoing(),
+            'duration_human' => $downtime->durationSummary($downtime->ended_at),
+            'started_reason' => $downtime->started_reason,
+            'latest_reason' => $downtime->latest_reason,
+            'recovery_reason' => $downtime->recovery_reason,
+            'screenshot_url' => $downtime->screenshotUrl(),
+            'ai_summary' => $downtime->ai_summary,
         ];
     }
 }

@@ -4,6 +4,7 @@ use App\Models\ApiKey;
 use App\Models\Recipient;
 use App\Models\RecipientGroup;
 use App\Models\Service;
+use App\Models\ServiceDowntime;
 use App\Models\ServiceGroup;
 use App\Models\ServiceTemplate;
 use App\Models\User;
@@ -19,6 +20,7 @@ new #[Title('Dashboard')] class extends Component {
     public function monitoredServices()
     {
         return Service::query()
+            ->with('downtimes')
             ->orderByRaw("
                 case current_status
                     when 'down' then 0
@@ -58,6 +60,12 @@ new #[Title('Dashboard')] class extends Component {
                 'label' => 'Services',
                 'value' => Service::query()->count(),
                 'description' => 'Monitored service endpoints',
+                'href' => $isAdmin ? route('services.index') : null,
+            ],
+            [
+                'label' => 'Downtime incidents',
+                'value' => ServiceDowntime::query()->count(),
+                'description' => 'Recorded outage history entries',
                 'href' => $isAdmin ? route('services.index') : null,
             ],
             [
@@ -121,6 +129,9 @@ new #[Title('Dashboard')] class extends Component {
                             <div class="min-w-0">
                                 <div class="font-semibold text-zinc-900 dark:text-zinc-100">{{ $service->name }}</div>
                                 <div class="mt-1 break-all text-sm text-zinc-600 dark:text-zinc-300">{{ $service->url }}</div>
+                                <div class="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+                                    {{ __('30-day uptime: :percentage%', ['percentage' => number_format($service->uptimePercentageForDays(30), 2)]) }}
+                                </div>
                             </div>
 
                             <span class="rounded-full px-3 py-1 text-xs font-medium {{ $service->monitoringStatusClasses() }}">{{ __($service->monitoringStatusLabel()) }}</span>

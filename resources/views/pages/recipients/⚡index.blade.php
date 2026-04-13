@@ -4,6 +4,7 @@ use App\Concerns\RecipientValidation;
 use App\Models\Recipient;
 use App\Models\RecipientGroup;
 use App\Support\Recipients\RecipientData;
+use App\Support\Services\ServiceData;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
@@ -33,6 +34,9 @@ new #[Title('Recipient management')] class extends Component {
     public string $webhookAuthHeaderName = '';
 
     public string $webhookAuthHeaderValue = '';
+
+    /** @var array<int, array{name: string, value: string}> */
+    public array $additionalHeaders = [];
 
     /** @var array<int, string> */
     public array $selectedGroupIds = [];
@@ -70,6 +74,9 @@ new #[Title('Recipient management')] class extends Component {
                 $recipient->endpointTarget(),
                 $recipient->endpointTypeLabel(),
                 $recipient->isWebhookEndpoint() ? $recipient->webhookAuthenticationSummary() : 'Not required',
+                $recipient->additionalHeadersSummary(),
+                collect($recipient->configuredAdditionalHeaders())->pluck('name')->all(),
+                collect($recipient->configuredAdditionalHeaders())->pluck('value')->all(),
                 $recipient->groups->pluck('name')->all(),
             ]))
             ->values();
@@ -141,6 +148,7 @@ new #[Title('Recipient management')] class extends Component {
         $this->webhookAuthToken = $recipient->webhook_auth_token ?? '';
         $this->webhookAuthHeaderName = $recipient->webhook_auth_header_name ?? '';
         $this->webhookAuthHeaderValue = $recipient->webhook_auth_header_value ?? '';
+        $this->additionalHeaders = $recipient->configuredAdditionalHeaders();
         $this->selectedGroupIds = $recipient->groups
             ->pluck('id')
             ->map(fn (int $groupId): string => (string) $groupId)
@@ -174,6 +182,21 @@ new #[Title('Recipient management')] class extends Component {
         $this->resetValidation();
     }
 
+    public function addAdditionalHeader(): void
+    {
+        $this->additionalHeaders[] = [
+            'name' => '',
+            'value' => '',
+        ];
+    }
+
+    public function removeAdditionalHeader(int $index): void
+    {
+        unset($this->additionalHeaders[$index]);
+
+        $this->additionalHeaders = array_values($this->additionalHeaders);
+    }
+
     public function deleteConfirmedItem(): void
     {
         if ($this->deleteConfirmationType === 'recipient' && $this->deleteConfirmationId !== null) {
@@ -199,6 +222,8 @@ new #[Title('Recipient management')] class extends Component {
      */
     private function recipientRules(): array
     {
+        $this->additionalHeaders = ServiceData::normalizeAdditionalHeaders($this->additionalHeaders);
+
         return $this->recipientValidationRules($this->endpointType, $this->webhookAuthType);
     }
 
@@ -213,6 +238,7 @@ new #[Title('Recipient management')] class extends Component {
             'webhookAuthToken',
             'webhookAuthHeaderName',
             'webhookAuthHeaderValue',
+            'additionalHeaders',
             'selectedGroupIds',
         ]);
 
@@ -230,6 +256,7 @@ new #[Title('Recipient management')] class extends Component {
         $this->webhookAuthToken = '';
         $this->webhookAuthHeaderName = '';
         $this->webhookAuthHeaderValue = '';
+        $this->additionalHeaders = [];
     }
 
     private function closeDeleteConfirmation(): void
@@ -411,6 +438,47 @@ new #[Title('Recipient management')] class extends Component {
                                 </div>
                             </div>
                         @endif
+
+                        <div class="space-y-4 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
+                            <div class="flex flex-wrap items-start justify-between gap-3">
+                                <div>
+                                    <flux:heading>{{ __('Additional headers') }}</flux:heading>
+                                    <flux:subheading class="mt-1">{{ __('Optionally send extra headers with every webhook delivery, similar to service request headers.') }}</flux:subheading>
+                                </div>
+
+                                <flux:button type="button" variant="subtle" size="sm" wire:click="addAdditionalHeader">
+                                    {{ __('Add header') }}
+                                </flux:button>
+                            </div>
+
+                            @if ($additionalHeaders === [])
+                                <p class="rounded-lg border border-dashed border-zinc-300 px-4 py-3 text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
+                                    {{ __('This webhook will only send authentication headers unless you add more here.') }}
+                                </p>
+                            @else
+                                <div class="space-y-3">
+                                    @foreach ($additionalHeaders as $index => $header)
+                                        <div wire:key="recipient-additional-header-{{ $index }}" class="grid gap-3 rounded-xl border border-zinc-200 bg-zinc-50 p-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] dark:border-zinc-700 dark:bg-zinc-950/40">
+                                            <div class="min-w-0">
+                                                <flux:input wire:model="additionalHeaders.{{ $index }}.name" :label="__('Header name')" type="text" placeholder="X-Environment" autocomplete="off" />
+                                            </div>
+                                            <div class="min-w-0">
+                                                <flux:input wire:model="additionalHeaders.{{ $index }}.value" :label="__('Header value')" type="text" placeholder="production" autocomplete="off" />
+                                            </div>
+                                            <div class="flex items-end">
+                                                <flux:button type="button" variant="ghost" wire:click="removeAdditionalHeader({{ $index }})">{{ __('Remove') }}</flux:button>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                                @error('additionalHeaders.*.name')
+                                    <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                                @enderror
+                                @error('additionalHeaders.*.value')
+                                    <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                                @enderror
+                            @endif
+                        </div>
                     </div>
                 @endif
 
@@ -492,6 +560,7 @@ new #[Title('Recipient management')] class extends Component {
                                 <th class="pb-3 font-medium">{{ __('Recipient') }}</th>
                                 <th class="pb-3 font-medium">{{ __('Endpoint') }}</th>
                                 <th class="pb-3 font-medium">{{ __('Authentication') }}</th>
+                                <th class="pb-3 font-medium">{{ __('Extra headers') }}</th>
                                 <th class="pb-3 font-medium">{{ __('Groups') }}</th>
                                 <th class="pb-3 font-medium">{{ __('Actions') }}</th>
                             </tr>
@@ -514,6 +583,9 @@ new #[Title('Recipient management')] class extends Component {
                                     </td>
                                     <td class="py-4 pe-4 text-zinc-600 dark:text-zinc-300">
                                         {{ __($recipient->isWebhookEndpoint() ? $recipient->webhookAuthenticationSummary() : 'Not required') }}
+                                    </td>
+                                    <td class="py-4 pe-4 text-zinc-600 dark:text-zinc-300">
+                                        {{ __($recipient->isWebhookEndpoint() ? $recipient->additionalHeadersSummary() : 'Not required') }}
                                     </td>
                                     <td class="py-4 pe-4">
                                         @if ($recipient->groups->isEmpty())

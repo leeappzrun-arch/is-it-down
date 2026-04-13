@@ -92,6 +92,7 @@ new #[Title('Service management')] class extends Component {
                 'groups.recipients:id,name,endpoint',
                 'groups.recipientGroups:id,name',
                 'groups.recipientGroups.recipients:id,name,endpoint',
+                'downtimes',
             ])
             ->orderBy('name')
             ->orderBy('url')
@@ -115,9 +116,16 @@ new #[Title('Service management')] class extends Component {
                     collect($service->configuredAdditionalHeaders())->pluck('name')->all(),
                     collect($service->configuredAdditionalHeaders())->pluck('value')->all(),
                     $service->monitoringStatusLabel(),
+                    $service->uptimePercentageForDays(30).'%',
                     $service->statusDurationSummary(),
                     $service->monitoringReasonSummary(),
                     $service->nextCheckSummary(),
+                    $service->recentDowntimes()->map(fn (\App\Models\ServiceDowntime $downtime): string => implode(' ', array_filter([
+                        $downtime->started_reason,
+                        $downtime->latest_reason,
+                        $downtime->recovery_reason,
+                        $downtime->ai_summary,
+                    ])))->all(),
                     $service->groups->pluck('name')->all(),
                     $service->recipientGroups->pluck('name')->all(),
                     $service->recipients->pluck('name')->all(),
@@ -923,6 +931,31 @@ new #[Title('Service management')] class extends Component {
                                     </div>
                                 </div>
 
+                                <div class="grid gap-4 lg:grid-cols-3">
+                                    <div class="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
+                                        <div class="text-sm font-medium text-zinc-900 dark:text-zinc-100">{{ __('30-day uptime') }}</div>
+                                        <div class="mt-3 text-2xl font-semibold text-zinc-900 dark:text-zinc-100">{{ number_format($service->uptimePercentageForDays(30), 2) }}%</div>
+                                        <div class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{{ __('Based on recorded downtime incidents from the last 30 days.') }}</div>
+                                    </div>
+
+                                    <div class="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
+                                        <div class="text-sm font-medium text-zinc-900 dark:text-zinc-100">{{ __('Downtime incidents') }}</div>
+                                        <div class="mt-3 text-2xl font-semibold text-zinc-900 dark:text-zinc-100">{{ number_format($service->downtimes->count()) }}</div>
+                                        <div class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{{ __('Open and resolved incidents recorded for this service.') }}</div>
+                                    </div>
+
+                                    <div class="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
+                                        <div class="text-sm font-medium text-zinc-900 dark:text-zinc-100">{{ __('Latest downtime record') }}</div>
+                                        @php($latestDowntime = $service->recentDowntimes(1)->first())
+                                        <div class="mt-3 text-sm text-zinc-600 dark:text-zinc-300">
+                                            {{ $latestDowntime?->started_at?->diffForHumans() ?? __('No downtime incidents recorded yet') }}
+                                        </div>
+                                        @if ($latestDowntime)
+                                            <div class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{{ $latestDowntime->started_at->toDayDateTimeString() }}</div>
+                                        @endif
+                                    </div>
+                                </div>
+
                                 <div class="grid gap-4 lg:grid-cols-2">
                                     <div class="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
                                         <div class="text-sm font-medium text-zinc-900 dark:text-zinc-100">{{ __('Additional headers') }}</div>
@@ -1018,6 +1051,61 @@ new #[Title('Service management')] class extends Component {
                                                             <span wire:key="effective-recipient-source-{{ $service->id }}-{{ $route['recipient']->id }}-{{ md5($source) }}" class="rounded-full bg-sky-100 px-3 py-1 text-xs font-medium text-sky-700 dark:bg-sky-500/15 dark:text-sky-300">{{ __($source) }}</span>
                                                         @endforeach
                                                     </div>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    @endif
+                                </div>
+
+                                <div>
+                                    <div class="mb-3 text-sm font-medium text-zinc-900 dark:text-zinc-100">{{ __('Downtime history') }}</div>
+
+                                    @if ($service->recentDowntimes()->isEmpty())
+                                        <p class="rounded-xl border border-dashed border-zinc-300 px-4 py-5 text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">{{ __('No downtime incidents have been recorded for this service yet.') }}</p>
+                                    @else
+                                        <div class="space-y-3">
+                                            @foreach ($service->recentDowntimes() as $downtime)
+                                                <div wire:key="service-downtime-{{ $service->id }}-{{ $downtime->id }}" class="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
+                                                    <div class="flex flex-wrap items-start justify-between gap-3">
+                                                        <div>
+                                                            <div class="font-medium text-zinc-900 dark:text-zinc-100">
+                                                                {{ __('Started :time', ['time' => $downtime->started_at->toDayDateTimeString()]) }}
+                                                            </div>
+                                                            <div class="mt-1 text-sm text-zinc-600 dark:text-zinc-300">
+                                                                {{ $downtime->ended_at ? __('Recovered after :duration', ['duration' => $downtime->durationSummary($downtime->ended_at)]) : __('Still ongoing') }}
+                                                            </div>
+                                                        </div>
+
+                                                        <div class="flex flex-wrap gap-2">
+                                                            <span class="rounded-full px-3 py-1 text-xs font-medium {{ $downtime->isOngoing() ? 'bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300' }}">
+                                                                {{ $downtime->isOngoing() ? __('Ongoing') : __('Resolved') }}
+                                                            </span>
+                                                            @if ($downtime->screenshotUrl())
+                                                                <a href="{{ $downtime->screenshotUrl() }}" class="rounded-full bg-sky-100 px-3 py-1 text-xs font-medium text-sky-700 hover:bg-sky-200 dark:bg-sky-500/15 dark:text-sky-300 dark:hover:bg-sky-500/25">
+                                                                    {{ __('Screenshot') }}
+                                                                </a>
+                                                            @endif
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="mt-3 grid gap-3 lg:grid-cols-2">
+                                                        <div class="text-sm text-zinc-600 dark:text-zinc-300">
+                                                            <strong class="text-zinc-900 dark:text-zinc-100">{{ __('Started because:') }}</strong>
+                                                            {{ $downtime->started_reason ?? __('Unknown') }}
+                                                        </div>
+                                                        @if ($downtime->recovery_reason)
+                                                            <div class="text-sm text-zinc-600 dark:text-zinc-300">
+                                                                <strong class="text-zinc-900 dark:text-zinc-100">{{ __('Recovered because:') }}</strong>
+                                                                {{ $downtime->recovery_reason }}
+                                                            </div>
+                                                        @endif
+                                                    </div>
+
+                                                    @if ($downtime->ai_summary)
+                                                        <div class="mt-3 rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-100">
+                                                            <strong>{{ __('Dave thinks:') }}</strong> {{ $downtime->ai_summary }}
+                                                        </div>
+                                                    @endif
                                                 </div>
                                             @endforeach
                                         </div>

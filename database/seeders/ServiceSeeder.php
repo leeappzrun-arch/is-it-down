@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Recipient;
 use App\Models\RecipientGroup;
 use App\Models\Service;
+use App\Models\ServiceDowntime;
 use App\Models\ServiceGroup;
 use Illuminate\Database\Seeder;
 
@@ -39,6 +40,10 @@ class ServiceSeeder extends Seeder
                 'interval_seconds' => Service::INTERVAL_1_MINUTE,
                 'expect_type' => Service::EXPECT_TEXT,
                 'expect_value' => 'All systems operational',
+                'additional_headers' => [
+                    ['name' => 'X-Monitor', 'value' => 'marketing'],
+                ],
+                'ssl_expiry_notifications_enabled' => true,
                 'current_status' => Service::STATUS_UP,
                 'last_response_code' => 200,
                 'last_check_reason' => 'Received an HTTP 200 response and the expected text was present.',
@@ -65,9 +70,13 @@ class ServiceSeeder extends Seeder
                 'interval_seconds' => Service::INTERVAL_5_MINUTES,
                 'expect_type' => Service::EXPECT_REGEX,
                 'expect_value' => '/status\\s*:\\s*ok/i',
+                'additional_headers' => [
+                    ['name' => 'X-Vendor-Monitor', 'value' => 'vendor-api'],
+                ],
+                'ssl_expiry_notifications_enabled' => false,
                 'current_status' => Service::STATUS_DOWN,
                 'last_response_code' => 503,
-                'last_check_reason' => 'Expected HTTP 200 response but received 503.',
+                'last_check_reason' => 'The service still appeared down after retrying 3 seconds later. Expected HTTP 200 response but received 503.',
                 'last_checked_at' => $seededAt->copy()->subMinutes(4),
                 'next_check_at' => $seededAt->copy()->addMinute(),
                 'last_status_changed_at' => $seededAt->copy()->subMinutes(20),
@@ -82,6 +91,51 @@ class ServiceSeeder extends Seeder
                 $serviceGroups->get('Production')?->id,
             ],
         );
+
+        $marketingSite = Service::query()->where('name', 'Marketing Site')->first();
+        $vendorApi = Service::query()->where('name', 'Vendor API')->first();
+
+        if ($marketingSite instanceof Service) {
+            ServiceDowntime::query()->updateOrCreate(
+                [
+                    'service_id' => $marketingSite->id,
+                    'started_at' => $seededAt->copy()->subDays(2)->subMinutes(18),
+                ],
+                [
+                    'ended_at' => $seededAt->copy()->subDays(2)->subMinutes(10),
+                    'started_reason' => 'The service still appeared down after retrying 3 seconds later. Expected HTTP 200 response but received 503.',
+                    'latest_reason' => 'Expected HTTP 200 response but received 503.',
+                    'recovery_reason' => 'Received an HTTP 200 response and the expected text was present.',
+                    'started_response_code' => 503,
+                    'latest_response_code' => 503,
+                    'recovery_response_code' => 200,
+                    'last_checked_at' => $seededAt->copy()->subDays(2)->subMinutes(10),
+                    'last_check_attempts' => 2,
+                    'ai_summary' => 'The upstream likely served a maintenance or origin error page for a short period.',
+                ],
+            );
+        }
+
+        if ($vendorApi instanceof Service) {
+            ServiceDowntime::query()->updateOrCreate(
+                [
+                    'service_id' => $vendorApi->id,
+                    'started_at' => $seededAt->copy()->subMinutes(20),
+                ],
+                [
+                    'ended_at' => null,
+                    'started_reason' => 'The service still appeared down after retrying 3 seconds later. Expected HTTP 200 response but received 503.',
+                    'latest_reason' => 'Expected HTTP 200 response but received 503.',
+                    'recovery_reason' => null,
+                    'started_response_code' => 503,
+                    'latest_response_code' => 503,
+                    'recovery_response_code' => null,
+                    'last_checked_at' => $seededAt->copy()->subMinutes(4),
+                    'last_check_attempts' => 2,
+                    'ai_summary' => 'The upstream appears to still be unavailable or returning a maintenance response.',
+                ],
+            );
+        }
     }
 
     /**

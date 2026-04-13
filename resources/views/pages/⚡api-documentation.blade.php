@@ -57,12 +57,13 @@ new #[Title('API documentation')] class extends Component {
         <div class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <a href="#authentication" class="rounded-lg border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:text-zinc-100">{{ __('Authentication') }}</a>
             <a href="#permissions" class="rounded-lg border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:text-zinc-100">{{ __('Permissions') }}</a>
+            <a href="#response-notes" class="rounded-lg border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:text-zinc-100">{{ __('Response notes') }}</a>
             <a href="#playground" class="rounded-lg border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:text-zinc-100">{{ __('Playground') }}</a>
             <a href="#endpoint-catalog" class="rounded-lg border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:text-zinc-100">{{ __('Endpoint catalog') }}</a>
         </div>
     </div>
 
-    <div class="grid gap-6 xl:grid-cols-3">
+    <div class="grid gap-6 xl:grid-cols-2">
             <div id="authentication" class="scroll-mt-24 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
                 <flux:heading size="lg">{{ __('Authentication') }}</flux:heading>
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
@@ -75,9 +76,21 @@ new #[Title('API documentation')] class extends Component {
             <div id="permissions" class="scroll-mt-24 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
                 <flux:heading size="lg">{{ __('Permissions') }}</flux:heading>
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
-                    <p>{{ __('Each API key permission follows the `resource:action` format. The current published REST API uses `recipients:*`, `services:*`, `templates:*`, and `users:*` permissions, with read routes requiring `:read` and mutating routes requiring `:write`.') }}</p>
-                    <p>{{ __('Recipient groups share the `recipients` permission family, and service groups share the `services` permission family. Service templates have their own `templates` permission family because they can be managed directly over the API and used as defaults when creating services.') }}</p>
+                    <p>{{ __('Each API key permission follows the `resource:action` format. The current published REST API uses `recipients:*`, `services:*`, `history:*`, `templates:*`, and `users:*` permissions, with read routes requiring `:read` and mutating routes requiring `:write`.') }}</p>
+                    <p>{{ __('Recipient groups share the `recipients` permission family, service groups share the `services` permission family, and downtime-history routes use the dedicated `history` permission family.') }}</p>
                     <p>{{ __('When new functionality or permission areas are added, the endpoints, docs, playground catalog, tests, and API key permission registry should be updated in the same change.') }}</p>
+                </div>
+            </div>
+    </div>
+
+    <div class="mt-6 grid gap-6 xl:grid-cols-2">
+            <div id="response-notes" class="scroll-mt-24 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+                <flux:heading size="lg">{{ __('Response notes') }}</flux:heading>
+                <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+                    <p>{{ __('Service responses now expose `uptime_percentage_last_30_days`, the current downtime when one is active, and recent downtime records when the endpoint loads service history.') }}</p>
+                    <p>{{ __('Recipient payloads include `additional_headers` and `additional_headers_count` so integrations can review configured webhook headers.') }}</p>
+                    <p>{{ __('Downtime resources expose timing details, retry counts, `screenshot_url`, and `ai_summary` so external systems can build richer incident timelines.') }}</p>
+                    <p>{{ __('Listing service downtime incidents supports a `status` filter with `ongoing` or `resolved` plus the standard `per_page` paginator size.') }}</p>
                 </div>
             </div>
 
@@ -86,7 +99,7 @@ new #[Title('API documentation')] class extends Component {
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
                     <p>{{ __('Use the API Playground page to pick any documented endpoint, review its request contract, paste an API key, and send a real request against this environment.') }}</p>
                     <p>{{ __('The playground shares the same endpoint catalog as this page so the dropdown documentation and this reference stay in sync.') }}</p>
-                    <p>{{ __('Service and template examples include the current `additional_headers` array format plus the `ssl_expiry_notifications_enabled` flag so integrations can mirror the UI exactly.') }}</p>
+                    <p>{{ __('Service, template, and recipient examples include the current `additional_headers` array format, and service examples also include the `ssl_expiry_notifications_enabled` flag so integrations can mirror the UI exactly.') }}</p>
                     <p>
                         <a href="{{ route('api-playground') }}" class="font-medium text-sky-600 hover:text-sky-500 dark:text-sky-400 dark:hover:text-sky-300">{{ __('Visit the API Playground') }}</a>
                          to get started or test out requests without needing a separate REST client.

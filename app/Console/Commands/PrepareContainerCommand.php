@@ -30,6 +30,10 @@ class PrepareContainerCommand extends Command
             '--force' => true,
         ]);
 
+        $this->call('storage:link', [
+            '--force' => true,
+        ]);
+
         $this->ensureInitialAdmin();
 
         $this->components->info('Container preparation complete.');

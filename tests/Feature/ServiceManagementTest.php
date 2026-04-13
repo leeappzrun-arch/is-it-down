@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Recipient;
 use App\Models\RecipientGroup;
 use App\Models\Service;
+use App\Models\ServiceDowntime;
 use App\Models\ServiceGroup;
 use App\Models\ServiceTemplate;
 use App\Models\User;
@@ -258,6 +259,7 @@ class ServiceManagementTest extends TestCase
         $response->assertSeeText('Latest reason');
         $response->assertSeeText('Status duration: 5 minutes');
         $response->assertSeeText('Expected HTTP 200 response but received 503.');
+        $response->assertSeeText('30-day uptime');
         $response->assertSee('wire:poll.5s.visible', false);
 
         $this->travelBack();
@@ -324,5 +326,30 @@ class ServiceManagementTest extends TestCase
             ->assertSee('No services match your search.')
             ->assertDontSee('https://marketing.example.com')
             ->assertDontSee('https://billing.example.com');
+    }
+
+    public function test_service_page_shows_downtime_history_records(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $service = Service::factory()->create([
+            'name' => 'Billing API',
+            'url' => 'https://billing.example.com/status',
+        ]);
+
+        ServiceDowntime::factory()->create([
+            'service_id' => $service->id,
+            'started_at' => now()->subHours(3),
+            'ended_at' => now()->subHours(2)->subMinutes(45),
+            'started_reason' => 'Expected HTTP 200 response but received 503.',
+            'recovery_reason' => 'Received an HTTP 200 response.',
+            'ai_summary' => 'The upstream likely experienced a short maintenance window.',
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('services.index'));
+
+        $response->assertOk();
+        $response->assertSeeText('Downtime history');
+        $response->assertSeeText('The upstream likely experienced a short maintenance window.');
+        $response->assertSeeText('Recovered after 15 minutes');
     }
 }

@@ -26,6 +26,7 @@ class RecipientFactory extends Factory
             'webhook_auth_token' => null,
             'webhook_auth_header_name' => null,
             'webhook_auth_header_value' => null,
+            'additional_headers' => [],
         ];
     }
 
@@ -42,6 +43,7 @@ class RecipientFactory extends Factory
             'webhook_auth_token' => null,
             'webhook_auth_header_name' => null,
             'webhook_auth_header_value' => null,
+            'additional_headers' => [],
         ]);
     }
 
@@ -53,6 +55,7 @@ class RecipientFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'endpoint' => 'webhook://'.fake()->domainName().'/hooks/'.fake()->uuid(),
             'webhook_auth_type' => Recipient::WEBHOOK_AUTH_NONE,
+            'additional_headers' => [],
         ]);
     }
 

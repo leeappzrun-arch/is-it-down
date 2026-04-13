@@ -82,6 +82,26 @@ class RecipientManagementTest extends TestCase
         $this->assertSame('top-secret-token', $recipient->webhook_auth_token);
     }
 
+    public function test_admin_users_can_store_additional_webhook_headers(): void
+    {
+        $this->actingAs(User::factory()->admin()->create());
+
+        Livewire::test('pages::recipients.index')
+            ->set('name', 'Ops webhook')
+            ->set('endpointType', Recipient::TYPE_WEBHOOK)
+            ->set('endpointTarget', 'hooks.example.com/services/ops')
+            ->set('additionalHeaders', [
+                ['name' => 'X-Environment', 'value' => 'production'],
+            ])
+            ->call('saveRecipient')
+            ->assertHasNoErrors();
+
+        $recipient = Recipient::query()->where('name', 'Ops webhook')->first();
+
+        $this->assertNotNull($recipient);
+        $this->assertSame([['name' => 'X-Environment', 'value' => 'production']], $recipient->configuredAdditionalHeaders());
+    }
+
     public function test_invalid_endpoints_are_rejected(): void
     {
         $this->actingAs(User::factory()->admin()->create());

@@ -4,6 +4,7 @@ namespace App\Http\Requests\Api\V1;
 
 use App\Concerns\RecipientValidation;
 use App\Models\Recipient;
+use App\Support\Services\ServiceData;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpsertRecipientRequest extends FormRequest
@@ -27,6 +28,7 @@ class UpsertRecipientRequest extends FormRequest
             'endpointType' => $this->input('endpoint_type', $this->input('endpointType', Recipient::TYPE_MAIL)),
             'endpointTarget' => $this->input('endpoint_target', $this->input('endpointTarget', '')),
             'selectedGroupIds' => $this->input('group_ids', $this->input('selectedGroupIds', [])),
+            'additionalHeaders' => ServiceData::normalizeAdditionalHeaders($this->input('additional_headers', $this->input('additionalHeaders', []))),
             'webhookAuthType' => $this->input('webhook_auth_type', $this->input('webhookAuthType', Recipient::WEBHOOK_AUTH_NONE)),
             'webhookAuthUsername' => $this->input('webhook_auth_username', $this->input('webhookAuthUsername', '')),
             'webhookAuthPassword' => $this->input('webhook_auth_password', $this->input('webhookAuthPassword', '')),

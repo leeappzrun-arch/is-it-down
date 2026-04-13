@@ -8,5 +8,8 @@ final readonly class ServiceCheckResult
         public string $status,
         public string $reason,
         public ?int $responseCode = null,
+        public ?string $bodyExcerpt = null,
+        public bool $connectionSucceeded = false,
+        public int $attemptCount = 1,
     ) {}
 }

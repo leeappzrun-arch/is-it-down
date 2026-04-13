@@ -22,6 +22,8 @@ class RecipientResource extends JsonResource
             'endpoint_target' => $this->endpointTarget(),
             'webhook_auth_type' => $this->webhook_auth_type,
             'webhook_auth_summary' => $this->isWebhookEndpoint() ? $this->webhookAuthenticationSummary() : 'Not required',
+            'additional_headers' => $this->configuredAdditionalHeaders(),
+            'additional_headers_count' => count($this->configuredAdditionalHeaders()),
             'groups' => $this->whenLoaded('groups', fn (): array => $this->groups
                 ->map(fn ($group): array => [
                     'id' => $group->id,

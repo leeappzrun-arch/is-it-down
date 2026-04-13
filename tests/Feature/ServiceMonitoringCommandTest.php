@@ -7,9 +7,12 @@ use App\Mail\ServiceStatusChangedMail;
 use App\Mail\WebhookDeliveryFailedMail;
 use App\Models\Recipient;
 use App\Models\Service;
+use App\Models\ServiceDowntime;
 use App\Models\User;
+use App\Support\Monitoring\OutageAnalyzer;
 use App\Support\Monitoring\SslCertificateInspectionResult;
 use App\Support\Monitoring\SslCertificateInspector;
+use App\Support\Monitoring\WebsiteScreenshotter;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -20,6 +23,21 @@ use Tests\TestCase;
 class ServiceMonitoringCommandTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        config()->set('services.monitoring.failure_retry_delay_seconds', 0);
+
+        $this->mock(WebsiteScreenshotter::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('capture')->andReturn(null);
+        });
+
+        $this->mock(OutageAnalyzer::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('analyze')->andReturn(null);
+        });
+    }
 
     public function test_monitoring_command_sends_configured_additional_headers_with_the_service_check(): void
     {
@@ -48,6 +66,43 @@ class ServiceMonitoringCommandTest extends TestCase
         $this->artisan('monitor:services')->assertSuccessful();
     }
 
+    public function test_monitoring_command_retries_once_before_marking_a_service_down(): void
+    {
+        Mail::fake();
+        Http::preventStrayRequests();
+
+        $checkedAt = CarbonImmutable::parse('2026-04-04 10:25:00');
+
+        $this->travelTo($checkedAt);
+
+        $recipient = Recipient::factory()->mail()->create([
+            'endpoint' => 'mailto://ops@example.com',
+        ]);
+
+        $service = Service::factory()->currentlyUp()->create([
+            'name' => 'Marketing Site',
+            'url' => 'https://status.example.com',
+            'next_check_at' => $checkedAt->subSecond(),
+        ]);
+
+        $service->recipients()->sync([$recipient->id]);
+
+        Http::fake([
+            'https://status.example.com' => Http::sequence()
+                ->push('Temporary failure', 503)
+                ->push('All systems operational', 200),
+        ]);
+
+        $this->artisan('monitor:services')->assertSuccessful();
+
+        $service->refresh();
+
+        $this->assertSame(Service::STATUS_UP, $service->current_status);
+        $this->assertStringContainsString('The first check failed, but the service recovered after retrying immediately.', $service->last_check_reason);
+        $this->assertDatabaseCount('service_downtimes', 0);
+        Mail::assertNothingSent();
+    }
+
     public function test_monitoring_command_marks_services_down_for_expectation_failures_and_does_not_repeat_the_same_down_alert(): void
     {
         Mail::fake();
@@ -70,7 +125,9 @@ class ServiceMonitoringCommandTest extends TestCase
         $service->recipients()->sync([$recipient->id]);
 
         Http::fake([
-            'https://status.example.com' => Http::response('Everything is broken', 200),
+            'https://status.example.com' => Http::sequence()
+                ->push('Everything is broken', 200)
+                ->push('Everything is still broken', 200),
         ]);
 
         $this->artisan('monitor:services')->assertSuccessful();
@@ -78,9 +135,15 @@ class ServiceMonitoringCommandTest extends TestCase
         $service->refresh();
 
         $this->assertSame(Service::STATUS_DOWN, $service->current_status);
-        $this->assertSame('Response body did not contain the expected text.', $service->last_check_reason);
+        $this->assertSame('The service still appeared down after retrying immediately. Response body did not contain the expected text.', $service->last_check_reason);
         $this->assertSame(200, $service->last_response_code);
         $this->assertSame($checkedAt->addMinute()->toDateTimeString(), $service->next_check_at?->toDateTimeString());
+        $this->assertDatabaseHas('service_downtimes', [
+            'service_id' => $service->id,
+            'started_reason' => 'The service still appeared down after retrying immediately. Response body did not contain the expected text.',
+            'latest_reason' => 'The service still appeared down after retrying immediately. Response body did not contain the expected text.',
+            'ended_at' => null,
+        ]);
 
         Mail::assertSent(ServiceStatusChangedMail::class, function (ServiceStatusChangedMail $mail) use ($service): bool {
             return $mail->hasTo('ops@example.com')
@@ -95,7 +158,9 @@ class ServiceMonitoringCommandTest extends TestCase
         ])->save();
 
         Http::fake([
-            'https://status.example.com' => Http::response('Everything is still broken', 200),
+            'https://status.example.com' => Http::sequence()
+                ->push('Everything is still broken', 200)
+                ->push('Everything is still broken', 200),
         ]);
 
         $this->artisan('monitor:services')->assertSuccessful();
@@ -103,7 +168,7 @@ class ServiceMonitoringCommandTest extends TestCase
         $service->refresh();
 
         $this->assertSame(Service::STATUS_DOWN, $service->current_status);
-        $this->assertSame('Response body did not contain the expected text.', $service->last_check_reason);
+        $this->assertSame('The service still appeared down after retrying immediately. Response body did not contain the expected text.', $service->last_check_reason);
         $this->assertSame($checkedAt->addMinutes(2)->addSecond()->toDateTimeString(), $service->next_check_at?->toDateTimeString());
 
         Mail::assertSent(ServiceStatusChangedMail::class, 1);
@@ -135,6 +200,13 @@ class ServiceMonitoringCommandTest extends TestCase
 
         $service->recipients()->sync([$recipient->id]);
 
+        $downtime = ServiceDowntime::factory()->ongoing()->create([
+            'service_id' => $service->id,
+            'started_at' => $checkedAt->subMinute(),
+            'started_reason' => 'The service still appeared down after retrying immediately. Response body did not contain the expected text.',
+            'latest_reason' => 'The service still appeared down after retrying immediately. Response body did not contain the expected text.',
+        ]);
+
         Http::fake([
             'https://status.example.com' => Http::response('All systems operational', 200),
         ]);
@@ -142,9 +214,12 @@ class ServiceMonitoringCommandTest extends TestCase
         $this->artisan('monitor:services')->assertSuccessful();
 
         $service->refresh();
+        $downtime->refresh();
 
         $this->assertSame(Service::STATUS_UP, $service->current_status);
         $this->assertSame('Received an HTTP 200 response and the expected text was present.', $service->last_check_reason);
+        $this->assertNotNull($downtime->ended_at);
+        $this->assertSame('Received an HTTP 200 response and the expected text was present.', $downtime->recovery_reason);
 
         Mail::assertSent(ServiceStatusChangedMail::class, function (ServiceStatusChangedMail $mail) use ($service): bool {
             $rendered = $mail->render();
@@ -153,7 +228,7 @@ class ServiceMonitoringCommandTest extends TestCase
                 && $mail->service->is($service)
                 && $mail->currentStatus === Service::STATUS_UP
                 && $mail->envelope()->subject === '['.config('app.name').'] It Is Up!: '.$service->name
-                && $mail->downtimeDurationSummary === '1 minute'
+                && $mail->downtime?->durationSummary($mail->downtime->ended_at) === '1 minute'
                 && str_contains($rendered, 'Downtime:</strong> 1 minute');
         });
     }
@@ -215,6 +290,69 @@ class ServiceMonitoringCommandTest extends TestCase
         });
     }
 
+    public function test_monitoring_command_sends_webhook_additional_headers_and_downtime_context(): void
+    {
+        Http::preventStrayRequests();
+
+        $checkedAt = CarbonImmutable::parse('2026-04-04 11:10:00');
+
+        $this->travelTo($checkedAt);
+
+        $this->mock(WebsiteScreenshotter::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('capture')->once()->andReturn([
+                'disk' => 'public',
+                'path' => 'downtime-screenshots/billing-api.png',
+            ]);
+        });
+
+        $this->mock(OutageAnalyzer::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('analyze')->once()->andReturn('The upstream returned repeated 503 responses, which suggests server-side maintenance or an outage.');
+        });
+
+        $recipient = Recipient::factory()->webhook()->basicAuth()->create([
+            'name' => 'Ops Webhook',
+            'endpoint' => 'webhook://hooks.example.com/ops',
+            'webhook_auth_username' => 'ops-user',
+            'webhook_auth_password' => 'ops-pass',
+            'additional_headers' => [
+                ['name' => 'X-Recipient', 'value' => 'operations'],
+            ],
+        ]);
+
+        $service = Service::factory()->currentlyUp()->create([
+            'name' => 'Billing API',
+            'url' => 'https://billing.example.com/status',
+            'next_check_at' => $checkedAt,
+        ]);
+
+        $service->recipients()->sync([$recipient->id]);
+
+        Http::fake([
+            'https://billing.example.com/status' => Http::sequence()
+                ->push('Server error', 503)
+                ->push('Server error', 503),
+            'https://hooks.example.com/ops' => function ($request) {
+                $payload = json_decode($request->body(), true);
+
+                $this->assertSame('Basic '.base64_encode('ops-user:ops-pass'), $request->header('Authorization')[0] ?? null);
+                $this->assertSame('operations', $request->header('X-Recipient')[0] ?? null);
+                $this->assertSame('Billing API', $payload['service']['name'] ?? null);
+                $this->assertSame('down', $payload['status'] ?? null);
+                $this->assertSame('The upstream returned repeated 503 responses, which suggests server-side maintenance or an outage.', $payload['downtime']['ai_summary'] ?? null);
+                $this->assertStringContainsString('/storage/downtime-screenshots/billing-api.png', $payload['downtime']['screenshot_url'] ?? '');
+
+                return Http::response(['accepted' => true], 200);
+            },
+        ]);
+
+        $this->artisan('monitor:services')->assertSuccessful();
+
+        $this->assertDatabaseHas('service_downtimes', [
+            'service_id' => $service->id,
+            'screenshot_path' => 'downtime-screenshots/billing-api.png',
+        ]);
+    }
+
     public function test_monitoring_command_includes_downtime_in_recovery_webhook_payloads(): void
     {
         Http::preventStrayRequests();
@@ -240,6 +378,13 @@ class ServiceMonitoringCommandTest extends TestCase
 
         $service->recipients()->sync([$recipient->id]);
 
+        ServiceDowntime::factory()->ongoing()->create([
+            'service_id' => $service->id,
+            'started_at' => $checkedAt->subMinutes(2),
+            'started_reason' => 'The service still appeared down after retrying immediately. Response body did not contain the expected text.',
+            'latest_reason' => 'The service still appeared down after retrying immediately. Response body did not contain the expected text.',
+        ]);
+
         Http::fake([
             'https://status.example.com' => Http::response('All systems operational', 200),
             'https://hooks.example.com/recovery' => function ($request) {
@@ -247,8 +392,8 @@ class ServiceMonitoringCommandTest extends TestCase
 
                 $this->assertSame('up', $payload['status'] ?? null);
                 $this->assertSame('down', $payload['previous_status'] ?? null);
-                $this->assertSame(120, $payload['downtime_duration']['seconds'] ?? null);
-                $this->assertSame('2 minutes', $payload['downtime_duration']['human'] ?? null);
+                $this->assertSame(120, $payload['downtime']['duration']['seconds'] ?? null);
+                $this->assertSame('2 minutes', $payload['downtime']['duration']['human'] ?? null);
 
                 return Http::response(['accepted' => true], 200);
             },

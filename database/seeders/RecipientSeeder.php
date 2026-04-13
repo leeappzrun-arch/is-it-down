@@ -28,6 +28,7 @@ class RecipientSeeder extends Seeder
                 'webhook_auth_token' => null,
                 'webhook_auth_header_name' => null,
                 'webhook_auth_header_value' => null,
+                'additional_headers' => [],
             ],
             groupIds: [
                 $groups->get('Operations')?->id,
@@ -45,6 +46,10 @@ class RecipientSeeder extends Seeder
                 'webhook_auth_token' => 'seeded-pagerduty-token',
                 'webhook_auth_header_name' => null,
                 'webhook_auth_header_value' => null,
+                'additional_headers' => [
+                    ['name' => 'X-Environment', 'value' => 'production'],
+                    ['name' => 'X-Monitor', 'value' => 'is-it-down'],
+                ],
             ],
             groupIds: [
                 $groups->get('Operations')?->id,
@@ -61,6 +66,9 @@ class RecipientSeeder extends Seeder
                 'webhook_auth_token' => null,
                 'webhook_auth_header_name' => 'X-Vendor-Key',
                 'webhook_auth_header_value' => 'seeded-vendor-header-value',
+                'additional_headers' => [
+                    ['name' => 'X-Vendor-Environment', 'value' => 'sandbox'],
+                ],
             ],
             groupIds: [
                 $groups->get('Vendors')?->id,

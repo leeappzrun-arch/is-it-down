@@ -19,14 +19,20 @@
                     <div style="margin-bottom: 10px;"><strong>Name:</strong> {{ $service->name }}</div>
                     <div style="margin-bottom: 10px;"><strong>URL:</strong> {{ $service->url }}</div>
                     <div style="margin-bottom: 10px;"><strong>Status change:</strong> {{ strtoupper($previousStatus ?? 'unknown') }} to {{ strtoupper($currentStatus) }}</div>
-                    @if ($downtimeDurationSummary)
-                        <div style="margin-bottom: 10px;"><strong>Downtime:</strong> {{ $downtimeDurationSummary }}</div>
+                    @if ($downtime?->ended_at)
+                        <div style="margin-bottom: 10px;"><strong>Downtime:</strong> {{ $downtime->durationSummary($downtime->ended_at) }}</div>
                     @endif
                     <div style="margin-bottom: 10px;"><strong>Checked at:</strong> {{ $checkedAt->toDayDateTimeString() }} UTC</div>
                     @if ($responseCode !== null)
                         <div style="margin-bottom: 10px;"><strong>HTTP response:</strong> {{ $responseCode }}</div>
                     @endif
-                    <div style="margin-bottom: {{ $service->hasExpectation() ? '10px' : '0' }};"><strong>Reason:</strong> {{ $reason }}</div>
+                    <div style="margin-bottom: 10px;"><strong>Reason:</strong> {{ $reason }}</div>
+                    @if ($downtime?->ai_summary)
+                        <div style="margin-bottom: 10px;"><strong>Dave thinks:</strong> {{ $downtime->ai_summary }}</div>
+                    @endif
+                    @if ($downtime?->screenshotUrl())
+                        <div style="margin-bottom: 10px;"><strong>Screenshot:</strong> <a href="{{ $downtime->screenshotUrl() }}">{{ $downtime->screenshotUrl() }}</a></div>
+                    @endif
                     @if ($service->hasExpectation())
                         <div><strong>Expectation:</strong> {{ $service->expectSummary() }}</div>
                     @endif

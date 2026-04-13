@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
@@ -98,6 +100,22 @@ class Service extends Model
     public function groups(): BelongsToMany
     {
         return $this->belongsToMany(ServiceGroup::class, 'service_service_group');
+    }
+
+    /**
+     * Get the recorded downtime incidents for the service.
+     */
+    public function downtimes(): HasMany
+    {
+        return $this->hasMany(ServiceDowntime::class)->orderByDesc('started_at');
+    }
+
+    /**
+     * Get the current active downtime incident, if any.
+     */
+    public function currentDowntime(): HasOne
+    {
+        return $this->hasOne(ServiceDowntime::class)->whereNull('ended_at')->latestOfMany('started_at');
     }
 
     /**
@@ -274,6 +292,45 @@ class Service extends Model
         return $nextCheckAt->isPast()
             ? 'Checking...'
             : 'Next check '.$nextCheckAt->diffForHumans();
+    }
+
+    /**
+     * Get the uptime percentage for the given rolling day window.
+     */
+    public function uptimePercentageForDays(int $days, ?CarbonInterface $referenceTime = null): float
+    {
+        $referenceTime ??= now();
+        $windowStart = $referenceTime->copy()->subDays($days);
+        $windowSeconds = max(1, $windowStart->diffInSeconds($referenceTime));
+
+        $downtimeSeconds = $this->downtimes()
+            ->overlappingWindow($windowStart, $referenceTime)
+            ->get()
+            ->sum(fn (ServiceDowntime $downtime): int => $downtime->overlapDurationInSeconds($windowStart, $referenceTime));
+
+        $uptimeSeconds = max(0, $windowSeconds - $downtimeSeconds);
+
+        return round(($uptimeSeconds / $windowSeconds) * 100, 2);
+    }
+
+    /**
+     * Get the recent downtime incidents for the service.
+     *
+     * @return Collection<int, ServiceDowntime>
+     */
+    public function recentDowntimes(int $limit = 5): Collection
+    {
+        if ($this->relationLoaded('downtimes')) {
+            /** @var Collection<int, ServiceDowntime> $downtimes */
+            $downtimes = $this->getRelation('downtimes');
+
+            return $downtimes->sortByDesc('started_at')->take($limit)->values();
+        }
+
+        /** @var Collection<int, ServiceDowntime> $downtimes */
+        $downtimes = $this->downtimes()->limit($limit)->get();
+
+        return $downtimes;
     }
 
     /**
