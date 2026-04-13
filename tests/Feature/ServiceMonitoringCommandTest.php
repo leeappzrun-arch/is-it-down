@@ -125,10 +125,7 @@ class ServiceMonitoringCommandTest extends TestCase
         $service->recipients()->sync([$recipient->id]);
 
         Http::fake([
-            'https://status.example.com' => Http::sequence()
-                ->push('Everything is broken', 200)
-                ->push('Everything is still broken', 200)
-                ->push('Everything is still broken', 200),
+            'https://status.example.com' => Http::response('Everything is broken', 200),
         ]);
 
         $this->artisan('monitor:services')->assertSuccessful();
@@ -159,10 +156,7 @@ class ServiceMonitoringCommandTest extends TestCase
         ])->save();
 
         Http::fake([
-            'https://status.example.com' => Http::sequence()
-                ->push('Everything is still broken', 200)
-                ->push('Everything is still broken', 200)
-                ->push('Everything is still broken', 200),
+            'https://status.example.com' => Http::response('Everything is still broken', 200),
         ]);
 
         $this->artisan('monitor:services')->assertSuccessful();
