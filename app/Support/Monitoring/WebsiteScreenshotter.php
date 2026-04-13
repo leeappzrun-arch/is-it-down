@@ -142,10 +142,10 @@ class WebsiteScreenshotter
      */
     protected function configureBrowsershot(object $browsershot): object
     {
-        $nodeBinary = trim((string) env('LARAVEL_SCREENSHOT_NODE_BINARY', '/usr/bin/node'));
-        $nodeModulesPath = trim((string) env('LARAVEL_SCREENSHOT_NODE_MODULES_PATH', '/opt/browsershot/node_modules'));
-        $chromePath = trim((string) env('LARAVEL_SCREENSHOT_CHROME_PATH', ''));
-        $screenshotTimeout = max(5, (int) env('MONITORING_SCREENSHOT_TIMEOUT_SECONDS', 30));
+        $nodeBinary = trim($this->runtimeEnvironmentValue('LARAVEL_SCREENSHOT_NODE_BINARY', '/usr/bin/node'));
+        $nodeModulesPath = trim($this->runtimeEnvironmentValue('LARAVEL_SCREENSHOT_NODE_MODULES_PATH', '/opt/browsershot/node_modules'));
+        $chromePath = trim($this->runtimeEnvironmentValue('LARAVEL_SCREENSHOT_CHROME_PATH', ''));
+        $screenshotTimeout = max(5, (int) $this->runtimeEnvironmentValue('MONITORING_SCREENSHOT_TIMEOUT_SECONDS', '30'));
 
         if ($nodeBinary !== '' && method_exists($browsershot, 'setNodeBinary')) {
             $browsershot->setNodeBinary($nodeBinary);
@@ -171,10 +171,24 @@ class WebsiteScreenshotter
             $browsershot->ignoreHttpsErrors();
         }
 
-        if (filter_var(env('LARAVEL_SCREENSHOT_NO_SANDBOX', true), FILTER_VALIDATE_BOOL) && method_exists($browsershot, 'noSandbox')) {
+        if (filter_var($this->runtimeEnvironmentValue('LARAVEL_SCREENSHOT_NO_SANDBOX', 'true'), FILTER_VALIDATE_BOOL) && method_exists($browsershot, 'noSandbox')) {
             $browsershot->noSandbox();
         }
 
         return $browsershot;
+    }
+
+    /**
+     * Resolve a runtime environment value with getenv compatibility for plain PHPUnit tests.
+     */
+    protected function runtimeEnvironmentValue(string $key, string $default = ''): string
+    {
+        $value = getenv($key);
+
+        if ($value !== false) {
+            return (string) $value;
+        }
+
+        return (string) env($key, $default);
     }
 }
