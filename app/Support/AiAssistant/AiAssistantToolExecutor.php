@@ -322,7 +322,9 @@ class AiAssistantToolExecutor
                 'expectation' => $service->expectSummary(),
                 'latest_reason' => $service->monitoringReasonSummary(),
                 'last_response_code' => $service->last_response_code,
+                'last_response_headers' => $service->lastResponseHeaders(),
                 'last_checked_at' => $service->last_checked_at?->toIso8601String(),
+                'latest_screenshot_url' => $service->latestScreenshotUrl(),
                 'next_check_at' => $service->next_check_at?->toIso8601String(),
                 'next_check_summary' => $service->nextCheckSummary(),
                 'status_duration' => $service->statusDurationSummary(),
@@ -418,6 +420,7 @@ class AiAssistantToolExecutor
             'response_code' => $result->responseCode,
             'attempt_count' => $result->attemptCount,
             'response_excerpt' => $result->bodyExcerpt,
+            'response_headers' => $result->responseHeaders,
             'analysis' => $analysis,
         ];
     }
@@ -997,8 +1000,8 @@ class AiAssistantToolExecutor
         $candidates = $recipientQuery
             ->get()
             ->filter(function (Recipient $recipient) use ($trimmedIdentifier): bool {
-                return $recipient->name === $trimmedIdentifier
-                    || $recipient->endpointTarget() === $trimmedIdentifier;
+                return mb_strtolower($recipient->name) === mb_strtolower($trimmedIdentifier)
+                    || mb_strtolower($recipient->endpointTarget()) === mb_strtolower($trimmedIdentifier);
             })
             ->values();
 
@@ -1094,7 +1097,7 @@ class AiAssistantToolExecutor
 
         foreach ($columns as $column) {
             $matches = (clone $query)
-                ->where($column, $trimmedIdentifier)
+                ->whereRaw('LOWER('.$query->getModel()->qualifyColumn($column).') = ?', [mb_strtolower($trimmedIdentifier)])
                 ->get();
 
             if ($matches->count() === 1) {
@@ -1241,6 +1244,7 @@ class AiAssistantToolExecutor
             'latest_reason' => $downtime->latest_reason,
             'recovery_reason' => $downtime->recovery_reason,
             'screenshot_url' => $downtime->screenshotUrl(),
+            'latest_response_headers' => $downtime->latestResponseHeaders(),
             'ai_summary' => $downtime->ai_summary,
         ];
     }

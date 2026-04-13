@@ -91,16 +91,20 @@ new #[Title('User guide')] class extends Component {
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
                     <p>{{ __('Services represent the URLs you want to monitor. Each service includes a name, URL, polling interval, optional extra request headers, and an optional expectation that can be plain text or a regex pattern.') }}</p>
                     <p>{{ __('A service is considered down whenever the URL does not respond with HTTP 200, or when a configured text or regex expectation fails to match the response body.') }}</p>
-                    <p>{{ __('To reduce false positives, the monitor now pauses briefly and retries one failed check before the service is classified as down. The attempt count is recorded with the resulting downtime entry.') }}</p>
-                    <p>{{ __('Additional request headers can be stored per service when a monitored endpoint needs custom authentication or routing metadata during the health check.') }}</p>
+                    <p>{{ __('To reduce false positives, the monitor confirms a failed result before the service changes state. The attempt count is still recorded with the downtime entry for integrations that need it.') }}</p>
+                    <p>{{ __('The monitor also sends a browser-like default request profile and can add a small amount of schedule jitter so Cloudflare-style protection is less likely to mistake routine checks for bot traffic.') }}</p>
+                    <p>{{ __('Additional request headers can still be stored per service when a monitored endpoint needs custom authentication or routing metadata during the health check.') }}</p>
                     <p>{{ __('You can also enable SSL expiry notifications so recipients are warned when an HTTPS certificate is within 10 days of expiry. Those warnings are limited to once every 24 hours for each service.') }}</p>
                     <p>{{ __('A service can have direct recipients, direct recipient groups, and one or more service groups attached at the same time.') }}</p>
                     <p>{{ __('Use the sticky search field at the top of the Services page to narrow managed services from a single query.') }}</p>
                     <p>{{ __('Use the Save as template action on any existing service when you want to capture its non-URL settings into a reusable starting point.') }}</p>
                     <p>{{ __('When you want to manage linked services or routing ingredients from the group side, open the dedicated Service Groups page.') }}</p>
                     <p>{{ __('Each service opens as an accordion so the list stays compact while still exposing the current monitoring state, how long the service has been in that state, the latest reason, the last check time, the next check timer, rolling 30-day uptime, recent downtime incidents, and the full effective recipient breakdown when you expand a service.') }}</p>
-                    <p>{{ __('Downtime history records keep the start reason, latest reason, recovery reason, response codes, retry count, and timestamps so you can look back at what happened later.') }}</p>
-                    <p>{{ __('When a website can still be reached but the check fails, Is It Down can capture a screenshot of the page and store it against the downtime record. If Dave is enabled, the system can also store a short AI analysis of what the failure likely means.') }}</p>
+                    <p>{{ __('The latest reason panel now also shows the most recent stored screenshot for that service, along with any failed response headers captured during the current down state.') }}</p>
+                    <p>{{ __('Downtime history records keep the start reason, latest reason, recovery reason, response codes, failed response headers, and timestamps so you can look back at what happened later.') }}</p>
+                    <p>{{ __('When a failed response looks like Cloudflare protection or rate limiting, the recorded reason calls that out directly so temporary edge blocking is easier to distinguish from an origin outage.') }}</p>
+                    <p>{{ __('Whenever a website can still be reached, Is It Down can capture a fresh screenshot of the returned page. The latest screenshot is shown on the service, and each downtime record keeps its own most recent captured screenshot. If Dave is enabled, the system can also store a short AI analysis of what the failure likely means.') }}</p>
+                    <p>{{ __('Resolved downtime history older than roughly three months is pruned automatically so the database and stored screenshots do not grow without bound.') }}</p>
                     <p>{{ __('Recipients are only notified when a service changes state. A service that stays down will not keep sending repeated down alerts on every interval, but a recovery alert is sent once it comes back up and includes how long the outage lasted.') }}</p>
                     <p>{{ __('Editing a service scrolls the form back into view, and deleting a service asks for confirmation before it is removed.') }}</p>
                 </div>
@@ -164,7 +168,7 @@ new #[Title('User guide')] class extends Component {
                     <p>{{ __('If you close the chat and open it again later, or move to another page, the current conversation should stay available during the same browser session.') }}</p>
                     <p>{{ __('Standard users can use Dave for guidance about outages, monitoring state, downtime history, live website checks, and sending a test email to confirm the application mail settings are working.') }}</p>
                     <p>{{ __('Admins can additionally use Dave to create, edit, and delete users, recipients, and services when the request is clear enough to act on safely, and can send test emails to another address when needed.') }}</p>
-                    <p>{{ __('When a website outage is recorded and Dave is enabled, the system can ask Dave for a short explanation of the likely issue and include that summary in the downtime history and notifications.') }}</p>
+                    <p>{{ __('When a website outage is recorded and Dave is enabled, the system can ask Dave for a short explanation of the likely issue and include that summary in the downtime history and notifications. Dave now also resolves exact service, recipient, user, and template names case-insensitively.') }}</p>
                     <p>{{ __('If Dave cannot act because something is ambiguous or your account lacks permission, it should explain that clearly instead of pretending the change happened.') }}</p>
                 </div>
             </div>
@@ -175,7 +179,7 @@ new #[Title('User guide')] class extends Component {
                     <p>{{ __('The application now exposes a REST API under `/api/v1`, authenticated with bearer tokens generated from the API Keys page.') }}</p>
                     <p>{{ __('Read routes and write routes each require the matching API key permissions, and expired or revoked keys stop working immediately. The current REST API now includes service-template endpoints, downtime history endpoints, and also allows new services to start from a saved template.') }}</p>
                     <p>{{ __('Service and template payloads now support `additional_headers` and `ssl_expiry_notifications_enabled`, while recipient payloads also support `additional_headers` for outbound webhook customization.') }}</p>
-                    <p>{{ __('Service responses now include uptime and downtime context, and dedicated downtime-history endpoints expose incident timelines, screenshots, retry counts, and Dave summaries when available.') }}</p>
+                    <p>{{ __('Service responses now include uptime and downtime context, plus the latest stored screenshot and any failed response headers. Dedicated downtime-history endpoints expose incident timelines, screenshots, failed response headers, attempt counts, and Dave summaries when available.') }}</p>
                     <p>{{ __('Use the API Documentation page for the full endpoint reference and the API Playground page to test those endpoints against the current environment.') }}</p>
                 </div>
             </div>

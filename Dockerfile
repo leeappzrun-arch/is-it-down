@@ -40,10 +40,40 @@ ENV APACHE_DOCUMENT_ROOT=/var/www/html/public \
     LARAVEL_SCREENSHOT_DRIVER=browsershot \
     LARAVEL_SCREENSHOT_NODE_BINARY=/usr/bin/node \
     LARAVEL_SCREENSHOT_NODE_MODULES_PATH=/opt/browsershot/node_modules \
+    PUPPETEER_CACHE_DIR=/opt/browsershot/.cache/puppeteer \
     LARAVEL_SCREENSHOT_NO_SANDBOX=true
 
 RUN apt-get update \
-    && apt-get install -y libicu-dev libzip-dev libsqlite3-dev nodejs npm \
+    && apt-get install -y \
+        ca-certificates \
+        fonts-liberation \
+        libasound2 \
+        libatk-bridge2.0-0 \
+        libatk1.0-0 \
+        libcups2 \
+        libdbus-1-3 \
+        libdrm2 \
+        libgbm1 \
+        libgtk-3-0 \
+        libicu-dev \
+        libnspr4 \
+        libnss3 \
+        libsqlite3-dev \
+        libu2f-udev \
+        libvulkan1 \
+        libx11-6 \
+        libx11-xcb1 \
+        libxcb1 \
+        libxcomposite1 \
+        libxdamage1 \
+        libxext6 \
+        libxfixes3 \
+        libxkbcommon0 \
+        libxrandr2 \
+        libzip-dev \
+        nodejs \
+        npm \
+        xdg-utils \
     && docker-php-ext-install intl pdo_sqlite zip opcache \
     && a2enmod rewrite headers expires \
     && mkdir -p /opt/browsershot \
@@ -57,7 +87,7 @@ COPY --from=asset_builder /var/www/html /var/www/html
 COPY .env.docker /var/www/html/.env
 
 RUN chmod +x /var/www/html/docker-entrypoint.sh \
-    && chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/database
+    && chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/database /opt/browsershot
 
 VOLUME ["/var/www/html/database/data", "/var/www/html/storage/app/public"]
 

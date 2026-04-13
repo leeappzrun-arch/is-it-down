@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Monitoring\ResponseHeaderData;
 use Carbon\CarbonInterface;
 use Database\Factories\ServiceDowntimeFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -19,7 +20,9 @@ use Illuminate\Support\Facades\Storage;
     'latest_reason',
     'recovery_reason',
     'started_response_code',
+    'started_response_headers',
     'latest_response_code',
+    'latest_response_headers',
     'recovery_response_code',
     'last_checked_at',
     'last_check_attempts',
@@ -82,6 +85,26 @@ class ServiceDowntime extends Model
         }
 
         return Storage::disk((string) $this->screenshot_disk)->url((string) $this->screenshot_path);
+    }
+
+    /**
+     * Get the response headers captured when the downtime started.
+     *
+     * @return array<int, array{name: string, value: string}>
+     */
+    public function startedResponseHeaders(): array
+    {
+        return ResponseHeaderData::normalize($this->started_response_headers);
+    }
+
+    /**
+     * Get the latest response headers captured while the downtime was active.
+     *
+     * @return array<int, array{name: string, value: string}>
+     */
+    public function latestResponseHeaders(): array
+    {
+        return ResponseHeaderData::normalize($this->latest_response_headers);
     }
 
     /**
@@ -160,7 +183,9 @@ class ServiceDowntime extends Model
             'screenshot_captured_at' => 'datetime',
             'ai_summary_created_at' => 'datetime',
             'started_response_code' => 'integer',
+            'started_response_headers' => 'array',
             'latest_response_code' => 'integer',
+            'latest_response_headers' => 'array',
             'recovery_response_code' => 'integer',
             'last_check_attempts' => 'integer',
         ];

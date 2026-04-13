@@ -29,14 +29,51 @@ class ServiceMonitoringCommandTest extends TestCase
         parent::setUp();
 
         config()->set('services.monitoring.failure_retry_delay_seconds', 0);
+        config()->set('services.monitoring.schedule_jitter_max_seconds', 0);
 
         $this->mock(WebsiteScreenshotter::class, function (MockInterface $mock): void {
             $mock->shouldReceive('capture')->andReturn(null);
+            $mock->shouldReceive('storeLatestForService')->andReturn([
+                'disk' => 'public',
+                'path' => 'service-screenshots/service-1.png',
+            ])->byDefault();
+            $mock->shouldReceive('storeForDowntime')->andReturn([
+                'disk' => 'public',
+                'path' => 'downtime-screenshots/service-1-downtime-1.png',
+            ])->byDefault();
         });
 
         $this->mock(OutageAnalyzer::class, function (MockInterface $mock): void {
             $mock->shouldReceive('analyze')->andReturn(null);
         });
+    }
+
+    public function test_monitoring_command_sends_browser_like_default_headers_with_the_service_check(): void
+    {
+        Http::preventStrayRequests();
+
+        config()->set('services.monitoring.default_request_headers', [
+            'Accept' => 'text/html,*/*;q=0.8',
+            'Accept-Language' => 'en-GB,en;q=0.9',
+            'User-Agent' => 'IsItDownTest/1.0',
+        ]);
+
+        $service = Service::factory()->create([
+            'name' => 'Docs Site',
+            'url' => 'https://docs.example.com',
+        ]);
+
+        Http::fake([
+            'https://docs.example.com' => function ($request) {
+                $this->assertSame('text/html,*/*;q=0.8', $request->header('Accept')[0] ?? null);
+                $this->assertSame('en-GB,en;q=0.9', $request->header('Accept-Language')[0] ?? null);
+                $this->assertSame('IsItDownTest/1.0', $request->header('User-Agent')[0] ?? null);
+
+                return Http::response('All systems operational', 200);
+            },
+        ]);
+
+        $this->artisan('monitor:services')->assertSuccessful();
     }
 
     public function test_monitoring_command_sends_configured_additional_headers_with_the_service_check(): void
@@ -64,6 +101,68 @@ class ServiceMonitoringCommandTest extends TestCase
         ]);
 
         $this->artisan('monitor:services')->assertSuccessful();
+    }
+
+    public function test_monitoring_command_applies_positive_schedule_jitter_when_configured(): void
+    {
+        Http::preventStrayRequests();
+
+        config()->set('services.monitoring.schedule_jitter_max_seconds', 15);
+
+        $checkedAt = CarbonImmutable::parse('2026-04-04 10:21:00');
+
+        $this->travelTo($checkedAt);
+
+        $service = Service::factory()->create([
+            'name' => 'Portal',
+            'url' => 'https://portal.example.com/health',
+            'interval_seconds' => Service::INTERVAL_1_MINUTE,
+        ]);
+
+        Http::fake([
+            'https://portal.example.com/health' => Http::response('Healthy', 200),
+        ]);
+
+        $this->artisan('monitor:services')->assertSuccessful();
+
+        $service->refresh();
+
+        $this->assertNotNull($service->next_check_at);
+        $this->assertTrue($service->next_check_at->greaterThanOrEqualTo($checkedAt->addMinute()));
+        $this->assertTrue($service->next_check_at->lessThanOrEqualTo($checkedAt->addMinute()->addSeconds(15)));
+    }
+
+    public function test_monitoring_command_refreshes_the_latest_service_screenshot_for_successful_checks(): void
+    {
+        Http::preventStrayRequests();
+
+        $checkedAt = CarbonImmutable::parse('2026-04-04 10:22:00');
+
+        $this->travelTo($checkedAt);
+
+        $this->mock(WebsiteScreenshotter::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('capture')->once()->andReturn('fresh-png-bytes');
+            $mock->shouldReceive('storeLatestForService')->once()->andReturn([
+                'disk' => 'public',
+                'path' => 'service-screenshots/service-1.png',
+            ]);
+        });
+
+        $service = Service::factory()->create([
+            'name' => 'Healthy Site',
+            'url' => 'https://healthy.example.com',
+        ]);
+
+        Http::fake([
+            'https://healthy.example.com' => Http::response('All good', 200),
+        ]);
+
+        $this->artisan('monitor:services')->assertSuccessful();
+
+        $service->refresh();
+
+        $this->assertSame('service-screenshots/service-1.png', $service->last_screenshot_path);
+        $this->assertNotNull($service->last_screenshot_captured_at);
     }
 
     public function test_monitoring_command_retries_once_before_marking_a_service_down(): void
@@ -98,7 +197,7 @@ class ServiceMonitoringCommandTest extends TestCase
         $service->refresh();
 
         $this->assertSame(Service::STATUS_UP, $service->current_status);
-        $this->assertStringContainsString('The first check failed, but the service recovered after retrying immediately.', $service->last_check_reason);
+        $this->assertSame('Received an HTTP 200 response.', $service->last_check_reason);
         $this->assertDatabaseCount('service_downtimes', 0);
         Mail::assertNothingSent();
     }
@@ -133,13 +232,13 @@ class ServiceMonitoringCommandTest extends TestCase
         $service->refresh();
 
         $this->assertSame(Service::STATUS_DOWN, $service->current_status);
-        $this->assertSame('The service still appeared down after retrying immediately. Response body did not contain the expected text.', $service->last_check_reason);
+        $this->assertSame('Response body did not contain the expected text.', $service->last_check_reason);
         $this->assertSame(200, $service->last_response_code);
         $this->assertSame($checkedAt->addMinute()->toDateTimeString(), $service->next_check_at?->toDateTimeString());
         $this->assertDatabaseHas('service_downtimes', [
             'service_id' => $service->id,
-            'started_reason' => 'The service still appeared down after retrying immediately. Response body did not contain the expected text.',
-            'latest_reason' => 'The service still appeared down after retrying immediately. Response body did not contain the expected text.',
+            'started_reason' => 'Response body did not contain the expected text.',
+            'latest_reason' => 'Response body did not contain the expected text.',
             'ended_at' => null,
         ]);
 
@@ -164,7 +263,7 @@ class ServiceMonitoringCommandTest extends TestCase
         $service->refresh();
 
         $this->assertSame(Service::STATUS_DOWN, $service->current_status);
-        $this->assertSame('The service still appeared down after retrying immediately. Response body did not contain the expected text.', $service->last_check_reason);
+        $this->assertSame('Response body did not contain the expected text.', $service->last_check_reason);
         $this->assertSame($checkedAt->addMinutes(2)->addSecond()->toDateTimeString(), $service->next_check_at?->toDateTimeString());
 
         Mail::assertSent(ServiceStatusChangedMail::class, 1);
@@ -199,8 +298,11 @@ class ServiceMonitoringCommandTest extends TestCase
         $downtime = ServiceDowntime::factory()->ongoing()->create([
             'service_id' => $service->id,
             'started_at' => $checkedAt->subMinute(),
-            'started_reason' => 'The service still appeared down after retrying immediately. Response body did not contain the expected text.',
-            'latest_reason' => 'The service still appeared down after retrying immediately. Response body did not contain the expected text.',
+            'started_reason' => 'Response body did not contain the expected text.',
+            'latest_reason' => 'Response body did not contain the expected text.',
+            'latest_response_headers' => [
+                ['name' => 'Content-Type', 'value' => 'text/html; charset=UTF-8'],
+            ],
         ]);
 
         Http::fake([
@@ -225,7 +327,9 @@ class ServiceMonitoringCommandTest extends TestCase
                 && $mail->currentStatus === Service::STATUS_UP
                 && $mail->envelope()->subject === '['.config('app.name').'] It Is Up!: '.$service->name
                 && $mail->downtime?->durationSummary($mail->downtime->ended_at) === '1 minute'
-                && str_contains($rendered, 'Downtime:</strong> 1 minute');
+                && str_contains($rendered, 'Downtime:</strong> 1 minute')
+                && str_contains($rendered, 'href="https://status.example.com"')
+                && str_contains($rendered, 'Content-Type');
         });
     }
 
@@ -295,9 +399,14 @@ class ServiceMonitoringCommandTest extends TestCase
         $this->travelTo($checkedAt);
 
         $this->mock(WebsiteScreenshotter::class, function (MockInterface $mock): void {
-            $mock->shouldReceive('capture')->once()->andReturn([
+            $mock->shouldReceive('capture')->once()->andReturn('fake-png-bytes');
+            $mock->shouldReceive('storeLatestForService')->once()->andReturn([
                 'disk' => 'public',
-                'path' => 'downtime-screenshots/billing-api.png',
+                'path' => 'service-screenshots/service-1.png',
+            ]);
+            $mock->shouldReceive('storeForDowntime')->once()->andReturn([
+                'disk' => 'public',
+                'path' => 'downtime-screenshots/service-1-downtime-1.png',
             ]);
         });
 
@@ -325,8 +434,8 @@ class ServiceMonitoringCommandTest extends TestCase
 
         Http::fake([
             'https://billing.example.com/status' => Http::sequence()
-                ->push('Server error', 503)
-                ->push('Server error', 503),
+                ->push('Server error', 503, ['Content-Type' => 'text/plain'])
+                ->push('Server error', 503, ['Content-Type' => 'text/plain']),
             'https://hooks.example.com/ops' => function ($request) {
                 $payload = json_decode($request->body(), true);
 
@@ -334,8 +443,10 @@ class ServiceMonitoringCommandTest extends TestCase
                 $this->assertSame('operations', $request->header('X-Recipient')[0] ?? null);
                 $this->assertSame('Billing API', $payload['service']['name'] ?? null);
                 $this->assertSame('down', $payload['status'] ?? null);
+                $this->assertSame('Content-Type', $payload['response_headers'][0]['name'] ?? null);
                 $this->assertSame('The upstream returned repeated 503 responses, which suggests server-side maintenance or an outage.', $payload['downtime']['ai_summary'] ?? null);
-                $this->assertStringContainsString('/storage/downtime-screenshots/billing-api.png', $payload['downtime']['screenshot_url'] ?? '');
+                $this->assertStringContainsString('/storage/downtime-screenshots/service-1-downtime-1.png', $payload['downtime']['screenshot_url'] ?? '');
+                $this->assertSame('Content-Type', $payload['downtime']['latest_response_headers'][0]['name'] ?? null);
 
                 return Http::response(['accepted' => true], 200);
             },
@@ -345,8 +456,61 @@ class ServiceMonitoringCommandTest extends TestCase
 
         $this->assertDatabaseHas('service_downtimes', [
             'service_id' => $service->id,
-            'screenshot_path' => 'downtime-screenshots/billing-api.png',
+            'screenshot_path' => 'downtime-screenshots/service-1-downtime-1.png',
         ]);
+    }
+
+    public function test_monitoring_command_labels_cloudflare_rate_limits_clearly(): void
+    {
+        Mail::fake();
+        Http::preventStrayRequests();
+
+        $checkedAt = CarbonImmutable::parse('2026-04-04 11:20:00');
+
+        $this->travelTo($checkedAt);
+
+        $recipient = Recipient::factory()->mail()->create([
+            'endpoint' => 'mailto://ops@example.com',
+        ]);
+
+        $service = Service::factory()->currentlyUp()->create([
+            'name' => 'Customer Portal',
+            'url' => 'https://portal.example.com/health',
+            'next_check_at' => $checkedAt,
+        ]);
+
+        $service->recipients()->sync([$recipient->id]);
+
+        Http::fake([
+            'https://portal.example.com/health' => Http::sequence()
+                ->push('Too many requests', 429, [
+                    'Server' => 'cloudflare',
+                    'CF-Ray' => 'abc123-lhr',
+                    'Retry-After' => '120',
+                ])
+                ->push('Too many requests', 429, [
+                    'Server' => 'cloudflare',
+                    'CF-Ray' => 'abc123-lhr',
+                    'Retry-After' => '120',
+                ]),
+        ]);
+
+        $this->artisan('monitor:services')->assertSuccessful();
+
+        $service->refresh();
+
+        $this->assertSame(Service::STATUS_DOWN, $service->current_status);
+        $this->assertSame(
+            'Cloudflare rate limited the monitor request with HTTP 429 Too Many Requests. This often indicates temporary protection rather than a real outage.',
+            $service->last_check_reason,
+        );
+        $this->assertTrue(collect($service->last_response_headers)->contains(
+            fn (array $header): bool => ($header['name'] ?? null) === 'Retry-After' && ($header['value'] ?? null) === '120',
+        ));
+
+        Mail::assertSent(ServiceStatusChangedMail::class, function (ServiceStatusChangedMail $mail): bool {
+            return str_contains($mail->render(), 'Cloudflare rate limited the monitor request');
+        });
     }
 
     public function test_monitoring_command_includes_downtime_in_recovery_webhook_payloads(): void
@@ -377,8 +541,8 @@ class ServiceMonitoringCommandTest extends TestCase
         ServiceDowntime::factory()->ongoing()->create([
             'service_id' => $service->id,
             'started_at' => $checkedAt->subMinutes(2),
-            'started_reason' => 'The service still appeared down after retrying immediately. Response body did not contain the expected text.',
-            'latest_reason' => 'The service still appeared down after retrying immediately. Response body did not contain the expected text.',
+            'started_reason' => 'Response body did not contain the expected text.',
+            'latest_reason' => 'Response body did not contain the expected text.',
         ]);
 
         Http::fake([

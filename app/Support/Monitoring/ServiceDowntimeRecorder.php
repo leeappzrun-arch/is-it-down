@@ -22,6 +22,10 @@ class ServiceDowntimeRecorder
         ServiceCheckResult $result,
         CarbonInterface $checkedAt,
     ): ?ServiceDowntime {
+        if ($result->connectionSucceeded && $result->status === Service::STATUS_UP && $previousStatus !== Service::STATUS_DOWN) {
+            $this->storeLatestServiceScreenshot($service, $checkedAt);
+        }
+
         if ($result->status === Service::STATUS_DOWN) {
             return $this->recordDowntime($service, $previousStatus, $result, $checkedAt);
         }
@@ -53,7 +57,9 @@ class ServiceDowntimeRecorder
                 'started_reason' => $result->reason,
                 'latest_reason' => $result->reason,
                 'started_response_code' => $result->responseCode,
+                'started_response_headers' => $result->responseHeaders === [] ? null : $result->responseHeaders,
                 'latest_response_code' => $result->responseCode,
+                'latest_response_headers' => $result->responseHeaders === [] ? null : $result->responseHeaders,
                 'last_checked_at' => $checkedAt,
                 'last_check_attempts' => $result->attemptCount,
             ]);
@@ -61,18 +67,21 @@ class ServiceDowntimeRecorder
             $downtime->forceFill([
                 'latest_reason' => $result->reason,
                 'latest_response_code' => $result->responseCode,
+                'latest_response_headers' => $result->responseHeaders === [] ? null : $result->responseHeaders,
                 'last_checked_at' => $checkedAt,
                 'last_check_attempts' => $result->attemptCount,
             ])->save();
         }
 
-        if (! $downtime->hasScreenshot() && $result->connectionSucceeded) {
-            $capture = $this->websiteScreenshotter->capture($service, $downtime);
+        if ($result->connectionSucceeded) {
+            $pngContents = $this->storeLatestServiceScreenshot($service, $checkedAt);
 
-            if ($capture !== null) {
+            if ($pngContents !== null) {
+                $downtimeCapture = $this->websiteScreenshotter->storeForDowntime($service, $downtime, $pngContents);
+
                 $downtime->forceFill([
-                    'screenshot_disk' => $capture['disk'],
-                    'screenshot_path' => $capture['path'],
+                    'screenshot_disk' => $downtimeCapture['disk'],
+                    'screenshot_path' => $downtimeCapture['path'],
                     'screenshot_captured_at' => $checkedAt,
                 ])->save();
             }
@@ -106,6 +115,10 @@ class ServiceDowntimeRecorder
             return null;
         }
 
+        if ($result->connectionSucceeded) {
+            $this->storeLatestServiceScreenshot($service, $checkedAt);
+        }
+
         $downtime->forceFill([
             'ended_at' => $checkedAt,
             'recovery_reason' => $result->reason,
@@ -113,5 +126,27 @@ class ServiceDowntimeRecorder
         ])->save();
 
         return $downtime->fresh();
+    }
+
+    /**
+     * Capture and store the latest screenshot for the service.
+     */
+    private function storeLatestServiceScreenshot(Service $service, CarbonInterface $checkedAt): ?string
+    {
+        $pngContents = $this->websiteScreenshotter->capture($service);
+
+        if ($pngContents === null) {
+            return null;
+        }
+
+        $latestServiceCapture = $this->websiteScreenshotter->storeLatestForService($service, $pngContents);
+
+        $service->forceFill([
+            'last_screenshot_disk' => $latestServiceCapture['disk'],
+            'last_screenshot_path' => $latestServiceCapture['path'],
+            'last_screenshot_captured_at' => $checkedAt,
+        ])->save();
+
+        return $pngContents;
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Monitoring\ResponseHeaderData;
 use App\Support\Services\ServiceData;
 use Carbon\CarbonInterface;
 use Database\Factories\ServiceFactory;
@@ -12,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 #[Fillable([
@@ -22,6 +24,10 @@ use Illuminate\Support\Str;
     'expect_value',
     'additional_headers',
     'ssl_expiry_notifications_enabled',
+    'last_response_headers',
+    'last_screenshot_disk',
+    'last_screenshot_path',
+    'last_screenshot_captured_at',
 ])]
 class Service extends Model
 {
@@ -130,10 +136,12 @@ class Service extends Model
             'additional_headers' => 'array',
             'ssl_expiry_notifications_enabled' => 'boolean',
             'last_response_code' => 'integer',
+            'last_response_headers' => 'array',
             'last_checked_at' => 'datetime',
             'next_check_at' => 'datetime',
             'last_status_changed_at' => 'datetime',
             'last_ssl_expiry_notification_sent_at' => 'datetime',
+            'last_screenshot_captured_at' => 'datetime',
         ];
     }
 
@@ -193,6 +201,44 @@ class Service extends Model
         }
 
         return trim(trans_choice('{1} :count additional header|[2,*] :count additional headers', $headerCount, ['count' => $headerCount]));
+    }
+
+    /**
+     * Get the latest failed response headers captured for the service.
+     *
+     * @return array<int, array{name: string, value: string}>
+     */
+    public function lastResponseHeaders(): array
+    {
+        return ResponseHeaderData::normalize($this->last_response_headers);
+    }
+
+    /**
+     * Determine whether failed response headers are stored for the service.
+     */
+    public function hasLastResponseHeaders(): bool
+    {
+        return $this->lastResponseHeaders() !== [];
+    }
+
+    /**
+     * Determine whether a latest screenshot is stored for the service.
+     */
+    public function hasLatestScreenshot(): bool
+    {
+        return filled($this->last_screenshot_disk) && filled($this->last_screenshot_path);
+    }
+
+    /**
+     * Get the public URL for the latest stored screenshot.
+     */
+    public function latestScreenshotUrl(): ?string
+    {
+        if (! $this->hasLatestScreenshot()) {
+            return null;
+        }
+
+        return Storage::disk((string) $this->last_screenshot_disk)->url((string) $this->last_screenshot_path);
     }
 
     /**

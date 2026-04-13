@@ -205,6 +205,59 @@ class AiAssistantWidgetTest extends TestCase
             ->assertSet('messages.2.content', 'Billing API is currently down and the latest check received HTTP 503.');
     }
 
+    public function test_ai_tools_resolve_exact_service_names_case_insensitively(): void
+    {
+        $user = User::factory()->create();
+
+        Service::factory()->currentlyDown()->create([
+            'name' => 'Billing API',
+            'url' => 'https://billing.example.com',
+            'last_check_reason' => 'Expected HTTP 200 response but received 503.',
+            'last_status_changed_at' => now()->subMinutes(5),
+        ]);
+
+        AiAssistantSetting::factory()->configured()->create([
+            'settings_key' => AiAssistantSetting::DEFAULT_SETTINGS_KEY,
+        ]);
+
+        Http::fake([
+            'https://api.openai.com/v1/chat/completions' => Http::sequence()
+                ->push([
+                    'choices' => [[
+                        'message' => [
+                            'role' => 'assistant',
+                            'content' => '',
+                            'tool_calls' => [[
+                                'id' => 'call_inspect_service_lowercase',
+                                'type' => 'function',
+                                'function' => [
+                                    'name' => 'inspect_service',
+                                    'arguments' => json_encode([
+                                        'identifier' => 'billing api',
+                                    ]),
+                                ],
+                            ]],
+                        ],
+                    ]],
+                ])
+                ->push([
+                    'choices' => [[
+                        'message' => [
+                            'role' => 'assistant',
+                            'content' => 'I found Billing API even though you used lowercase.',
+                        ],
+                    ]],
+                ]),
+        ]);
+
+        $this->actingAs($user);
+
+        Livewire::test(Widget::class)
+            ->set('draft', 'Why is billing api down?')
+            ->call('sendMessage')
+            ->assertSet('messages.2.content', 'I found Billing API even though you used lowercase.');
+    }
+
     public function test_admin_users_can_create_a_service_from_a_template_through_the_ai_widget(): void
     {
         $admin = User::factory()->admin()->create();

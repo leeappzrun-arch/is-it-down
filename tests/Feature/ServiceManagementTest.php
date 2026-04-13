@@ -10,6 +10,7 @@ use App\Models\ServiceGroup;
 use App\Models\ServiceTemplate;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -351,5 +352,32 @@ class ServiceManagementTest extends TestCase
         $response->assertSeeText('Downtime history');
         $response->assertSeeText('The upstream likely experienced a short maintenance window.');
         $response->assertSeeText('Recovered after 15 minutes');
+    }
+
+    public function test_service_page_shows_the_latest_screenshot_and_failed_response_headers(): void
+    {
+        Storage::fake('public');
+
+        $admin = User::factory()->admin()->create();
+        $service = Service::factory()->currentlyDown()->create([
+            'name' => 'Billing API',
+            'url' => 'https://billing.example.com/status',
+            'last_check_reason' => 'Expected HTTP 200 response but received 503.',
+            'last_response_headers' => [
+                ['name' => 'Content-Type', 'value' => 'text/html; charset=UTF-8'],
+                ['name' => 'Server', 'value' => 'nginx'],
+            ],
+            'last_screenshot_disk' => 'public',
+            'last_screenshot_path' => 'service-screenshots/service-1.png',
+            'last_screenshot_captured_at' => now()->subMinute(),
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('services.index'));
+
+        $response->assertOk();
+        $response->assertSeeText('Latest screenshot');
+        $response->assertSeeText('Failed response headers');
+        $response->assertSeeText('Content-Type');
+        $response->assertSeeText('nginx');
     }
 }

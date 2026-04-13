@@ -144,6 +144,9 @@ class SystemApiTest extends TestCase
             'service_id' => $service->id,
             'started_at' => now()->subMinutes(10),
             'ended_at' => now()->subMinutes(5),
+            'latest_response_headers' => [
+                ['name' => 'Content-Type', 'value' => 'text/plain'],
+            ],
             'ai_summary' => 'The upstream returned 503 responses.',
         ]);
 
@@ -153,12 +156,14 @@ class SystemApiTest extends TestCase
             ->getJson('/api/v1/services/'.$service->id.'/downtimes?status=resolved')
             ->assertOk()
             ->assertJsonPath('data.0.id', $downtime->id)
+            ->assertJsonPath('data.0.latest_response_headers.0.name', 'Content-Type')
             ->assertJsonPath('data.0.ai_summary', 'The upstream returned 503 responses.');
 
         $this->withToken($token)
             ->getJson('/api/v1/service-downtimes/'.$downtime->id)
             ->assertOk()
-            ->assertJsonPath('data.service.name', 'Billing API');
+            ->assertJsonPath('data.service.name', 'Billing API')
+            ->assertJsonPath('data.latest_response_headers.0.value', 'text/plain');
 
         $forbiddenToken = $this->issueApiKey($admin, ['services:read']);
 
@@ -225,6 +230,11 @@ class SystemApiTest extends TestCase
             'url' => 'https://example.com/status',
             'expect_type' => Service::EXPECT_TEXT,
             'expect_value' => 'Healthy',
+            'last_response_headers' => [
+                ['name' => 'Content-Type', 'value' => 'text/plain'],
+            ],
+            'last_screenshot_disk' => 'public',
+            'last_screenshot_path' => 'service-screenshots/service-1.png',
         ]);
         $service->groups()->sync([$serviceGroup->id]);
         $service->recipientGroups()->sync([$recipientGroup->id]);
@@ -255,7 +265,9 @@ class SystemApiTest extends TestCase
         $this->withToken($token)
             ->getJson('/api/v1/services?search=Marketing&status=down&service_group_id='.$serviceGroup->id.'&recipient_group_id='.$recipientGroup->id.'&recipient_id='.$recipient->id)
             ->assertOk()
-            ->assertJsonPath('data.0.name', 'Marketing Site');
+            ->assertJsonPath('data.0.name', 'Marketing Site')
+            ->assertJsonPath('data.0.last_response_headers.0.name', 'Content-Type')
+            ->assertJsonPath('data.0.latest_screenshot_url', '/storage/service-screenshots/service-1.png');
 
         $this->withToken($token)
             ->postJson('/api/v1/services', [

@@ -61,12 +61,16 @@ Is It Down is a Laravel 13 and Livewire 4 application for managing monitored ser
 - Open the Service Groups page when you want to manage service-group membership and routing from the group side.
 - Track the latest monitoring status, how long the service has been in that state, the last reason, the last check time, and a live next-check timer from the Services page.
 - Mark a service as down when the response is not HTTP 200 or when a configured text or regex expectation does not match the response body.
-- Retry one failed check after a short pause before classifying the service as down, which helps reduce false positives caused by brief network or origin blips.
+- Confirm one failed check before classifying the service as down, which helps reduce false positives caused by brief network or origin blips.
+- Send browser-like default headers with monitoring requests and optionally add small scheduling jitter so protected origins are less likely to treat checks as bot bursts.
 - Notify assigned recipients only when the service changes state, so repeated down checks do not resend the same alert until the service recovers.
-- Record downtime incidents with start and recovery reasons, response codes, retry attempt counts, screenshots, and optional Dave-generated outage analysis.
+- Record downtime incidents with start and recovery reasons, response codes, failed response headers, screenshots, and optional Dave-generated outage analysis.
+- Refresh the service-level latest screenshot on every successful connection and show it inline on the Services page.
+- Prune resolved downtime history and stored downtime screenshots automatically after the retention window.
 - Show 30-day uptime percentages plus recent downtime history directly on the Services page and the dashboard.
 - Deliver email alerts to `mailto://` recipients and JSON payloads to `webhook://` recipients using the authentication method saved on each webhook recipient.
-- Include structured downtime context in status-change notifications so emails and webhook consumers can see outage duration, screenshots, and AI analysis when available.
+- Include structured downtime context in status-change notifications so emails and webhook consumers can see outage duration, screenshots, failed response headers, and AI analysis when available.
+- Flag likely Cloudflare challenges or rate limits with clearer monitoring reasons so temporary protection events are easier to distinguish from origin outages.
 - Email all admin users if any webhook delivery fails during a status-change notification.
 - Review the effective recipients for a service, including whether each route is direct, comes from a recipient group, or is inherited through a service group.
 
@@ -114,6 +118,7 @@ Is It Down is a Laravel 13 and Livewire 4 application for managing monitored ser
 - Standard users can ask Dave for help with monitoring and outage questions, inspect downtime history, run a live website check, and send a test email to themselves.
 - Admins can also ask Dave to create, update, and delete users, recipients, and services, and can send mail-setting test messages to another target email address when needed.
 - When Dave is enabled and a website-style check fails after connecting successfully, the monitoring flow can ask Dave for a short explanation of what the failure might mean and include that in notifications and downtime records.
+- Dave resolves exact service, recipient, user, and template identifiers case-insensitively.
 - The assistant rules and management tool guidance are centralized in `app/Support/AiAssistant/AiAssistantRules.php` and `app/Support/AiAssistant/AiAssistantToolExecutor.php`, which should be updated when new features or management flows are added.
 
 ### REST API
@@ -131,8 +136,8 @@ Is It Down is a Laravel 13 and Livewire 4 application for managing monitored ser
 - Services can be created from a saved service template by passing a template id or exact template name together with the URL and any optional overrides.
 - Service and template payloads support `additional_headers` plus `ssl_expiry_notifications_enabled` so integrations can manage custom check headers and SSL warning behavior.
 - Recipient payloads support `additional_headers` so webhook consumers can receive custom headers without hard-coding them elsewhere.
-- Service responses now expose uptime history metadata, current downtime details, and recent downtime incidents.
-- Downtime history endpoints expose screenshots, retry counts, and Dave outage summaries for integrations.
+- Service responses now expose uptime history metadata, current downtime details, recent downtime incidents, the latest screenshot URL, and failed response headers.
+- Downtime history endpoints expose screenshots, failed response headers, attempt counts, and Dave outage summaries for integrations.
 
 ### In-app documentation
 
@@ -177,6 +182,7 @@ Release tags also publish versioned images. For example, pushing Git tag `v1.2.3
 
 The image already includes a production `.env` with non-sensitive defaults for the app name, production mode, SQLite, database-backed sessions/cache/queue, stderr logging, and the scheduler loop. Any values you pass from your own Compose `.env` file override those baked-in defaults.
 The runtime image also declares `/var/www/html/database/data` and `/var/www/html/storage/app/public` as Docker volumes, so SQLite data, the generated `app.key`, and captured downtime screenshots survive ordinary container recreation during image updates. Using your own bind mounts or named volumes is still recommended so you control where that data lives.
+The runtime image also installs the headless-browser libraries and shared Puppeteer cache path used by monitoring screenshots, so website screenshots continue to work after deployment without requiring a separate Chrome sidecar.
 
 If the app sits behind Cloudflare Tunnel, Zero Trust, or another reverse proxy that terminates HTTPS before the container, keep `APP_URL` set to the public `https://...` address. The application trusts standard forwarded proxy headers so Livewire update requests, generated URLs, and redirects continue to use HTTPS.
 
@@ -218,8 +224,18 @@ INITIAL_ADMIN_EMAIL=admin@example.com
 INITIAL_ADMIN_PASSWORD=change-this-password
 
 MONITORING_FAILURE_RETRY_DELAY_SECONDS=3
+MONITORING_REQUEST_ACCEPT=text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8
+MONITORING_REQUEST_ACCEPT_LANGUAGE=en-GB,en-US;q=0.9,en;q=0.8
+MONITORING_REQUEST_CACHE_CONTROL=no-cache
+MONITORING_REQUEST_PRAGMA=no-cache
+MONITORING_REQUEST_UPGRADE_INSECURE_REQUESTS=1
+MONITORING_REQUEST_USER_AGENT="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36"
+MONITORING_SCHEDULE_JITTER_MAX_SECONDS=10
 MONITORING_DOWNTIME_SCREENSHOT_DISK=public
 MONITORING_DOWNTIME_SCREENSHOT_DIRECTORY=downtime-screenshots
+MONITORING_LATEST_SERVICE_SCREENSHOT_DIRECTORY=service-screenshots
+MONITORING_DOWNTIME_HISTORY_RETENTION_DAYS=90
+MONITORING_SCREENSHOT_TIMEOUT_SECONDS=30
 ```
 
 Then start the application with:
@@ -241,6 +257,7 @@ To change the public port, update `APP_PORT` in your `.env` file.
 
 To move the persistent data somewhere else on the host, update `APP_DATA_DIR`.
 To store captured downtime screenshots somewhere else on the host, update `APP_STORAGE_DIR`.
+If Cloudflare or another edge service occasionally rate limits your checks, keep the browser-like `MONITORING_REQUEST_*` headers in place, consider increasing each affected service interval, and use `MONITORING_SCHEDULE_JITTER_MAX_SECONDS` so checks do not all land on the same second.
 To stay on a fixed release instead of tracking new builds, change the image tag in `docker-compose.yml`, for example:
 
 ```yaml

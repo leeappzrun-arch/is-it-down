@@ -3,6 +3,7 @@
 namespace App\Support\Monitoring;
 
 use App\Models\Service;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Throwable;
@@ -27,29 +28,15 @@ class ServiceMonitor
         $this->pause->pause();
 
         $secondAttempt = $this->performCheck($service);
-        $delaySeconds = max(0, (int) config('services.monitoring.failure_retry_delay_seconds', 3));
-        $retrySummary = $delaySeconds > 0
-            ? ' after retrying '.$delaySeconds.' seconds later'
-            : ' after retrying immediately';
-
-        if ($secondAttempt->status === Service::STATUS_UP) {
-            return new ServiceCheckResult(
-                status: Service::STATUS_UP,
-                reason: 'The first check failed, but the service recovered'.$retrySummary.'. '.$secondAttempt->reason,
-                responseCode: $secondAttempt->responseCode,
-                bodyExcerpt: $secondAttempt->bodyExcerpt,
-                connectionSucceeded: $secondAttempt->connectionSucceeded,
-                attemptCount: 2,
-            );
-        }
 
         return new ServiceCheckResult(
-            status: Service::STATUS_DOWN,
-            reason: 'The service still appeared down'.$retrySummary.'. '.$secondAttempt->reason,
+            status: $secondAttempt->status,
+            reason: $secondAttempt->reason,
             responseCode: $secondAttempt->responseCode,
             bodyExcerpt: $secondAttempt->bodyExcerpt,
             connectionSucceeded: $secondAttempt->connectionSucceeded,
             attemptCount: 2,
+            responseHeaders: $secondAttempt->responseHeaders,
         );
     }
 
@@ -59,7 +46,7 @@ class ServiceMonitor
     private function performCheck(Service $service): ServiceCheckResult
     {
         try {
-            $request = Http::accept('*/*')
+            $request = Http::withHeaders($this->defaultRequestHeaders())
                 ->connectTimeout(5)
                 ->timeout(10);
 
@@ -78,14 +65,16 @@ class ServiceMonitor
 
         $body = $response->body();
         $bodyExcerpt = Str::limit(trim(strip_tags($body)), 500);
+        $responseHeaders = ResponseHeaderData::normalize($response->headers());
 
         if ($response->status() !== 200) {
             return new ServiceCheckResult(
                 status: Service::STATUS_DOWN,
-                reason: 'Expected HTTP 200 response but received '.$response->status().'.',
+                reason: $this->failureReason($response, $responseHeaders, $body),
                 responseCode: $response->status(),
                 bodyExcerpt: $bodyExcerpt !== '' ? $bodyExcerpt : null,
                 connectionSucceeded: true,
+                responseHeaders: $responseHeaders,
             );
         }
 
@@ -96,6 +85,7 @@ class ServiceMonitor
                 responseCode: $response->status(),
                 bodyExcerpt: $bodyExcerpt !== '' ? $bodyExcerpt : null,
                 connectionSucceeded: true,
+                responseHeaders: $responseHeaders,
             );
         }
 
@@ -107,6 +97,7 @@ class ServiceMonitor
                     responseCode: $response->status(),
                     bodyExcerpt: $bodyExcerpt !== '' ? $bodyExcerpt : null,
                     connectionSucceeded: true,
+                    responseHeaders: $responseHeaders,
                 );
             }
 
@@ -116,6 +107,7 @@ class ServiceMonitor
                 responseCode: $response->status(),
                 bodyExcerpt: $bodyExcerpt !== '' ? $bodyExcerpt : null,
                 connectionSucceeded: true,
+                responseHeaders: $responseHeaders,
             );
         }
 
@@ -129,6 +121,7 @@ class ServiceMonitor
                     responseCode: $response->status(),
                     bodyExcerpt: $bodyExcerpt !== '' ? $bodyExcerpt : null,
                     connectionSucceeded: true,
+                    responseHeaders: $responseHeaders,
                 );
             }
 
@@ -139,6 +132,7 @@ class ServiceMonitor
                     responseCode: $response->status(),
                     bodyExcerpt: $bodyExcerpt !== '' ? $bodyExcerpt : null,
                     connectionSucceeded: true,
+                    responseHeaders: $responseHeaders,
                 );
             }
 
@@ -148,6 +142,7 @@ class ServiceMonitor
                 responseCode: $response->status(),
                 bodyExcerpt: $bodyExcerpt !== '' ? $bodyExcerpt : null,
                 connectionSucceeded: true,
+                responseHeaders: $responseHeaders,
             );
         }
 
@@ -157,6 +152,138 @@ class ServiceMonitor
             responseCode: $response->status(),
             bodyExcerpt: $bodyExcerpt !== '' ? $bodyExcerpt : null,
             connectionSucceeded: true,
+            responseHeaders: $responseHeaders,
         );
+    }
+
+    /**
+     * Resolve the default headers used for all monitoring requests.
+     *
+     * @return array<string, string>
+     */
+    private function defaultRequestHeaders(): array
+    {
+        return collect(config('services.monitoring.default_request_headers', []))
+            ->filter(fn (mixed $value): bool => is_string($value) && trim($value) !== '')
+            ->map(fn (string $value): string => trim($value))
+            ->all();
+    }
+
+    /**
+     * Build the down reason for a non-200 response.
+     *
+     * @param  array<int, array{name: string, value: string}>  $responseHeaders
+     */
+    private function failureReason(Response $response, array $responseHeaders, string $body): string
+    {
+        if ($this->looksLikeCloudflareProtection($response, $responseHeaders, $body)) {
+            return match ($response->status()) {
+                429 => 'Cloudflare rate limited the monitor request with HTTP 429 Too Many Requests. This often indicates temporary protection rather than a real outage.',
+                403 => 'Cloudflare blocked or challenged the monitor request with HTTP 403 Forbidden. This often indicates bot protection rather than a real outage.',
+                default => 'Cloudflare intercepted the monitor request with HTTP '.$this->statusSummary($response->status()).'. This may indicate temporary protection or rate limiting rather than a real outage.',
+            };
+        }
+
+        if ($this->looksRateLimited($response, $responseHeaders, $body)) {
+            return match ($response->status()) {
+                429 => 'The service rate limited the monitor request with HTTP 429 Too Many Requests.',
+                default => 'The service appears to have rate limited the monitor request with HTTP '.$this->statusSummary($response->status()).'.',
+            };
+        }
+
+        return 'Expected HTTP 200 response but received '.$response->status().'.';
+    }
+
+    /**
+     * Determine whether the failed response looks like Cloudflare protection.
+     *
+     * @param  array<int, array{name: string, value: string}>  $responseHeaders
+     */
+    private function looksLikeCloudflareProtection(Response $response, array $responseHeaders, string $body): bool
+    {
+        $headerMap = $this->headerMap($responseHeaders);
+        $bodyLower = Str::lower($body);
+        $hasChallengeMarkers = Str::contains($bodyLower, [
+            'attention required! | cloudflare',
+            'cloudflare ray id',
+            '/cdn-cgi/challenge-platform',
+            'cf-browser-verification',
+            'error code 1020',
+        ]);
+        $isCloudflareEdge = ($headerMap['server'] ?? null) === 'cloudflare'
+            || array_key_exists('cf-ray', $headerMap)
+            || array_key_exists('cf-cache-status', $headerMap);
+
+        if ($hasChallengeMarkers) {
+            return true;
+        }
+
+        if (! $isCloudflareEdge) {
+            return false;
+        }
+
+        return in_array($response->status(), [403, 429], true);
+    }
+
+    /**
+     * Determine whether the failed response looks like rate limiting.
+     *
+     * @param  array<int, array{name: string, value: string}>  $responseHeaders
+     */
+    private function looksRateLimited(Response $response, array $responseHeaders, string $body): bool
+    {
+        if ($response->status() === 429) {
+            return true;
+        }
+
+        $headerMap = $this->headerMap($responseHeaders);
+
+        if (
+            array_key_exists('retry-after', $headerMap)
+            || ($headerMap['x-ratelimit-remaining'] ?? null) === '0'
+        ) {
+            return true;
+        }
+
+        return Str::contains(Str::lower($body), [
+            'too many requests',
+            'rate limit',
+            'rate limited',
+        ]);
+    }
+
+    /**
+     * Build a lower-cased header map for lookup helpers.
+     *
+     * @param  array<int, array{name: string, value: string}>  $responseHeaders
+     * @return array<string, string>
+     */
+    private function headerMap(array $responseHeaders): array
+    {
+        return collect($responseHeaders)
+            ->filter(fn (mixed $header): bool => is_array($header))
+            ->reduce(function (array $map, array $header): array {
+                $name = Str::lower((string) ($header['name'] ?? ''));
+                $value = trim((string) ($header['value'] ?? ''));
+
+                if ($name !== '' && $value !== '') {
+                    $map[$name] = $value;
+                }
+
+                return $map;
+            }, []);
+    }
+
+    /**
+     * Format an HTTP status code for user-facing reasons.
+     */
+    private function statusSummary(int $status): string
+    {
+        return match ($status) {
+            403 => '403 Forbidden',
+            429 => '429 Too Many Requests',
+            503 => '503 Service Unavailable',
+            default => (string) $status,
+        };
     }
 }

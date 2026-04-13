@@ -89,9 +89,12 @@ class MonitorServicesCommand extends Command
         $service->forceFill([
             'current_status' => $result->status,
             'last_response_code' => $result->responseCode,
+            'last_response_headers' => $result->status === Service::STATUS_DOWN && $result->responseHeaders !== []
+                ? $result->responseHeaders
+                : null,
             'last_check_reason' => $result->reason,
             'last_checked_at' => $checkedAt,
-            'next_check_at' => $checkedAt->copy()->addSeconds($service->interval_seconds),
+            'next_check_at' => $this->nextCheckAt($checkedAt, $service),
             'last_status_changed_at' => $statusChanged ? $checkedAt : $service->last_status_changed_at,
         ])->save();
 
@@ -167,6 +170,24 @@ class MonitorServicesCommand extends Command
     }
 
     /**
+     * Resolve the next scheduled check time, including optional jitter.
+     */
+    private function nextCheckAt(CarbonInterface $checkedAt, Service $service): CarbonInterface
+    {
+        $nextCheckAt = $checkedAt->copy()->addSeconds($service->interval_seconds);
+        $maximumJitterSeconds = max(0, min(
+            (int) config('services.monitoring.schedule_jitter_max_seconds', 0),
+            max(0, $service->interval_seconds),
+        ));
+
+        if ($maximumJitterSeconds === 0) {
+            return $nextCheckAt;
+        }
+
+        return $nextCheckAt->addSeconds(random_int(0, $maximumJitterSeconds));
+    }
+
+    /**
      * Build the JSON payload sent to webhook recipients.
      *
      * @return array<string, mixed>
@@ -199,6 +220,10 @@ class MonitorServicesCommand extends Command
             'reason' => $result->reason,
             'attempt_count' => $result->attemptCount,
         ];
+
+        if ($result->responseHeaders !== []) {
+            $payload['response_headers'] = $result->responseHeaders;
+        }
 
         if ($downtime instanceof ServiceDowntime) {
             $payload['downtime'] = $this->buildDowntimePayload($downtime);
@@ -328,6 +353,8 @@ class MonitorServicesCommand extends Command
             'latest_reason' => $downtime->latest_reason,
             'recovery_reason' => $downtime->recovery_reason,
             'screenshot_url' => $downtime->screenshotUrl(),
+            'started_response_headers' => $downtime->startedResponseHeaders(),
+            'latest_response_headers' => $downtime->latestResponseHeaders(),
             'ai_summary' => $downtime->ai_summary,
         ];
 

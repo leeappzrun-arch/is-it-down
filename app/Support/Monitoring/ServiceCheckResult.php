@@ -11,5 +11,7 @@ final readonly class ServiceCheckResult
         public ?string $bodyExcerpt = null,
         public bool $connectionSucceeded = false,
         public int $attemptCount = 1,
+        /** @var array<int, array{name: string, value: string}> */
+        public array $responseHeaders = [],
     ) {}
 }

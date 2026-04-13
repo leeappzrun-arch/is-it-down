@@ -9,6 +9,8 @@
                     {{ $currentStatus === \App\Models\Service::STATUS_DOWN ? 'A monitored service is down' : 'A monitored service has recovered' }}
                 </h1>
 
+                @php($latestFailedHeaders = $downtime?->latestResponseHeaders() ?: $service->lastResponseHeaders())
+
                 <p style="margin: 0 0 24px; font-size: 16px; line-height: 1.7; color: #3f3f46;">
                     {{ $service->name }} is currently marked as <strong>{{ strtoupper($currentStatus) }}</strong>.
                     {{ $reason }}
@@ -17,7 +19,7 @@
                 <div style="border-radius: 18px; background: #fafafa; padding: 20px;">
                     <div style="margin-bottom: 12px; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #71717a;">Service details</div>
                     <div style="margin-bottom: 10px;"><strong>Name:</strong> {{ $service->name }}</div>
-                    <div style="margin-bottom: 10px;"><strong>URL:</strong> {{ $service->url }}</div>
+                    <div style="margin-bottom: 10px;"><strong>URL:</strong> <a href="{{ $service->url }}" style="color: #0284c7; text-decoration: underline; word-break: break-all;">{{ $service->url }}</a></div>
                     <div style="margin-bottom: 10px;"><strong>Status change:</strong> {{ strtoupper($previousStatus ?? 'unknown') }} to {{ strtoupper($currentStatus) }}</div>
                     @if ($downtime?->ended_at)
                         <div style="margin-bottom: 10px;"><strong>Downtime:</strong> {{ $downtime->durationSummary($downtime->ended_at) }}</div>
@@ -30,8 +32,18 @@
                     @if ($downtime?->ai_summary)
                         <div style="margin-bottom: 10px;"><strong>Dave thinks:</strong> {{ $downtime->ai_summary }}</div>
                     @endif
-                    @if ($downtime?->screenshotUrl())
-                        <div style="margin-bottom: 10px;"><strong>Screenshot:</strong> <a href="{{ $downtime->screenshotUrl() }}">{{ $downtime->screenshotUrl() }}</a></div>
+                    @if ($service->latestScreenshotUrl())
+                        <div style="margin-bottom: 10px;"><strong>Latest screenshot:</strong> <a href="{{ $service->latestScreenshotUrl() }}" style="color: #0284c7; text-decoration: underline; word-break: break-all;">{{ $service->latestScreenshotUrl() }}</a></div>
+                    @endif
+                    @if ($latestFailedHeaders !== [])
+                        <div style="margin-bottom: 10px;">
+                            <strong>Latest failed response headers:</strong>
+                            <div style="margin-top: 8px; border-radius: 12px; background: #f4f4f5; padding: 12px 14px; font-family: Consolas, Menlo, Monaco, monospace; font-size: 13px; line-height: 1.6; color: #27272a;">
+                                @foreach ($latestFailedHeaders as $header)
+                                    <div><strong>{{ $header['name'] }}:</strong> {{ $header['value'] }}</div>
+                                @endforeach
+                            </div>
+                        </div>
                     @endif
                     @if ($service->hasExpectation())
                         <div><strong>Expectation:</strong> {{ $service->expectSummary() }}</div>

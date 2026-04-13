@@ -27,11 +27,15 @@ class ServiceFactory extends Factory
             'ssl_expiry_notifications_enabled' => false,
             'current_status' => null,
             'last_response_code' => null,
+            'last_response_headers' => null,
             'last_check_reason' => null,
             'last_checked_at' => null,
             'next_check_at' => null,
             'last_status_changed_at' => null,
             'last_ssl_expiry_notification_sent_at' => null,
+            'last_screenshot_disk' => null,
+            'last_screenshot_path' => null,
+            'last_screenshot_captured_at' => null,
         ];
     }
 

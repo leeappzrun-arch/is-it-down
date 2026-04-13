@@ -524,7 +524,12 @@ new #[Title('Service management')] class extends Component {
     }
 }; ?>
 
-<section wire:poll.5s.visible class="w-full">
+<section
+    wire:poll.5s.visible
+    x-data="{ previewImage: null }"
+    x-on:keydown.escape.window="previewImage = null"
+    class="w-full"
+>
     <div class="relative mb-6 w-full">
         <div class="flex flex-wrap items-start justify-between gap-4">
             <div>
@@ -564,7 +569,7 @@ new #[Title('Service management')] class extends Component {
     <div class="grid gap-6 xl:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]">
         <div class="min-w-0 space-y-6">
             <div
-                x-data="{ highlight: false, timeout: null, focusForm() { this.$el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' }); this.$nextTick(() => this.$el.querySelector('input, select, textarea, button')?.focus({ preventScroll: true })); this.highlight = true; if (this.timeout) { clearTimeout(this.timeout); } this.timeout = setTimeout(() => { this.highlight = false }, 2200); } }"
+                x-data="{ highlight: false, timeout: null, focusForm() { this.$el.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' }); this.$nextTick(() => this.$el.querySelector('input, select, textarea, button')?.focus({ preventScroll: true })); this.highlight = true; if (this.timeout) { clearTimeout(this.timeout); } this.timeout = setTimeout(() => { this.highlight = false }, 2200); } }"
                 x-on:focus-form.window="if ($event.detail.form === 'service') { focusForm() }"
                 :class="{ 'ring-2 ring-sky-400/70 ring-offset-2 ring-offset-white shadow-lg shadow-sky-500/10 animate-pulse dark:ring-sky-300/60 dark:ring-offset-zinc-900': highlight }"
                 class="min-w-0 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm transition-all duration-300 sm:p-6 dark:border-zinc-700 dark:bg-zinc-900"
@@ -926,8 +931,43 @@ new #[Title('Service management')] class extends Component {
                                     </div>
 
                                     <div class="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
+                                        @php($latestScreenshotUrl = $service->latestScreenshotUrl())
                                         <div class="text-sm font-medium text-zinc-900 dark:text-zinc-100">{{ __('Latest reason') }}</div>
-                                        <div class="mt-3 text-sm text-zinc-600 dark:text-zinc-300">{{ $service->monitoringReasonSummary() }}</div>
+                                        <div class="mt-3 text-sm text-zinc-600 dark:text-zinc-300">{{ $service->last_check_reason ?? __('Awaiting the first monitoring check.') }}</div>
+
+                                        @if ($service->hasLastResponseHeaders())
+                                            <div class="mt-4">
+                                                <div class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">{{ __('Failed response headers') }}</div>
+                                                <div class="mt-2 space-y-2">
+                                                    @foreach ($service->lastResponseHeaders() as $header)
+                                                        <div wire:key="service-last-response-header-{{ $service->id }}-{{ md5($header['name'].'-'.$header['value']) }}" class="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs text-zinc-700 dark:border-zinc-700 dark:bg-zinc-950/40 dark:text-zinc-200">
+                                                            <span class="font-medium text-zinc-900 dark:text-zinc-100">{{ $header['name'] }}:</span>
+                                                            <span class="break-all">{{ $header['value'] }}</span>
+                                                        </div>
+                                                    @endforeach
+                                                </div>
+                                            </div>
+                                        @endif
+
+                                        @if ($latestScreenshotUrl)
+                                            <div class="mt-4">
+                                                <div class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">{{ __('Latest screenshot') }}</div>
+                                                <button
+                                                    type="button"
+                                                    class="mt-2 inline-flex items-start gap-3 rounded-xl border border-zinc-200 bg-zinc-50 p-2 text-left transition hover:border-sky-300 hover:bg-sky-50 dark:border-zinc-700 dark:bg-zinc-950/40 dark:hover:border-sky-400/50 dark:hover:bg-sky-500/10"
+                                                    @click="previewImage = @js([
+                                                        'url' => $latestScreenshotUrl,
+                                                        'title' => $service->name.' latest screenshot',
+                                                    ])"
+                                                >
+                                                    <img src="{{ $latestScreenshotUrl }}" alt="{{ $service->name }} latest screenshot" class="h-16 w-24 rounded-lg object-cover shadow-sm" loading="lazy">
+                                                    <span class="min-w-0 pt-1 text-xs text-zinc-600 dark:text-zinc-300">
+                                                        <span class="block font-medium text-zinc-900 dark:text-zinc-100">{{ __('Click to enlarge') }}</span>
+                                                        <span class="mt-1 block">{{ $service->last_screenshot_captured_at?->diffForHumans() ?? __('Captured recently') }}</span>
+                                                    </span>
+                                                </button>
+                                            </div>
+                                        @endif
                                     </div>
                                 </div>
 
@@ -1081,9 +1121,16 @@ new #[Title('Service management')] class extends Component {
                                                                 {{ $downtime->isOngoing() ? __('Ongoing') : __('Resolved') }}
                                                             </span>
                                                             @if ($downtime->screenshotUrl())
-                                                                <a href="{{ $downtime->screenshotUrl() }}" class="rounded-full bg-sky-100 px-3 py-1 text-xs font-medium text-sky-700 hover:bg-sky-200 dark:bg-sky-500/15 dark:text-sky-300 dark:hover:bg-sky-500/25">
+                                                                <button
+                                                                    type="button"
+                                                                    class="rounded-full bg-sky-100 px-3 py-1 text-xs font-medium text-sky-700 hover:bg-sky-200 dark:bg-sky-500/15 dark:text-sky-300 dark:hover:bg-sky-500/25"
+                                                                    @click="previewImage = @js([
+                                                                        'url' => $downtime->screenshotUrl(),
+                                                                        'title' => $service->name.' downtime screenshot',
+                                                                    ])"
+                                                                >
                                                                     {{ __('Screenshot') }}
-                                                                </a>
+                                                                </button>
                                                             @endif
                                                         </div>
                                                     </div>
@@ -1100,6 +1147,20 @@ new #[Title('Service management')] class extends Component {
                                                             </div>
                                                         @endif
                                                     </div>
+
+                                                    @if ($downtime->latestResponseHeaders() !== [])
+                                                        <div class="mt-3">
+                                                            <div class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">{{ __('Latest failed response headers') }}</div>
+                                                            <div class="mt-2 space-y-2">
+                                                                @foreach ($downtime->latestResponseHeaders() as $header)
+                                                                    <div wire:key="downtime-response-header-{{ $downtime->id }}-{{ md5($header['name'].'-'.$header['value']) }}" class="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs text-zinc-700 dark:border-zinc-700 dark:bg-zinc-950/40 dark:text-zinc-200">
+                                                                        <span class="font-medium text-zinc-900 dark:text-zinc-100">{{ $header['name'] }}:</span>
+                                                                        <span class="break-all">{{ $header['value'] }}</span>
+                                                                    </div>
+                                                                @endforeach
+                                                            </div>
+                                                        </div>
+                                                    @endif
 
                                                     @if ($downtime->ai_summary)
                                                         <div class="mt-3 rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-100">
@@ -1154,4 +1215,30 @@ new #[Title('Service management')] class extends Component {
             </div>
         </div>
     </flux:modal>
+
+    <div
+        x-cloak
+        x-show="previewImage"
+        x-transition.opacity
+        class="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/80 p-4"
+        style="display: none;"
+    >
+        <div class="absolute inset-0" @click="previewImage = null"></div>
+
+        <div class="relative z-10 w-full max-w-5xl overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-zinc-900">
+            <div class="flex items-center justify-between gap-4 border-b border-zinc-200 px-4 py-3 dark:border-zinc-700">
+                <div class="min-w-0">
+                    <div class="truncate text-sm font-medium text-zinc-900 dark:text-zinc-100" x-text="previewImage?.title ?? ''"></div>
+                </div>
+
+                <flux:button type="button" variant="ghost" size="sm" @click="previewImage = null">
+                    {{ __('Close') }}
+                </flux:button>
+            </div>
+
+            <div class="max-h-[80vh] overflow-auto bg-zinc-950 p-3">
+                <img :src="previewImage?.url ?? ''" :alt="previewImage?.title ?? ''" class="mx-auto h-auto max-w-full rounded-xl">
+            </div>
+        </div>
+    </div>
 </section>

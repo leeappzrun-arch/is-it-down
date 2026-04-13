@@ -74,8 +74,8 @@ new #[Title('Webhook documentation')] class extends Component {
                 <flux:heading size="lg">{{ __('Payload shape') }}</flux:heading>
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
                     <p>{{ __('Webhook payloads are sent as JSON and include the event name plus the relevant service details for that alert type.') }}</p>
-                    <p>{{ __('Status-change events include the new status, the previous status, the check timestamp, the retry attempt count, the HTTP response code when available, and the reason the service was considered up or down.') }}</p>
-                    <p>{{ __('When an outage record exists, the payload also includes a `downtime` object with timestamps, reasons, a screenshot URL when one was stored, Dave analysis when available, and a duration block once the outage has been resolved.') }}</p>
+                    <p>{{ __('Status-change events include the new status, the previous status, the check timestamp, the attempt count, the HTTP response code when available, and the reason the service was considered up or down.') }}</p>
+                    <p>{{ __('When the failed check returned headers, the payload also includes `response_headers`. When an outage record exists, the payload includes a `downtime` object with timestamps, reasons, a screenshot URL when one was stored, failed response headers, Dave analysis when available, and a duration block once the outage has been resolved.') }}</p>
                     <p>{{ __('SSL-expiry events use the `service.ssl_expiring` event name and include an `ssl` object with the certificate expiry timestamp, signed days remaining, and a human-readable summary.') }}</p>
                     <p>{{ __('The `service.expectation` object is included when the service uses a text or regex expectation, which helps downstream systems understand why a response body was treated as healthy or unhealthy.') }}</p>
                     <p>{{ __('A representative payload looks like this:') }}</p>
@@ -101,10 +101,16 @@ new #[Title('Webhook documentation')] class extends Component {
     "id": 17,
     "started_at": "2026-04-04T10:25:00+00:00",
     "ended_at": "2026-04-04T10:30:00+00:00",
-    "started_reason": "The service still appeared down after retrying 3 seconds later. Expected HTTP 200 response but received 503.",
+    "started_reason": "Expected HTTP 200 response but received 503.",
     "latest_reason": "Expected HTTP 200 response but received 503.",
     "recovery_reason": "Received an HTTP 200 response and the expected text was present.",
     "screenshot_url": "https://status.example.com/storage/downtime-screenshots/marketing-site.png",
+    "latest_response_headers": [
+      {
+        "name": "Content-Type",
+        "value": "text/html; charset=UTF-8"
+      }
+    ],
     "ai_summary": "The upstream likely served a maintenance page or temporary origin error.",
     "duration": {
       "seconds": 300,
@@ -123,6 +129,7 @@ new #[Title('Webhook documentation')] class extends Component {
                     <p>{{ __('Sensitive webhook credential values are stored separately from the endpoint so authentication can be changed without rewriting the destination address.') }}</p>
                     <p>{{ __('Webhook passwords, bearer tokens, and custom header values are encrypted at rest by the model casts used by the application.') }}</p>
                     <p>{{ __('Stored downtime screenshots are referenced by URL in webhook payloads when available, so recipients can review the captured page state without the image bytes being embedded directly in the JSON body.') }}</p>
+                    <p>{{ __('Old resolved downtime screenshots are pruned automatically alongside downtime records once they age out of the retention window.') }}</p>
                     <p>{{ __('Changing a recipient from `Webhook` back to `Email` clears webhook-specific authentication fields from the form.') }}</p>
                 </div>
             </div>
