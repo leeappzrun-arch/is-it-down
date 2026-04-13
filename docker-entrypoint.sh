@@ -19,6 +19,7 @@ mkdir -p \
     "$APP_ROOT/storage/logs"
 
 chown -R www-data:www-data "$APP_DATA_PATH" "$APP_ROOT/bootstrap/cache" "$APP_ROOT/storage"
+chown -R www-data:www-data "$APP_ROOT/public"
 
 if [ -z "${APP_KEY:-}" ]; then
     if [ -s "$APP_KEY_FILE" ]; then
