@@ -127,6 +127,7 @@ class ServiceMonitoringCommandTest extends TestCase
         Http::fake([
             'https://status.example.com' => Http::sequence()
                 ->push('Everything is broken', 200)
+                ->push('Everything is still broken', 200)
                 ->push('Everything is still broken', 200),
         ]);
 
@@ -159,6 +160,7 @@ class ServiceMonitoringCommandTest extends TestCase
 
         Http::fake([
             'https://status.example.com' => Http::sequence()
+                ->push('Everything is still broken', 200)
                 ->push('Everything is still broken', 200)
                 ->push('Everything is still broken', 200),
         ]);

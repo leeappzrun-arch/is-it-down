@@ -50,7 +50,7 @@ class DocumentationPagesTest extends TestCase
         $response->assertSee('sticky top-4 z-20', false);
         $response->assertSee('x-on:scroll.window.throttle.50ms="updateStickyState()"', false);
         $response->assertSee('shadow-lg shadow-zinc-900/10 dark:shadow-black/30', false);
-        $response->assertSee('xl:grid-cols-3', false);
+        $response->assertSee('xl:grid-cols-2', false);
         $response->assertSee('id="endpoint-catalog" class="scroll-mt-24 mt-6 space-y-4"', false);
         $response->assertSee('<details', false);
     }

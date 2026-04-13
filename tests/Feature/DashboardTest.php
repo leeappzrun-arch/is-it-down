@@ -28,7 +28,7 @@ class DashboardTest extends TestCase
         $user = User::factory()->create();
         Recipient::factory()->count(2)->create();
         RecipientGroup::factory()->count(3)->create();
-        Service::factory()->currentlyDown()->create([
+        $billingService = Service::factory()->currentlyDown()->create([
             'name' => 'Billing API',
             'url' => 'https://billing.example.com',
             'last_status_changed_at' => now()->subMinutes(5),
@@ -40,7 +40,9 @@ class DashboardTest extends TestCase
             'user_id' => $user->id,
             'created_by_id' => $user->id,
         ]);
-        ServiceDowntime::factory()->count(2)->create();
+        ServiceDowntime::factory()->count(2)->create([
+            'service_id' => $billingService->id,
+        ]);
 
         $this->actingAs($user);
 
@@ -68,7 +70,7 @@ class DashboardTest extends TestCase
         $admin = User::factory()->admin()->create();
         Recipient::factory()->count(2)->create();
         RecipientGroup::factory()->count(3)->create();
-        Service::factory()->currentlyDown()->create([
+        $billingService = Service::factory()->currentlyDown()->create([
             'name' => 'Billing API',
             'url' => 'https://billing.example.com',
             'last_status_changed_at' => now()->subMinutes(5),
@@ -81,7 +83,9 @@ class DashboardTest extends TestCase
             'user_id' => $admin->id,
             'created_by_id' => $admin->id,
         ]);
-        ServiceDowntime::factory()->count(2)->create();
+        ServiceDowntime::factory()->count(2)->create([
+            'service_id' => $billingService->id,
+        ]);
 
         $response = $this->actingAs($admin)
             ->get(route('dashboard'));

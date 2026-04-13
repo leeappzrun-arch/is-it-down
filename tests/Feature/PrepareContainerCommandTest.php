@@ -108,12 +108,16 @@ class PrepareContainerCommandTest extends TestCase
         $dockerfile = File::get(base_path('Dockerfile'));
 
         $this->assertStringContainsString(
-            'VOLUME ["/var/www/html/database/data"]',
+            'VOLUME ["/var/www/html/database/data", "/var/www/html/storage/app/public"]',
             $dockerfile
         );
 
         $this->assertTrue(
             Str::contains($dockerfile, 'APP_DATA_PATH=/var/www/html/database/data')
+        );
+
+        $this->assertTrue(
+            Str::contains($dockerfile, '/var/www/html/storage/app/public')
         );
     }
 
