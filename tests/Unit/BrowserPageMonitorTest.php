@@ -192,4 +192,49 @@ class BrowserPageMonitorTest extends TestCase
         $this->assertStringContainsString('service-42', $fakeBrowsershot->userDataDir);
         $this->assertTrue(is_dir($fakeBrowsershot->userDataDir));
     }
+
+    public function test_it_treats_zero_status_metadata_as_missing_status(): void
+    {
+        $service = (new Service)->forceFill([
+            'id' => 7,
+            'url' => 'https://status.example.com',
+        ]);
+
+        $browserPageMonitor = new class extends BrowserPageMonitor
+        {
+            protected function makeBrowsershot(Service $service, array $headers = []): ?object
+            {
+                return new class
+                {
+                    public function bodyHtml(): string
+                    {
+                        return '<main><h1>Status page</h1></main>';
+                    }
+
+                    public function redirectHistory(): array
+                    {
+                        return [
+                            'status' => 0,
+                            'headers' => [
+                                'Content-Type' => 'text/html; charset=UTF-8',
+                            ],
+                        ];
+                    }
+
+                    public function failedRequests(): ?array
+                    {
+                        return null;
+                    }
+                };
+            }
+        };
+
+        $page = $browserPageMonitor->fetch($service);
+
+        $this->assertNull($page['status']);
+        $this->assertSame('<main><h1>Status page</h1></main>', $page['body']);
+        $this->assertSame([
+            ['name' => 'Content-Type', 'value' => 'text/html; charset=UTF-8'],
+        ], $page['headers']);
+    }
 }

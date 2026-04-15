@@ -26,11 +26,11 @@ class BrowserPageMonitor
         $failedRequest = method_exists($browsershot, 'failedRequests')
             ? $browsershot->failedRequests()
             : null;
+        $responseStatus = $this->extractResponseStatus($navigationResponse)
+            ?? $this->extractResponseStatus($failedRequest);
 
         return [
-            'status' => is_array($navigationResponse)
-                ? (int) ($navigationResponse['status'] ?? 0)
-                : (is_array($failedRequest) ? (int) ($failedRequest['status'] ?? 0) : null),
+            'status' => $responseStatus,
             'body' => $body,
             'headers' => ResponseHeaderData::normalize($navigationResponse['headers'] ?? []),
         ];
@@ -180,5 +180,25 @@ class BrowserPageMonitor
         }
 
         return (string) env($key, $default);
+    }
+
+    /**
+     * Extract a valid HTTP status from Browsershot response metadata.
+     */
+    private function extractResponseStatus(mixed $responseMetadata): ?int
+    {
+        if (! is_array($responseMetadata)) {
+            return null;
+        }
+
+        $status = $responseMetadata['status'] ?? null;
+
+        if (! is_numeric($status)) {
+            return null;
+        }
+
+        $status = (int) $status;
+
+        return $status > 0 ? $status : null;
     }
 }

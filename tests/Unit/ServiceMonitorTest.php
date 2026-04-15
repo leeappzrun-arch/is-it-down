@@ -144,4 +144,30 @@ class ServiceMonitorTest extends TestCase
         $this->assertSame(Service::STATUS_UP, $result->status);
         $this->assertSame('Received an HTTP 200 response and the expected regular expression matched.', $result->reason);
     }
+
+    public function test_it_accepts_rendered_browser_content_when_status_metadata_is_missing(): void
+    {
+        Http::preventStrayRequests();
+
+        $service = new Service([
+            'name' => 'Customer Portal',
+            'url' => 'https://portal.example.com',
+            'interval_seconds' => Service::INTERVAL_1_MINUTE,
+            'monitoring_method' => Service::MONITOR_BROWSER,
+        ]);
+
+        $this->mock(BrowserPageMonitor::class, function (MockInterface $mock) use ($service): void {
+            $mock->shouldReceive('fetch')->once()->with($service)->andReturn([
+                'status' => null,
+                'body' => '<main><h1>Customer portal</h1></main>',
+                'headers' => [],
+            ]);
+        });
+
+        $result = app(ServiceMonitor::class)->check($service);
+
+        $this->assertSame(Service::STATUS_UP, $result->status);
+        $this->assertSame('Browser rendered the page, but no HTTP response status was reported.', $result->reason);
+        $this->assertNull($result->responseCode);
+    }
 }

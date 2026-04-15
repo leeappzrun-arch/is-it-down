@@ -187,8 +187,9 @@ class ServiceMonitor
         $body = $page['body'];
         $bodyExcerpt = Str::limit(trim(strip_tags($body)), 500);
         $responseHeaders = $page['headers'];
+        $renderedBodyWasCaptured = trim($body) !== '';
 
-        if ($responseCode === null) {
+        if ($responseCode === null && ! $renderedBodyWasCaptured) {
             return new ServiceCheckResult(
                 status: Service::STATUS_DOWN,
                 reason: 'Browser monitoring did not report an HTTP response status.',
@@ -198,7 +199,7 @@ class ServiceMonitor
             );
         }
 
-        if ($responseCode !== 200) {
+        if ($responseCode !== null && $responseCode !== 200) {
             return new ServiceCheckResult(
                 status: Service::STATUS_DOWN,
                 reason: $this->failureReason($responseCode, $responseHeaders, $body),
@@ -212,7 +213,9 @@ class ServiceMonitor
         if (! $service->hasExpectation()) {
             return new ServiceCheckResult(
                 status: Service::STATUS_UP,
-                reason: 'Received an HTTP 200 response.',
+                reason: $responseCode === 200
+                    ? 'Received an HTTP 200 response.'
+                    : 'Browser rendered the page, but no HTTP response status was reported.',
                 responseCode: $responseCode,
                 bodyExcerpt: $bodyExcerpt !== '' ? $bodyExcerpt : null,
                 connectionSucceeded: true,
@@ -234,7 +237,9 @@ class ServiceMonitor
 
             return new ServiceCheckResult(
                 status: Service::STATUS_UP,
-                reason: 'Received an HTTP 200 response and the expected text was present.',
+                reason: $responseCode === 200
+                    ? 'Received an HTTP 200 response and the expected text was present.'
+                    : 'Browser rendered the page and the expected text was present.',
                 responseCode: $responseCode,
                 bodyExcerpt: $bodyExcerpt !== '' ? $bodyExcerpt : null,
                 connectionSucceeded: true,
@@ -269,7 +274,9 @@ class ServiceMonitor
 
             return new ServiceCheckResult(
                 status: Service::STATUS_UP,
-                reason: 'Received an HTTP 200 response and the expected regular expression matched.',
+                reason: $responseCode === 200
+                    ? 'Received an HTTP 200 response and the expected regular expression matched.'
+                    : 'Browser rendered the page and the expected regular expression matched.',
                 responseCode: $responseCode,
                 bodyExcerpt: $bodyExcerpt !== '' ? $bodyExcerpt : null,
                 connectionSucceeded: true,
@@ -279,7 +286,9 @@ class ServiceMonitor
 
         return new ServiceCheckResult(
             status: Service::STATUS_UP,
-            reason: 'Received an HTTP 200 response.',
+            reason: $responseCode === 200
+                ? 'Received an HTTP 200 response.'
+                : 'Browser rendered the page, but no HTTP response status was reported.',
             responseCode: $responseCode,
             bodyExcerpt: $bodyExcerpt !== '' ? $bodyExcerpt : null,
             connectionSucceeded: true,
