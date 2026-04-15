@@ -29,9 +29,10 @@ class ServiceManagementTest extends TestCase
         $response->assertSee('sticky top-4 z-20', false);
         $response->assertSee('x-on:scroll.window.throttle.50ms="updateStickyState()"', false);
         $response->assertSee('shadow-lg shadow-zinc-900/10 dark:shadow-black/30', false);
-        $response->assertSeeText('Expand to review monitoring status, the next check timer, routing details, and effective recipients.');
-        $response->assertSee('x-data="{ expanded: false }"', false);
-        $response->assertSee('x-bind:open="expanded"', false);
+        $response->assertSeeText('Review monitoring status, the next check timer, routing details, and effective recipients.');
+        $response->assertSeeText('Groups & Recipients');
+        $response->assertDontSeeText('Monitoring and routing details');
+        $response->assertDontSeeText('Expand');
         $response->assertSeeText('Manage service templates');
     }
 
@@ -231,7 +232,7 @@ class ServiceManagementTest extends TestCase
         $response->assertSeeText('Direct recipient');
         $response->assertSeeText('Recipient group: Leadership');
         $response->assertSeeText('Service group: Production');
-        $response->assertSeeText('Expand to review monitoring status, the next check timer, routing details, and effective recipients.');
+        $response->assertSeeText('Review monitoring status, the next check timer, routing details, and effective recipients.');
     }
 
     public function test_service_page_shows_monitoring_status_and_next_check_timer(): void
@@ -401,8 +402,24 @@ class ServiceManagementTest extends TestCase
 
         $response->assertOk();
         $response->assertSeeText('Latest failed response headers');
-        $response->assertSeeText('Toggle');
+        $response->assertSee('x-data="{ expanded: false }"', false);
         $response->assertSeeText('Content-Type');
         $response->assertSeeText('nginx');
+    }
+
+    public function test_service_page_expands_and_highlights_a_service_from_the_dashboard_link(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $service = Service::factory()->create([
+            'name' => 'Billing API',
+            'url' => 'https://billing.example.com/status',
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('services.index', ['service' => $service->id]));
+
+        $response->assertOk();
+        $response->assertSee('expanded: true', false);
+        $response->assertSee('highlight: true', false);
+        $response->assertSeeText('Groups & Recipients');
     }
 }

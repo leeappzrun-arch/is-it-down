@@ -124,7 +124,18 @@ new #[Title('Dashboard')] class extends Component {
         @else
             <div class="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 @foreach ($this->monitoredServices as $service)
-                    <div wire:key="dashboard-service-{{ $service->id }}" class="rounded-2xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-950/40">
+                    @php($serviceHref = auth()->user()?->isAdmin() ? route('services.index', ['service' => $service->id]) : null)
+
+                    @if ($serviceHref)
+                        <a
+                            wire:key="dashboard-service-{{ $service->id }}"
+                            href="{{ $serviceHref }}"
+                            wire:navigate
+                            class="group rounded-2xl border border-zinc-200 bg-zinc-50 p-4 transition hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-md dark:border-zinc-700 dark:bg-zinc-950/40 dark:hover:border-zinc-600"
+                        >
+                    @else
+                        <div wire:key="dashboard-service-{{ $service->id }}" class="rounded-2xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-950/40">
+                    @endif
                         <div class="flex flex-wrap items-start justify-between gap-3">
                             <div class="min-w-0">
                                 <div class="font-semibold text-zinc-900 dark:text-zinc-100">{{ $service->name }}</div>
@@ -132,11 +143,30 @@ new #[Title('Dashboard')] class extends Component {
                                 <div class="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
                                     {{ __('30-day uptime: :percentage%', ['percentage' => number_format($service->uptimePercentageForDays(30), 2)]) }}
                                 </div>
+
+                                <div
+                                    x-data="window.serviceCheckTimer(@js($service->next_check_at?->toIso8601String()))"
+                                    x-init="init()"
+                                    x-on:livewire:navigating.window="destroy()"
+                                    class="mt-2 text-xs text-zinc-500 dark:text-zinc-400"
+                                >
+                                    <span class="font-medium text-zinc-700 dark:text-zinc-200" x-text="remainingLabel">{{ $service->nextCheckSummary() }}</span>
+                                </div>
                             </div>
 
                             <span class="rounded-full px-3 py-1 text-xs font-medium {{ $service->monitoringStatusClasses() }}">{{ __($service->monitoringStatusLabel()) }}</span>
                         </div>
-                    </div>
+
+                        @if ($serviceHref)
+                            <div class="mt-4 text-xs font-medium uppercase tracking-[0.2em] text-zinc-400 transition group-hover:text-zinc-500 dark:text-zinc-500 dark:group-hover:text-zinc-400">
+                                {{ __('Open in Services') }}
+                            </div>
+                        @endif
+                    @if ($serviceHref)
+                        </a>
+                    @else
+                        </div>
+                    @endif
                 @endforeach
             </div>
         @endif

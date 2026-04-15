@@ -52,7 +52,8 @@ new #[Title('User guide')] class extends Component {
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
                     <p>{{ __('The dashboard is the default landing page after authentication and shows a live service-status grid above the headline totals for recipients, recipient groups, services, downtime incidents, templates, service groups, users, and API keys.') }}</p>
                     <p>{{ __('Admins can select those dashboard cards to move directly into the matching management page for recipients, recipient groups, services, templates, service groups, users, or API keys. Standard users can review the totals but cannot click through to admin-only tools.') }}</p>
-                    <p>{{ __('Service cards now also surface the rolling 30-day uptime percentage so recurring issues stand out without leaving the dashboard.') }}</p>
+                    <p>{{ __('Service cards now surface the rolling 30-day uptime percentage and the next scheduled check so recurring issues stand out without leaving the dashboard.') }}</p>
+                    <p>{{ __('Admins can also select an individual service card to jump straight into the Services page with that service expanded and highlighted for quicker follow-up.') }}</p>
                     <p>{{ __('Use the sidebar to move into administration screens, account settings, and supporting documentation.') }}</p>
                 </div>
             </div>
@@ -100,6 +101,7 @@ new #[Title('User guide')] class extends Component {
                     <p>{{ __('Use the Save as template action on any existing service when you want to capture its non-URL settings into a reusable starting point.') }}</p>
                     <p>{{ __('When you want to manage linked services or routing ingredients from the group side, open the dedicated Service Groups page.') }}</p>
                     <p>{{ __('Each service opens as an accordion so the list stays compact while still exposing the current monitoring state, how long the service has been in that state, the latest reason, the last check time, the next check timer, rolling 30-day uptime, recent downtime incidents, and the full effective recipient breakdown when you expand a service.') }}</p>
+                    <p>{{ __('Service groups, direct recipient groups, and direct recipients now live inside their own Groups & Recipients section within each expanded service so routing details stay available without taking over the whole panel.') }}</p>
                     <p>{{ __('The latest reason panel now shows the most recent stored screenshot for that service, while failed response headers stay grouped with each downtime record to keep the service summary cleaner.') }}</p>
                     <p>{{ __('Downtime history records keep the start reason, latest reason, recovery reason, response codes, failed response headers, and timestamps so you can look back at what happened later. Header lists can be expanded per incident when you need the detail.') }}</p>
                     <p>{{ __('When a failed response looks like Cloudflare protection or rate limiting, the recorded reason calls that out directly so temporary edge blocking is easier to distinguish from an origin outage.') }}</p>

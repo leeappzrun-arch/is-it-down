@@ -21,6 +21,8 @@ new #[Title('Service management')] class extends Component {
 
     public ?int $editingServiceId = null;
 
+    public ?int $highlightedServiceId = null;
+
     public string $name = '';
 
     public string $url = '';
@@ -71,9 +73,14 @@ new #[Title('Service management')] class extends Component {
         abort_unless(auth()->user()?->isAdmin(), 403);
 
         $templateId = (int) request()->integer('template');
+        $serviceId = (int) request()->integer('service');
 
         if ($templateId > 0) {
             $this->applyTemplate($templateId);
+        }
+
+        if ($serviceId > 0 && Service::query()->whereKey($serviceId)->exists()) {
+            $this->highlightedServiceId = $serviceId;
         }
     }
 
@@ -835,14 +842,34 @@ new #[Title('Service management')] class extends Component {
                     @foreach ($this->services as $service)
                         @php($effectiveRecipients = $service->effectiveRecipientRoutes())
 
-                        <details
+                        <div
                             wire:key="service-row-{{ $service->id }}"
-                            x-data="{ expanded: false }"
-                            x-bind:open="expanded"
-                            x-on:toggle="expanded = $el.open"
-                            class="group rounded-2xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-950/40"
+                            x-data="{
+                                expanded: @js($highlightedServiceId === $service->id),
+                                highlight: @js($highlightedServiceId === $service->id),
+                                timeout: null,
+                                init() {
+                                    if (! this.highlight) {
+                                        return;
+                                    }
+
+                                    this.$nextTick(() => {
+                                        this.$el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+
+                                        if (this.timeout) {
+                                            clearTimeout(this.timeout);
+                                        }
+
+                                        this.timeout = setTimeout(() => {
+                                            this.highlight = false;
+                                        }, 2200);
+                                    });
+                                },
+                            }"
+                            :class="{ 'ring-2 ring-sky-400/70 ring-offset-2 ring-offset-white shadow-lg shadow-sky-500/10 animate-pulse dark:ring-sky-300/60 dark:ring-offset-zinc-900': highlight }"
+                            class="group rounded-2xl border border-zinc-200 bg-zinc-50 p-4 transition-all duration-300 dark:border-zinc-700 dark:bg-zinc-950/40"
                         >
-                            <summary class="list-none cursor-pointer [&::-webkit-details-marker]:hidden">
+                            <button type="button" class="block w-full cursor-pointer text-left" @click="expanded = ! expanded">
                                 <div class="flex flex-wrap items-start justify-between gap-4">
                                     <div class="min-w-0 space-y-2">
                                         <div class="font-semibold text-zinc-900 dark:text-zinc-100">{{ $service->name }}</div>
@@ -869,18 +896,17 @@ new #[Title('Service management')] class extends Component {
                                         </div>
                                     </div>
 
-                                    <div class="flex w-full items-center justify-between gap-3 text-sm text-zinc-500 dark:text-zinc-400 sm:w-auto sm:flex-col sm:items-end sm:justify-start sm:text-right">
-                                        <span class="font-medium leading-5">{{ __('Monitoring and routing details') }}</span>
-                                        <span class="rounded-full border border-zinc-300 px-3 py-1 text-xs font-medium uppercase tracking-[0.2em] dark:border-zinc-600">
-                                            {{ __('Expand') }}
+                                    <div class="flex w-full items-center justify-end gap-3 sm:w-auto">
+                                        <span class="inline-flex rounded-full border border-zinc-300 p-2 text-zinc-500 transition group-hover:border-zinc-400 group-hover:text-zinc-700 dark:border-zinc-600 dark:text-zinc-400 dark:group-hover:border-zinc-500 dark:group-hover:text-zinc-200">
+                                            <flux:icon.chevron-down class="size-4 transition-transform duration-200" x-bind:class="expanded ? 'rotate-180' : ''" />
                                         </span>
                                     </div>
                                 </div>
 
-                                <p class="mt-3 text-sm text-zinc-500 dark:text-zinc-400">{{ __('Expand to review monitoring status, the next check timer, routing details, and effective recipients.') }}</p>
-                            </summary>
+                                <p class="mt-3 text-sm text-zinc-500 dark:text-zinc-400">{{ __('Review monitoring status, the next check timer, routing details, and effective recipients.') }}</p>
+                            </button>
 
-                            <div class="mt-4 space-y-4 border-t border-zinc-200 pt-4 dark:border-zinc-700">
+                            <div x-cloak x-show="expanded" x-transition.opacity.duration.150ms style="display: none;" class="mt-4 space-y-4 border-t border-zinc-200 pt-4 dark:border-zinc-700">
                                 <div class="flex flex-wrap items-start justify-between gap-4">
                                     <div>
                                         <div class="text-sm font-medium text-zinc-900 dark:text-zinc-100">{{ __('Monitoring and routing summary') }}</div>
@@ -1013,43 +1039,56 @@ new #[Title('Service management')] class extends Component {
                                     </div>
                                 </div>
 
-                                <div class="grid gap-4 lg:grid-cols-3">
-                                    <div class="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
-                                        <div class="text-sm font-medium text-zinc-900 dark:text-zinc-100">{{ __('Service groups') }}</div>
-                                        <div class="mt-3 flex flex-wrap gap-2">
-                                            @if ($service->groups->isEmpty())
-                                                <span class="text-sm text-zinc-500 dark:text-zinc-400">{{ __('None assigned') }}</span>
-                                            @else
-                                                @foreach ($service->groups as $serviceGroup)
-                                                    <span wire:key="service-group-chip-{{ $service->id }}-{{ $serviceGroup->id }}" class="rounded-full bg-zinc-200 px-3 py-1 text-xs font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">{{ $serviceGroup->name }}</span>
-                                                @endforeach
-                                            @endif
+                                <div x-data="{ expanded: false }" class="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
+                                    <button type="button" class="flex w-full items-start justify-between gap-4 text-left" @click="expanded = ! expanded">
+                                        <div>
+                                            <div class="text-sm font-medium text-zinc-900 dark:text-zinc-100">{{ __('Groups & Recipients') }}</div>
+                                            <p class="mt-1 text-sm text-zinc-600 dark:text-zinc-300">{{ __('Service groups, direct recipient groups, and direct recipients assigned to this service.') }}</p>
                                         </div>
-                                    </div>
 
-                                    <div class="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
-                                        <div class="text-sm font-medium text-zinc-900 dark:text-zinc-100">{{ __('Direct recipient groups') }}</div>
-                                        <div class="mt-3 flex flex-wrap gap-2">
-                                            @if ($service->recipientGroups->isEmpty())
-                                                <span class="text-sm text-zinc-500 dark:text-zinc-400">{{ __('None assigned') }}</span>
-                                            @else
-                                                @foreach ($service->recipientGroups as $recipientGroup)
-                                                    <span wire:key="service-recipient-group-chip-{{ $service->id }}-{{ $recipientGroup->id }}" class="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">{{ $recipientGroup->name }}</span>
-                                                @endforeach
-                                            @endif
+                                        <span class="inline-flex rounded-full border border-zinc-300 p-2 text-zinc-500 transition hover:border-zinc-400 hover:text-zinc-700 dark:border-zinc-600 dark:text-zinc-400 dark:hover:border-zinc-500 dark:hover:text-zinc-200">
+                                            <flux:icon.chevron-down class="size-4 transition-transform duration-200" x-bind:class="expanded ? 'rotate-180' : ''" />
+                                        </span>
+                                    </button>
+
+                                    <div x-cloak x-show="expanded" x-transition.opacity.duration.150ms style="display: none;" class="mt-4 grid gap-4 lg:grid-cols-3">
+                                        <div class="rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-950/40">
+                                            <div class="text-sm font-medium text-zinc-900 dark:text-zinc-100">{{ __('Service groups') }}</div>
+                                            <div class="mt-3 flex flex-wrap gap-2">
+                                                @if ($service->groups->isEmpty())
+                                                    <span class="text-sm text-zinc-500 dark:text-zinc-400">{{ __('None assigned') }}</span>
+                                                @else
+                                                    @foreach ($service->groups as $serviceGroup)
+                                                        <span wire:key="service-group-chip-{{ $service->id }}-{{ $serviceGroup->id }}" class="rounded-full bg-zinc-200 px-3 py-1 text-xs font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">{{ $serviceGroup->name }}</span>
+                                                    @endforeach
+                                                @endif
+                                            </div>
                                         </div>
-                                    </div>
 
-                                    <div class="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
-                                        <div class="text-sm font-medium text-zinc-900 dark:text-zinc-100">{{ __('Direct recipients') }}</div>
-                                        <div class="mt-3 flex flex-wrap gap-2">
-                                            @if ($service->recipients->isEmpty())
-                                                <span class="text-sm text-zinc-500 dark:text-zinc-400">{{ __('None assigned') }}</span>
-                                            @else
-                                                @foreach ($service->recipients as $recipient)
-                                                    <span wire:key="service-recipient-chip-{{ $service->id }}-{{ $recipient->id }}" class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">{{ $recipient->name }}</span>
-                                                @endforeach
-                                            @endif
+                                        <div class="rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-950/40">
+                                            <div class="text-sm font-medium text-zinc-900 dark:text-zinc-100">{{ __('Direct recipient groups') }}</div>
+                                            <div class="mt-3 flex flex-wrap gap-2">
+                                                @if ($service->recipientGroups->isEmpty())
+                                                    <span class="text-sm text-zinc-500 dark:text-zinc-400">{{ __('None assigned') }}</span>
+                                                @else
+                                                    @foreach ($service->recipientGroups as $recipientGroup)
+                                                        <span wire:key="service-recipient-group-chip-{{ $service->id }}-{{ $recipientGroup->id }}" class="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">{{ $recipientGroup->name }}</span>
+                                                    @endforeach
+                                                @endif
+                                            </div>
+                                        </div>
+
+                                        <div class="rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-950/40">
+                                            <div class="text-sm font-medium text-zinc-900 dark:text-zinc-100">{{ __('Direct recipients') }}</div>
+                                            <div class="mt-3 flex flex-wrap gap-2">
+                                                @if ($service->recipients->isEmpty())
+                                                    <span class="text-sm text-zinc-500 dark:text-zinc-400">{{ __('None assigned') }}</span>
+                                                @else
+                                                    @foreach ($service->recipients as $recipient)
+                                                        <span wire:key="service-recipient-chip-{{ $service->id }}-{{ $recipient->id }}" class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">{{ $recipient->name }}</span>
+                                                    @endforeach
+                                                @endif
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -1135,15 +1174,15 @@ new #[Title('Service management')] class extends Component {
                                                 </div>
 
                                                     @if ($downtime->latestResponseHeaders() !== [])
-                                                        <details class="mt-3 rounded-xl border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-950/40">
-                                                            <summary class="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium text-zinc-900 [&::-webkit-details-marker]:hidden dark:text-zinc-100">
+                                                        <div x-data="{ expanded: false }" class="mt-3 rounded-xl border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-950/40">
+                                                            <button type="button" class="flex w-full items-center justify-between gap-3 text-left text-sm font-medium text-zinc-900 dark:text-zinc-100" @click="expanded = ! expanded">
                                                                 <span>{{ __('Latest failed response headers') }}</span>
-                                                                <span class="rounded-full border border-zinc-300 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.2em] text-zinc-500 dark:border-zinc-600 dark:text-zinc-400">
-                                                                    {{ __('Toggle') }}
+                                                                <span class="inline-flex rounded-full border border-zinc-300 p-2 text-zinc-500 transition hover:border-zinc-400 hover:text-zinc-700 dark:border-zinc-600 dark:text-zinc-400 dark:hover:border-zinc-500 dark:hover:text-zinc-200">
+                                                                    <flux:icon.chevron-down class="size-4 transition-transform duration-200" x-bind:class="expanded ? 'rotate-180' : ''" />
                                                                 </span>
-                                                            </summary>
+                                                            </button>
 
-                                                            <div class="mt-3 space-y-2">
+                                                            <div x-cloak x-show="expanded" x-transition.opacity.duration.150ms style="display: none;" class="mt-3 space-y-2">
                                                                 @foreach ($downtime->latestResponseHeaders() as $header)
                                                                     <div wire:key="downtime-response-header-{{ $downtime->id }}-{{ md5($header['name'].'-'.$header['value']) }}" class="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200">
                                                                         <span class="font-medium text-zinc-900 dark:text-zinc-100">{{ $header['name'] }}:</span>
@@ -1151,7 +1190,7 @@ new #[Title('Service management')] class extends Component {
                                                                     </div>
                                                                 @endforeach
                                                             </div>
-                                                        </details>
+                                                        </div>
                                                     @endif
 
                                                     @if ($downtime->ai_summary)
@@ -1165,7 +1204,7 @@ new #[Title('Service management')] class extends Component {
                                     @endif
                                 </div>
                             </div>
-                        </details>
+                        </div>
                     @endforeach
                 </div>
             @endif

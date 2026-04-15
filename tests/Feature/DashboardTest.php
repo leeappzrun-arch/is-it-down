@@ -32,6 +32,7 @@ class DashboardTest extends TestCase
             'name' => 'Billing API',
             'url' => 'https://billing.example.com',
             'last_status_changed_at' => now()->subMinutes(5),
+            'next_check_at' => now()->addSeconds(44),
         ]);
         Service::factory()->currentlyUp()->count(3)->create();
         ServiceTemplate::factory()->count(2)->create();
@@ -53,6 +54,7 @@ class DashboardTest extends TestCase
         $response->assertSeeText('Billing API');
         $response->assertSeeText('https://billing.example.com');
         $response->assertSeeText('Down for 5 minutes');
+        $response->assertSeeText('Next check');
         $response->assertSeeTextInOrder(['Recipients', '2', 'Recipient groups', '3', 'Services', '4', 'Downtime incidents', '2', 'Templates', '2', 'Service groups', '5', 'Users', '1', 'API Keys', '4']);
         $response->assertSeeText('30-day uptime:');
         $response->assertSeeText('View only');
@@ -63,6 +65,7 @@ class DashboardTest extends TestCase
         $response->assertDontSee(route('service-groups.index'), false);
         $response->assertDontSee(route('users.index'), false);
         $response->assertDontSee(route('api-keys.index'), false);
+        $response->assertDontSee(route('services.index', ['service' => $billingService->id]), false);
     }
 
     public function test_admin_users_see_monitoring_and_access_navigation_groups(): void
@@ -74,6 +77,7 @@ class DashboardTest extends TestCase
             'name' => 'Billing API',
             'url' => 'https://billing.example.com',
             'last_status_changed_at' => now()->subMinutes(5),
+            'next_check_at' => now()->addSeconds(44),
         ]);
         Service::factory()->currentlyUp()->count(3)->create();
         ServiceTemplate::factory()->count(2)->create();
@@ -115,6 +119,9 @@ class DashboardTest extends TestCase
         $response->assertSeeText('Billing API');
         $response->assertSeeText('Down for 5 minutes');
         $response->assertSeeText('30-day uptime:');
+        $response->assertSeeText('Next check');
         $response->assertSeeText('Manage services');
+        $response->assertSee(route('services.index', ['service' => $billingService->id]), false);
+        $response->assertSeeText('Open in Services');
     }
 }
