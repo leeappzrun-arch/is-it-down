@@ -11,6 +11,7 @@ use Throwable;
 class ServiceMonitor
 {
     public function __construct(
+        private readonly BrowserPageMonitor $browserPageMonitor,
         private readonly ServiceMonitorPause $pause,
     ) {}
 
@@ -44,6 +45,18 @@ class ServiceMonitor
      * Perform a single service-check attempt.
      */
     private function performCheck(Service $service): ServiceCheckResult
+    {
+        if ($service->usesBrowserMonitoring()) {
+            return $this->performBrowserCheck($service);
+        }
+
+        return $this->performHttpCheck($service);
+    }
+
+    /**
+     * Perform a single HTTP service-check attempt.
+     */
+    private function performHttpCheck(Service $service): ServiceCheckResult
     {
         try {
             $request = Http::withHeaders($this->defaultRequestHeaders())
@@ -157,6 +170,124 @@ class ServiceMonitor
     }
 
     /**
+     * Perform a single browser-backed service-check attempt.
+     */
+    private function performBrowserCheck(Service $service): ServiceCheckResult
+    {
+        try {
+            $page = $this->browserPageMonitor->fetch($service);
+        } catch (Throwable $throwable) {
+            return new ServiceCheckResult(
+                status: Service::STATUS_DOWN,
+                reason: 'Browser monitoring failed: '.trim($throwable->getMessage()),
+            );
+        }
+
+        $responseCode = $page['status'];
+        $body = $page['body'];
+        $bodyExcerpt = Str::limit(trim(strip_tags($body)), 500);
+        $responseHeaders = $page['headers'];
+
+        if ($responseCode === null) {
+            return new ServiceCheckResult(
+                status: Service::STATUS_DOWN,
+                reason: 'Browser monitoring did not report an HTTP response status.',
+                bodyExcerpt: $bodyExcerpt !== '' ? $bodyExcerpt : null,
+                connectionSucceeded: true,
+                responseHeaders: $responseHeaders,
+            );
+        }
+
+        if ($responseCode !== 200) {
+            return new ServiceCheckResult(
+                status: Service::STATUS_DOWN,
+                reason: $this->failureReason($responseCode, $responseHeaders, $body),
+                responseCode: $responseCode,
+                bodyExcerpt: $bodyExcerpt !== '' ? $bodyExcerpt : null,
+                connectionSucceeded: true,
+                responseHeaders: $responseHeaders,
+            );
+        }
+
+        if (! $service->hasExpectation()) {
+            return new ServiceCheckResult(
+                status: Service::STATUS_UP,
+                reason: 'Received an HTTP 200 response.',
+                responseCode: $responseCode,
+                bodyExcerpt: $bodyExcerpt !== '' ? $bodyExcerpt : null,
+                connectionSucceeded: true,
+                responseHeaders: $responseHeaders,
+            );
+        }
+
+        if ($service->expect_type === Service::EXPECT_TEXT) {
+            if (! Str::contains($body, (string) $service->expect_value)) {
+                return new ServiceCheckResult(
+                    status: Service::STATUS_DOWN,
+                    reason: 'Response body did not contain the expected text.',
+                    responseCode: $responseCode,
+                    bodyExcerpt: $bodyExcerpt !== '' ? $bodyExcerpt : null,
+                    connectionSucceeded: true,
+                    responseHeaders: $responseHeaders,
+                );
+            }
+
+            return new ServiceCheckResult(
+                status: Service::STATUS_UP,
+                reason: 'Received an HTTP 200 response and the expected text was present.',
+                responseCode: $responseCode,
+                bodyExcerpt: $bodyExcerpt !== '' ? $bodyExcerpt : null,
+                connectionSucceeded: true,
+                responseHeaders: $responseHeaders,
+            );
+        }
+
+        if ($service->expect_type === Service::EXPECT_REGEX) {
+            $matched = @preg_match((string) $service->expect_value, $body);
+
+            if ($matched === false) {
+                return new ServiceCheckResult(
+                    status: Service::STATUS_DOWN,
+                    reason: 'The configured regular expression expectation is invalid.',
+                    responseCode: $responseCode,
+                    bodyExcerpt: $bodyExcerpt !== '' ? $bodyExcerpt : null,
+                    connectionSucceeded: true,
+                    responseHeaders: $responseHeaders,
+                );
+            }
+
+            if ($matched !== 1) {
+                return new ServiceCheckResult(
+                    status: Service::STATUS_DOWN,
+                    reason: 'Response body did not match the expected regular expression.',
+                    responseCode: $responseCode,
+                    bodyExcerpt: $bodyExcerpt !== '' ? $bodyExcerpt : null,
+                    connectionSucceeded: true,
+                    responseHeaders: $responseHeaders,
+                );
+            }
+
+            return new ServiceCheckResult(
+                status: Service::STATUS_UP,
+                reason: 'Received an HTTP 200 response and the expected regular expression matched.',
+                responseCode: $responseCode,
+                bodyExcerpt: $bodyExcerpt !== '' ? $bodyExcerpt : null,
+                connectionSucceeded: true,
+                responseHeaders: $responseHeaders,
+            );
+        }
+
+        return new ServiceCheckResult(
+            status: Service::STATUS_UP,
+            reason: 'Received an HTTP 200 response.',
+            responseCode: $responseCode,
+            bodyExcerpt: $bodyExcerpt !== '' ? $bodyExcerpt : null,
+            connectionSucceeded: true,
+            responseHeaders: $responseHeaders,
+        );
+    }
+
+    /**
      * Resolve the default headers used for all monitoring requests.
      *
      * @return array<string, string>
@@ -174,24 +305,26 @@ class ServiceMonitor
      *
      * @param  array<int, array{name: string, value: string}>  $responseHeaders
      */
-    private function failureReason(Response $response, array $responseHeaders, string $body): string
+    private function failureReason(Response|int $response, array $responseHeaders, string $body): string
     {
-        if ($this->looksLikeCloudflareProtection($response, $responseHeaders, $body)) {
-            return match ($response->status()) {
+        $status = $response instanceof Response ? $response->status() : $response;
+
+        if ($this->looksLikeCloudflareProtection($status, $responseHeaders, $body)) {
+            return match ($status) {
                 429 => 'Cloudflare rate limited the monitor request with HTTP 429 Too Many Requests. This often indicates temporary protection rather than a real outage.',
                 403 => 'Cloudflare blocked or challenged the monitor request with HTTP 403 Forbidden. This often indicates bot protection rather than a real outage.',
-                default => 'Cloudflare intercepted the monitor request with HTTP '.$this->statusSummary($response->status()).'. This may indicate temporary protection or rate limiting rather than a real outage.',
+                default => 'Cloudflare intercepted the monitor request with HTTP '.$this->statusSummary($status).'. This may indicate temporary protection or rate limiting rather than a real outage.',
             };
         }
 
-        if ($this->looksRateLimited($response, $responseHeaders, $body)) {
-            return match ($response->status()) {
+        if ($this->looksRateLimited($status, $responseHeaders, $body)) {
+            return match ($status) {
                 429 => 'The service rate limited the monitor request with HTTP 429 Too Many Requests.',
-                default => 'The service appears to have rate limited the monitor request with HTTP '.$this->statusSummary($response->status()).'.',
+                default => 'The service appears to have rate limited the monitor request with HTTP '.$this->statusSummary($status).'.',
             };
         }
 
-        return 'Expected HTTP 200 response but received '.$response->status().'.';
+        return 'Expected HTTP 200 response but received '.$status.'.';
     }
 
     /**
@@ -199,7 +332,7 @@ class ServiceMonitor
      *
      * @param  array<int, array{name: string, value: string}>  $responseHeaders
      */
-    private function looksLikeCloudflareProtection(Response $response, array $responseHeaders, string $body): bool
+    private function looksLikeCloudflareProtection(int $status, array $responseHeaders, string $body): bool
     {
         $headerMap = $this->headerMap($responseHeaders);
         $bodyLower = Str::lower($body);
@@ -222,7 +355,7 @@ class ServiceMonitor
             return false;
         }
 
-        return in_array($response->status(), [403, 429], true);
+        return in_array($status, [403, 429], true);
     }
 
     /**
@@ -230,9 +363,9 @@ class ServiceMonitor
      *
      * @param  array<int, array{name: string, value: string}>  $responseHeaders
      */
-    private function looksRateLimited(Response $response, array $responseHeaders, string $body): bool
+    private function looksRateLimited(int $status, array $responseHeaders, string $body): bool
     {
-        if ($response->status() === 429) {
+        if ($status === 429) {
             return true;
         }
 

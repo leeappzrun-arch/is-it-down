@@ -192,6 +192,7 @@ class ApiDocumentation
                     'name' => 'Marketing Site',
                     'url' => 'https://example.com/status',
                     'interval_seconds' => 60,
+                    'monitoring_method' => 'http',
                     'expect_type' => 'text',
                     'expect_value' => 'Healthy',
                     'additional_headers' => [
@@ -225,6 +226,7 @@ class ApiDocumentation
                     'name' => 'Marketing Site',
                     'url' => 'example.com/status',
                     'interval_seconds' => 300,
+                    'monitoring_method' => 'browser',
                     'expect_type' => 'none',
                     'expect_value' => '',
                     'additional_headers' => [],
@@ -272,6 +274,7 @@ class ApiDocumentation
                     'name' => 'Marketing site starter',
                     'service_name' => 'Marketing Site',
                     'interval_seconds' => 60,
+                    'monitoring_method' => 'http',
                     'expect_type' => 'text',
                     'expect_value' => 'Healthy',
                     'additional_headers' => [
@@ -305,6 +308,7 @@ class ApiDocumentation
                     'name' => 'Marketing site starter',
                     'service_name' => 'Marketing Site',
                     'interval_seconds' => 300,
+                    'monitoring_method' => 'browser',
                     'expect_type' => 'none',
                     'expect_value' => '',
                     'additional_headers' => [],

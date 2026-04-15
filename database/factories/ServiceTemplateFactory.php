@@ -24,6 +24,7 @@ class ServiceTemplateFactory extends Factory
             'configuration' => ServiceTemplateData::normalizeConfiguration([
                 'name' => fake()->company().' Status',
                 'interval_seconds' => fake()->randomElement(array_keys(Service::intervalOptions())),
+                'monitoring_method' => fake()->randomElement(array_keys(Service::monitoringMethods())),
                 'expect_type' => fake()->randomElement([null, Service::EXPECT_TEXT, Service::EXPECT_REGEX]),
                 'expect_value' => fake()->randomElement([null, 'All systems operational', '/healthy/i']),
                 'additional_headers' => [],

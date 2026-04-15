@@ -57,6 +57,7 @@ class ServiceManagementTest extends TestCase
             ->set('name', 'Marketing site')
             ->set('url', 'example.com/status')
             ->set('intervalSeconds', Service::INTERVAL_3_MINUTES)
+            ->set('monitoringMethod', Service::MONITOR_BROWSER)
             ->set('expectType', Service::EXPECT_TEXT)
             ->set('expectValue', 'All systems operational')
             ->set('additionalHeaders', [
@@ -75,6 +76,7 @@ class ServiceManagementTest extends TestCase
         $this->assertNotNull($service);
         $this->assertSame('https://example.com/status', $service->url);
         $this->assertSame(Service::INTERVAL_3_MINUTES, $service->interval_seconds);
+        $this->assertSame(Service::MONITOR_BROWSER, $service->monitoring_method);
         $this->assertSame(Service::EXPECT_TEXT, $service->expect_type);
         $this->assertSame('All systems operational', $service->expect_value);
         $this->assertSame([['name' => 'X-Monitor', 'value' => 'is-it-down']], $service->configuredAdditionalHeaders());
@@ -198,6 +200,7 @@ class ServiceManagementTest extends TestCase
             ->assertSet('name', 'Marketing site')
             ->assertSet('url', '')
             ->assertSet('intervalSeconds', Service::INTERVAL_5_MINUTES)
+            ->assertSet('monitoringMethod', Service::MONITOR_HTTP)
             ->assertSet('expectType', Service::EXPECT_TEXT)
             ->assertSet('expectValue', 'All systems operational')
             ->assertSet('additionalHeaders', [['name' => 'X-Monitor', 'value' => 'is-it-down']])

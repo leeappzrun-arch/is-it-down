@@ -29,6 +29,8 @@ new #[Title('Service management')] class extends Component {
 
     public int $intervalSeconds = Service::INTERVAL_1_MINUTE;
 
+    public string $monitoringMethod = Service::MONITOR_HTTP;
+
     public string $expectType = Service::EXPECT_NONE;
 
     public string $expectValue = '';
@@ -117,6 +119,7 @@ new #[Title('Service management')] class extends Component {
                     $service->name,
                     $service->url,
                     $service->intervalLabel(),
+                    $service->monitoringMethodLabel(),
                     $service->expectSummary(),
                     $service->additionalHeadersSummary(),
                     $service->ssl_expiry_notifications_enabled ? 'SSL expiry notifications enabled' : 'SSL expiry notifications disabled',
@@ -206,6 +209,17 @@ new #[Title('Service management')] class extends Component {
     }
 
     /**
+     * Get the supported monitoring method options.
+     *
+     * @return array<string, string>
+     */
+    #[Computed]
+    public function monitoringMethodOptions(): array
+    {
+        return $this->serviceMonitoringMethodOptions();
+    }
+
+    /**
      * Create or update a service.
      */
     public function saveService(): void
@@ -242,6 +256,7 @@ new #[Title('Service management')] class extends Component {
         $this->name = $service->name;
         $this->url = $service->url;
         $this->intervalSeconds = $service->interval_seconds;
+        $this->monitoringMethod = $service->monitoringMethod();
         $this->expectType = $service->expect_type ?? Service::EXPECT_NONE;
         $this->expectValue = $service->expect_value ?? '';
         $this->additionalHeaders = $service->configuredAdditionalHeaders();
@@ -413,6 +428,7 @@ new #[Title('Service management')] class extends Component {
         ]);
 
         $this->intervalSeconds = Service::INTERVAL_1_MINUTE;
+        $this->monitoringMethod = Service::MONITOR_HTTP;
         $this->expectType = Service::EXPECT_NONE;
         $this->sslExpiryNotificationsEnabled = false;
         $this->resetValidation();
@@ -507,6 +523,7 @@ new #[Title('Service management')] class extends Component {
         $this->name = $configuration['name'];
         $this->url = '';
         $this->intervalSeconds = $configuration['interval_seconds'];
+        $this->monitoringMethod = $configuration['monitoring_method'];
         $this->expectType = $configuration['expect_type'] ?? Service::EXPECT_NONE;
         $this->expectValue = $configuration['expect_value'] ?? '';
         $this->additionalHeaders = $configuration['additional_headers'];
@@ -615,6 +632,35 @@ new #[Title('Service management')] class extends Component {
                         @error('intervalSeconds')
                             <p class="mt-2 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
                         @enderror
+                    </div>
+
+                    <div class="space-y-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-950/40">
+                        <div>
+                            <flux:heading>{{ __('Check method') }}</flux:heading>
+                            <flux:subheading class="mt-1">{{ __('Choose whether to send a direct HTTP request or load the page in a browser session. Browser mode still applies any text or regex expectation against the rendered page body.') }}</flux:subheading>
+                        </div>
+
+                        <div>
+                            <label for="monitoringMethod" class="mb-2 block text-sm font-medium text-zinc-800 dark:text-zinc-100">{{ __('Monitoring method') }}</label>
+                            <select
+                                id="monitoringMethod"
+                                wire:model="monitoringMethod"
+                                class="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm text-zinc-900 outline-none transition focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+                            >
+                                @foreach ($this->monitoringMethodOptions as $value => $label)
+                                    <option value="{{ $value }}">{{ $label }}</option>
+                                @endforeach
+                            </select>
+                            @error('monitoringMethod')
+                                <p class="mt-2 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <p class="rounded-lg border border-dashed border-zinc-300 px-4 py-3 text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
+                            {{ $monitoringMethod === \App\Models\Service::MONITOR_BROWSER
+                                ? __('Browser session mode is useful for services that challenge simple bot-like requests. It is slower, but expectation checks still run against the rendered page content.')
+                                : __('HTTP request mode is faster and is still the best default for most endpoints and health pages.') }}
+                        </p>
                     </div>
 
                     <div class="space-y-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-950/40">
@@ -877,6 +923,7 @@ new #[Title('Service management')] class extends Component {
                                         <div class="flex flex-wrap gap-2 text-xs">
                                             <span class="rounded-full px-3 py-1 font-medium {{ $service->monitoringStatusClasses() }}">{{ __($service->monitoringStatusLabel()) }}</span>
                                             <span class="rounded-full bg-sky-100 px-3 py-1 font-medium text-sky-700 dark:bg-sky-500/15 dark:text-sky-300">{{ $service->intervalLabel() }}</span>
+                                            <span class="rounded-full bg-indigo-100 px-3 py-1 font-medium text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300">{{ $service->monitoringMethodLabel() }}</span>
                                             <span class="rounded-full bg-zinc-200 px-3 py-1 font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">{{ $service->expectSummary() }}</span>
                                             <span class="rounded-full bg-violet-100 px-3 py-1 font-medium text-violet-700 dark:bg-violet-500/15 dark:text-violet-300">{{ $service->additionalHeadersSummary() }}</span>
                                             @if ($service->ssl_expiry_notifications_enabled)
@@ -1008,7 +1055,17 @@ new #[Title('Service management')] class extends Component {
                                     </div>
                                 </div>
 
-                                <div class="grid gap-4 lg:grid-cols-2">
+                                <div class="grid gap-4 lg:grid-cols-3">
+                                    <div class="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
+                                        <div class="text-sm font-medium text-zinc-900 dark:text-zinc-100">{{ __('Monitoring method') }}</div>
+                                        <div class="mt-3 text-sm text-zinc-600 dark:text-zinc-300">{{ $service->monitoringMethodLabel() }}</div>
+                                        <div class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                                            {{ $service->usesBrowserMonitoring()
+                                                ? __('Loads the page in a browser session before evaluating expectations.')
+                                                : __('Sends a direct HTTP request before evaluating expectations.') }}
+                                        </div>
+                                    </div>
+
                                     <div class="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
                                         <div class="text-sm font-medium text-zinc-900 dark:text-zinc-100">{{ __('Additional headers') }}</div>
 

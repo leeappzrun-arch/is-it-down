@@ -46,6 +46,8 @@ return [
             'User-Agent' => env('MONITORING_REQUEST_USER_AGENT', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36'),
         ],
         'schedule_jitter_max_seconds' => env('MONITORING_SCHEDULE_JITTER_MAX_SECONDS', 10),
+        'browser_profile_directory' => env('MONITORING_BROWSER_PROFILE_DIRECTORY', 'app/monitoring-browser-profiles'),
+        'browser_settle_seconds' => env('MONITORING_BROWSER_SETTLE_SECONDS', 10),
         'downtime_screenshot_disk' => env('MONITORING_DOWNTIME_SCREENSHOT_DISK', 'public'),
         'downtime_screenshot_directory' => env('MONITORING_DOWNTIME_SCREENSHOT_DIRECTORY', 'downtime-screenshots'),
         'latest_service_screenshot_directory' => env('MONITORING_LATEST_SERVICE_SCREENSHOT_DIRECTORY', 'service-screenshots'),

@@ -87,7 +87,7 @@ new #[Title('API documentation')] class extends Component {
             <div id="response-notes" class="scroll-mt-24 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
                 <flux:heading size="lg">{{ __('Response notes') }}</flux:heading>
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
-                    <p>{{ __('Service responses now expose `uptime_percentage_last_30_days`, the current downtime when one is active, recent downtime records when the endpoint loads service history, the latest stored screenshot URL, and any failed response headers captured for the current down state.') }}</p>
+                    <p>{{ __('Service responses now expose `monitoring_method`, `uptime_percentage_last_30_days`, the current downtime when one is active, recent downtime records when the endpoint loads service history, the latest stored screenshot URL, and any failed response headers captured for the current down state.') }}</p>
                     <p>{{ __('Recipient payloads include `additional_headers` and `additional_headers_count` so integrations can review configured webhook headers.') }}</p>
                     <p>{{ __('Downtime resources expose timing details, attempt counts, `screenshot_url`, `started_response_headers`, `latest_response_headers`, and `ai_summary` so external systems can build richer incident timelines.') }}</p>
                     <p>{{ __('Listing service downtime incidents supports a `status` filter with `ongoing` or `resolved` plus the standard `per_page` paginator size.') }}</p>
@@ -99,7 +99,7 @@ new #[Title('API documentation')] class extends Component {
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
                     <p>{{ __('Use the API Playground page to pick any documented endpoint, review its request contract, paste an API key, and send a real request against this environment.') }}</p>
                     <p>{{ __('The playground shares the same endpoint catalog as this page so the dropdown documentation and this reference stay in sync.') }}</p>
-                    <p>{{ __('Service, template, and recipient examples include the current `additional_headers` array format, and service examples also include the `ssl_expiry_notifications_enabled` flag plus the latest monitoring artifacts so integrations can mirror the UI exactly.') }}</p>
+                    <p>{{ __('Service, template, and recipient examples include the current `additional_headers` array format, and service and template examples also include `monitoring_method` plus the `ssl_expiry_notifications_enabled` flag so integrations can mirror the UI exactly.') }}</p>
                     <p>
                         <a href="{{ route('api-playground') }}" class="font-medium text-sky-600 hover:text-sky-500 dark:text-sky-400 dark:hover:text-sky-300">{{ __('Visit the API Playground') }}</a>
                          to get started or test out requests without needing a separate REST client.

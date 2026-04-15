@@ -33,7 +33,7 @@ class ServiceTemplate extends Model
     /**
      * Get the normalized service configuration stored on the template.
      *
-     * @return array{name: string, interval_seconds: int, expect_type: ?string, expect_value: ?string, additional_headers: array<int, array{name: string, value: string}>, ssl_expiry_notifications_enabled: bool, service_group_ids: array<int, int>, recipient_group_ids: array<int, int>, recipient_ids: array<int, int>}
+     * @return array{name: string, interval_seconds: int, monitoring_method: string, expect_type: ?string, expect_value: ?string, additional_headers: array<int, array{name: string, value: string}>, ssl_expiry_notifications_enabled: bool, service_group_ids: array<int, int>, recipient_group_ids: array<int, int>, recipient_ids: array<int, int>}
      */
     public function serviceConfiguration(): array
     {
@@ -43,7 +43,7 @@ class ServiceTemplate extends Model
     /**
      * Get the form state used to start a new service from this template.
      *
-     * @return array{name: string, url: string, intervalSeconds: int, expectType: string, expectValue: string, additionalHeaders: array<int, array{name: string, value: string}>, sslExpiryNotificationsEnabled: bool, selectedServiceGroupIds: array<int, string>, selectedRecipientGroupIds: array<int, string>, selectedRecipientIds: array<int, string>}
+     * @return array{name: string, url: string, intervalSeconds: int, monitoringMethod: string, expectType: string, expectValue: string, additionalHeaders: array<int, array{name: string, value: string}>, sslExpiryNotificationsEnabled: bool, selectedServiceGroupIds: array<int, string>, selectedRecipientGroupIds: array<int, string>, selectedRecipientIds: array<int, string>}
      */
     public function serviceFormState(): array
     {
@@ -72,6 +72,22 @@ class ServiceTemplate extends Model
     public function intervalLabel(): string
     {
         return Service::intervalOptions()[$this->intervalSeconds()] ?? 'Custom interval';
+    }
+
+    /**
+     * Get the monitoring method stored on this template.
+     */
+    public function monitoringMethod(): string
+    {
+        return $this->serviceConfiguration()['monitoring_method'];
+    }
+
+    /**
+     * Get the human-readable monitoring method label.
+     */
+    public function monitoringMethodLabel(): string
+    {
+        return Service::monitoringMethods()[$this->monitoringMethod()] ?? 'HTTP request';
     }
 
     /**

@@ -46,6 +46,7 @@ class ServiceTemplateController extends Controller
                         $template->name,
                         $configuration['name'],
                         $template->intervalLabel(),
+                        $template->monitoringMethodLabel(),
                         $template->expectSummary(),
                         $template->additionalHeadersSummary(),
                         $template->sslExpiryNotificationsEnabled() ? 'SSL expiry notifications enabled' : 'SSL expiry notifications disabled',

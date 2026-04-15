@@ -20,6 +20,8 @@ class ServiceResource extends JsonResource
             'url' => $this->url,
             'interval_seconds' => $this->interval_seconds,
             'interval_label' => $this->intervalLabel(),
+            'monitoring_method' => $this->monitoringMethod(),
+            'monitoring_method_label' => $this->monitoringMethodLabel(),
             'expect_type' => $this->expect_type,
             'expect_value' => $this->expect_value,
             'additional_headers' => $this->configuredAdditionalHeaders(),

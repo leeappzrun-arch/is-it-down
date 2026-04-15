@@ -20,6 +20,7 @@ use Illuminate\Support\Str;
     'name',
     'url',
     'interval_seconds',
+    'monitoring_method',
     'expect_type',
     'expect_value',
     'additional_headers',
@@ -49,6 +50,10 @@ class Service extends Model
     public const EXPECT_TEXT = 'text';
 
     public const EXPECT_REGEX = 'regex';
+
+    public const MONITOR_HTTP = 'http';
+
+    public const MONITOR_BROWSER = 'browser';
 
     public const STATUS_UP = 'up';
 
@@ -81,6 +86,19 @@ class Service extends Model
             self::EXPECT_NONE => 'No expectation',
             self::EXPECT_TEXT => 'Plain text',
             self::EXPECT_REGEX => 'Regular expression',
+        ];
+    }
+
+    /**
+     * Get the supported monitoring method options.
+     *
+     * @return array<string, string>
+     */
+    public static function monitoringMethods(): array
+    {
+        return [
+            self::MONITOR_HTTP => 'HTTP request',
+            self::MONITOR_BROWSER => 'Browser session',
         ];
     }
 
@@ -143,6 +161,34 @@ class Service extends Model
             'last_ssl_expiry_notification_sent_at' => 'datetime',
             'last_screenshot_captured_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Get the configured monitoring method.
+     */
+    public function monitoringMethod(): string
+    {
+        $monitoringMethod = (string) ($this->monitoring_method ?? self::MONITOR_HTTP);
+
+        return array_key_exists($monitoringMethod, self::monitoringMethods())
+            ? $monitoringMethod
+            : self::MONITOR_HTTP;
+    }
+
+    /**
+     * Get the human-readable monitoring method label.
+     */
+    public function monitoringMethodLabel(): string
+    {
+        return self::monitoringMethods()[$this->monitoringMethod()] ?? 'HTTP request';
+    }
+
+    /**
+     * Determine whether this service should use browser-based monitoring.
+     */
+    public function usesBrowserMonitoring(): bool
+    {
+        return $this->monitoringMethod() === self::MONITOR_BROWSER;
     }
 
     /**

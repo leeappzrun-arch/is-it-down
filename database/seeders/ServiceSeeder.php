@@ -38,6 +38,7 @@ class ServiceSeeder extends Seeder
                 'name' => 'Marketing Site',
                 'url' => 'https://example.com',
                 'interval_seconds' => Service::INTERVAL_1_MINUTE,
+                'monitoring_method' => Service::MONITOR_HTTP,
                 'expect_type' => Service::EXPECT_TEXT,
                 'expect_value' => 'All systems operational',
                 'additional_headers' => [
@@ -68,6 +69,7 @@ class ServiceSeeder extends Seeder
                 'name' => 'Vendor API',
                 'url' => 'https://status.vendor.example.com',
                 'interval_seconds' => Service::INTERVAL_5_MINUTES,
+                'monitoring_method' => Service::MONITOR_BROWSER,
                 'expect_type' => Service::EXPECT_REGEX,
                 'expect_value' => '/status\\s*:\\s*ok/i',
                 'additional_headers' => [

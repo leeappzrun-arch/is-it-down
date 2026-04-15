@@ -84,6 +84,7 @@ class ServiceData
             'name' => trim((string) $validated['name']),
             'url' => self::normalizeUrl((string) $validated['url']),
             'interval_seconds' => (int) $validated['intervalSeconds'],
+            'monitoring_method' => (string) ($validated['monitoringMethod'] ?? Service::MONITOR_HTTP),
             'expect_type' => $expectType === Service::EXPECT_NONE ? null : $expectType,
             'expect_value' => $expectType === Service::EXPECT_NONE || $expectValue === '' ? null : $expectValue,
             'additional_headers' => self::normalizeAdditionalHeaders($validated['additionalHeaders'] ?? []),

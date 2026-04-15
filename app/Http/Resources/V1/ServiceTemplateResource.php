@@ -21,6 +21,8 @@ class ServiceTemplateResource extends JsonResource
             'service_name' => $this->serviceName(),
             'interval_seconds' => $this->intervalSeconds(),
             'interval_label' => $this->intervalLabel(),
+            'monitoring_method' => $this->monitoringMethod(),
+            'monitoring_method_label' => $this->monitoringMethodLabel(),
             'expect_type' => $this->expectType() === Service::EXPECT_NONE ? null : $this->expectType(),
             'expect_value' => $this->expectValue(),
             'additional_headers' => $this->configuredAdditionalHeaders(),

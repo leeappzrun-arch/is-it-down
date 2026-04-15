@@ -31,7 +31,7 @@ class WebsiteScreenshotter
         @rename($temporaryFile, $pngPath);
 
         try {
-            if ($this->captureWithBrowsershot($service->url, $pngPath) || $this->captureWithLaravelScreenshot($service->url, $pngPath)) {
+            if ($this->captureWithBrowsershot($service, $pngPath) || $this->captureWithLaravelScreenshot($service->url, $pngPath)) {
                 $contents = file_get_contents($pngPath);
 
                 return $contents === false ? null : $contents;
@@ -108,9 +108,9 @@ class WebsiteScreenshotter
     /**
      * Capture a screenshot with spatie/browsershot when available.
      */
-    private function captureWithBrowsershot(string $url, string $path): bool
+    private function captureWithBrowsershot(Service $service, string $path): bool
     {
-        $browsershot = $this->makeBrowsershot($url);
+        $browsershot = $this->makeBrowsershot($service);
 
         if (! is_object($browsershot)) {
             return false;
@@ -124,7 +124,7 @@ class WebsiteScreenshotter
     /**
      * Create a configured Browsershot instance when the package is available.
      */
-    protected function makeBrowsershot(string $url): ?object
+    protected function makeBrowsershot(Service $service): ?object
     {
         $browsershotClass = 'Spatie\\Browsershot\\Browsershot';
 
@@ -132,15 +132,15 @@ class WebsiteScreenshotter
             return null;
         }
 
-        $browsershot = $browsershotClass::url($url);
+        $browsershot = $browsershotClass::url($service->url);
 
-        return $this->configureBrowsershot($browsershot);
+        return $this->configureBrowsershot($browsershot, $service);
     }
 
     /**
      * Apply the runtime Browsershot configuration used inside the container.
      */
-    protected function configureBrowsershot(object $browsershot): object
+    protected function configureBrowsershot(object $browsershot, ?Service $service = null): object
     {
         $nodeBinary = trim($this->runtimeEnvironmentValue('LARAVEL_SCREENSHOT_NODE_BINARY', '/usr/bin/node'));
         $nodeModulesPath = trim($this->runtimeEnvironmentValue('LARAVEL_SCREENSHOT_NODE_MODULES_PATH', '/opt/browsershot/node_modules'));
@@ -175,7 +175,65 @@ class WebsiteScreenshotter
             $browsershot->noSandbox();
         }
 
+        $requestHeaders = $this->requestHeaders($service);
+        $userAgent = $requestHeaders['User-Agent'] ?? null;
+        unset($requestHeaders['User-Agent']);
+
+        if (is_string($userAgent) && $userAgent !== '' && method_exists($browsershot, 'userAgent')) {
+            $browsershot->userAgent($userAgent);
+        }
+
+        if ($requestHeaders !== [] && method_exists($browsershot, 'setExtraHttpHeaders')) {
+            $browsershot->setExtraHttpHeaders($requestHeaders);
+        }
+
+        if ($requestHeaders !== [] && method_exists($browsershot, 'setExtraNavigationHttpHeaders')) {
+            $browsershot->setExtraNavigationHttpHeaders($requestHeaders);
+        }
+
+        if ($service instanceof Service && method_exists($browsershot, 'userDataDir')) {
+            $browsershot->userDataDir($this->profilePathForService($service));
+        }
+
         return $browsershot;
+    }
+
+    /**
+     * Resolve the request headers used by the screenshot browser.
+     *
+     * @return array<string, string>
+     */
+    protected function requestHeaders(?Service $service = null): array
+    {
+        $defaultHeaders = collect(config('services.monitoring.default_request_headers', []))
+            ->filter(fn (mixed $value): bool => is_string($value) && trim($value) !== '')
+            ->map(fn (string $value): string => trim($value))
+            ->all();
+
+        if (! $service instanceof Service) {
+            return $defaultHeaders;
+        }
+
+        return array_replace($defaultHeaders, $service->requestHeaders());
+    }
+
+    /**
+     * Create the persistent browser profile path for a service.
+     */
+    protected function profilePathForService(Service $service): string
+    {
+        $directory = trim((string) config('services.monitoring.browser_profile_directory', 'app/monitoring-browser-profiles'));
+        $relativeDirectory = $directory === '' ? 'app/monitoring-browser-profiles' : str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $directory);
+        $serviceIdentifier = $service->getKey() !== null
+            ? 'service-'.$service->getKey()
+            : 'service-'.sha1((string) $service->url);
+        $profilePath = storage_path($relativeDirectory.DIRECTORY_SEPARATOR.$serviceIdentifier);
+
+        if (! is_dir($profilePath)) {
+            mkdir($profilePath, 0775, true);
+        }
+
+        return $profilePath;
     }
 
     /**

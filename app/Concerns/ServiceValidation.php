@@ -28,6 +28,16 @@ trait ServiceValidation
     }
 
     /**
+     * Get the supported monitoring method options.
+     *
+     * @return array<string, string>
+     */
+    protected function serviceMonitoringMethodOptions(): array
+    {
+        return Service::monitoringMethods();
+    }
+
+    /**
      * Get the validation rules for service upserts.
      *
      * @return array<string, array<int, mixed>>
@@ -68,6 +78,7 @@ trait ServiceValidation
                 },
             ],
             'intervalSeconds' => ['required', 'integer', Rule::in(array_keys($this->serviceIntervalOptions()))],
+            'monitoringMethod' => ['required', Rule::in(array_keys($this->serviceMonitoringMethodOptions()))],
             'expectType' => ['required', Rule::in(array_keys($this->serviceExpectationOptions()))],
             'expectValue' => [
                 Rule::requiredIf(fn (): bool => $expectType !== Service::EXPECT_NONE),
@@ -113,6 +124,7 @@ trait ServiceValidation
             ],
             'serviceName' => ['required', 'string', 'max:255'],
             'intervalSeconds' => ['required', 'integer', Rule::in(array_keys($this->serviceIntervalOptions()))],
+            'monitoringMethod' => ['required', Rule::in(array_keys($this->serviceMonitoringMethodOptions()))],
             'expectType' => ['required', Rule::in(array_keys($this->serviceExpectationOptions()))],
             'expectValue' => [
                 Rule::requiredIf(fn (): bool => $expectType !== Service::EXPECT_NONE),

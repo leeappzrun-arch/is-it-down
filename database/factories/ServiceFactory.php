@@ -21,6 +21,7 @@ class ServiceFactory extends Factory
             'name' => fake()->unique()->company().' Status',
             'url' => fake()->url(),
             'interval_seconds' => fake()->randomElement(array_keys(Service::intervalOptions())),
+            'monitoring_method' => Service::MONITOR_HTTP,
             'expect_type' => null,
             'expect_value' => null,
             'additional_headers' => [],

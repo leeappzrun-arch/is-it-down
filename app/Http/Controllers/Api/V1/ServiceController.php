@@ -51,6 +51,7 @@ class ServiceController extends Controller
                         ->where('name', 'like', '%'.$search.'%')
                         ->orWhere('url', 'like', '%'.$search.'%')
                         ->orWhere('expect_value', 'like', '%'.$search.'%')
+                        ->orWhere('monitoring_method', 'like', '%'.$search.'%')
                         ->orWhere('additional_headers', 'like', '%'.$search.'%')
                         ->orWhere('current_status', 'like', '%'.$search.'%')
                         ->orWhereHas('groups', function ($groupQuery) use ($search): void {

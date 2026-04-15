@@ -48,6 +48,7 @@ class ServiceTemplateManagementTest extends TestCase
             ->set('templateName', 'Website starter')
             ->set('serviceName', 'Marketing site')
             ->set('intervalSeconds', Service::INTERVAL_3_MINUTES)
+            ->set('monitoringMethod', Service::MONITOR_BROWSER)
             ->set('expectType', Service::EXPECT_TEXT)
             ->set('expectValue', 'All systems operational')
             ->set('additionalHeaders', [
@@ -66,6 +67,7 @@ class ServiceTemplateManagementTest extends TestCase
         $this->assertNotNull($template);
         $this->assertSame('Marketing site', $template->serviceName());
         $this->assertSame(Service::INTERVAL_3_MINUTES, $template->intervalSeconds());
+        $this->assertSame(Service::MONITOR_BROWSER, $template->monitoringMethod());
         $this->assertSame(Service::EXPECT_TEXT, $template->expectType());
         $this->assertSame('All systems operational', $template->expectValue());
         $this->assertSame([['name' => 'X-Monitor', 'value' => 'is-it-down']], $template->configuredAdditionalHeaders());

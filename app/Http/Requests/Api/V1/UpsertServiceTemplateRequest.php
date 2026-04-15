@@ -28,6 +28,7 @@ class UpsertServiceTemplateRequest extends FormRequest
             'templateName' => $this->input('name', $this->input('templateName', '')),
             'serviceName' => $this->input('service_name', $this->input('serviceName', '')),
             'intervalSeconds' => $this->input('interval_seconds', $this->input('intervalSeconds', Service::INTERVAL_1_MINUTE)),
+            'monitoringMethod' => $this->input('monitoring_method', $this->input('monitoringMethod', Service::MONITOR_HTTP)),
             'expectType' => $this->input('expect_type', $this->input('expectType', Service::EXPECT_NONE)),
             'expectValue' => $this->input('expect_value', $this->input('expectValue', '')),
             'additionalHeaders' => ServiceData::normalizeAdditionalHeaders($this->input('additional_headers', $this->input('additionalHeaders', []))),

@@ -3,8 +3,10 @@
 namespace Tests\Unit;
 
 use App\Models\Service;
+use App\Support\Monitoring\BrowserPageMonitor;
 use App\Support\Monitoring\ServiceMonitor;
 use Illuminate\Support\Facades\Http;
+use Mockery\MockInterface;
 use Tests\TestCase;
 
 class ServiceMonitorTest extends TestCase
@@ -84,5 +86,62 @@ class ServiceMonitorTest extends TestCase
         $this->assertTrue(collect($result->responseHeaders)->contains(
             fn (array $header): bool => ($header['name'] ?? null) === 'Retry-After' && ($header['value'] ?? null) === '120',
         ));
+    }
+
+    public function test_it_can_use_browser_monitoring_with_text_expectations(): void
+    {
+        Http::preventStrayRequests();
+
+        $service = new Service([
+            'name' => 'Customer Portal',
+            'url' => 'https://portal.example.com',
+            'interval_seconds' => Service::INTERVAL_1_MINUTE,
+            'monitoring_method' => Service::MONITOR_BROWSER,
+            'expect_type' => Service::EXPECT_TEXT,
+            'expect_value' => 'All systems operational',
+        ]);
+
+        $this->mock(BrowserPageMonitor::class, function (MockInterface $mock) use ($service): void {
+            $mock->shouldReceive('fetch')->once()->with($service)->andReturn([
+                'status' => 200,
+                'body' => '<main><h1>All systems operational</h1></main>',
+                'headers' => [
+                    ['name' => 'Content-Type', 'value' => 'text/html; charset=UTF-8'],
+                ],
+            ]);
+        });
+
+        $result = app(ServiceMonitor::class)->check($service);
+
+        $this->assertSame(Service::STATUS_UP, $result->status);
+        $this->assertSame('Received an HTTP 200 response and the expected text was present.', $result->reason);
+        $this->assertSame(200, $result->responseCode);
+    }
+
+    public function test_it_can_use_browser_monitoring_with_regex_expectations(): void
+    {
+        Http::preventStrayRequests();
+
+        $service = new Service([
+            'name' => 'Vendor Status',
+            'url' => 'https://vendor.example.com/status',
+            'interval_seconds' => Service::INTERVAL_1_MINUTE,
+            'monitoring_method' => Service::MONITOR_BROWSER,
+            'expect_type' => Service::EXPECT_REGEX,
+            'expect_value' => '/status\\s*:\\s*ok/i',
+        ]);
+
+        $this->mock(BrowserPageMonitor::class, function (MockInterface $mock) use ($service): void {
+            $mock->shouldReceive('fetch')->once()->with($service)->andReturn([
+                'status' => 200,
+                'body' => '<main><p>Status: OK</p></main>',
+                'headers' => [],
+            ]);
+        });
+
+        $result = app(ServiceMonitor::class)->check($service);
+
+        $this->assertSame(Service::STATUS_UP, $result->status);
+        $this->assertSame('Received an HTTP 200 response and the expected regular expression matched.', $result->reason);
     }
 }

@@ -53,7 +53,7 @@ Is It Down is a Laravel 13 and Livewire 4 application for managing monitored ser
 
 - Create, edit, and delete services.
 - Search the Services page to filter service cards from one input.
-- Configure a service name, URL, polling interval, optional extra request headers, and an optional expectation using either plain text or a regular expression.
+- Configure a service name, URL, polling interval, a monitoring method, optional extra request headers, and an optional expectation using either plain text or a regular expression.
 - Enable SSL expiry notifications per service to warn recipients when an HTTPS certificate is within 10 days of expiry, with those alerts limited to once every 24 hours per service.
 - Save any existing service as a reusable template without its URL.
 - Assign services to one or more service groups.
@@ -61,6 +61,8 @@ Is It Down is a Laravel 13 and Livewire 4 application for managing monitored ser
 - Open the Service Groups page when you want to manage service-group membership and routing from the group side.
 - Track the latest monitoring status, how long the service has been in that state, the last reason, the last check time, and a live next-check timer from the Services page.
 - Mark a service as down when the response is not HTTP 200 or when a configured text or regex expectation does not match the response body.
+- Choose between fast direct HTTP checks and browser-session monitoring for services that need a rendered page load or run behind stricter bot protection.
+- Browser-session monitoring now reuses a persistent per-service Chromium profile so cookies and other browser session state can survive between checks.
 - Confirm one failed check before classifying the service as down, which helps reduce false positives caused by brief network or origin blips.
 - Send browser-like default headers with monitoring requests and optionally add small scheduling jitter so protected origins are less likely to treat checks as bot bursts.
 - Notify assigned recipients only when the service changes state, so repeated down checks do not resend the same alert until the service recovers.
@@ -77,7 +79,7 @@ Is It Down is a Laravel 13 and Livewire 4 application for managing monitored ser
 ### Template management
 
 - Create, edit, and delete reusable service templates.
-- Store the same service settings you normally configure on the Services page except for the URL, including extra request headers and the SSL expiry notification default.
+- Store the same service settings you normally configure on the Services page except for the URL, including the monitoring method, extra request headers, and the SSL expiry notification default.
 - Save templates directly from the Templates page or create them from an existing service with a name prompt.
 - Start a new service from a template, which pre-fills the service form so only the URL and any final adjustments are needed.
 - Search the Templates page by template name, saved service defaults, or routing assignments.
@@ -134,7 +136,7 @@ Is It Down is a Laravel 13 and Livewire 4 application for managing monitored ser
 - Listing endpoints support search plus resource-specific filtering where relevant.
 - Creation endpoints reuse the same validation rules as the matching Livewire management forms.
 - Services can be created from a saved service template by passing a template id or exact template name together with the URL and any optional overrides.
-- Service and template payloads support `additional_headers` plus `ssl_expiry_notifications_enabled` so integrations can manage custom check headers and SSL warning behavior.
+- Service and template payloads support `monitoring_method`, `additional_headers`, and `ssl_expiry_notifications_enabled` so integrations can manage browser-based checks, custom request headers, and SSL warning behavior.
 - Recipient payloads support `additional_headers` so webhook consumers can receive custom headers without hard-coding them elsewhere.
 - Service responses now expose uptime history metadata, current downtime details, recent downtime incidents, the latest screenshot URL, and failed response headers.
 - Downtime history endpoints expose screenshots, failed response headers, attempt counts, and Dave outage summaries for integrations.
@@ -231,6 +233,8 @@ MONITORING_REQUEST_PRAGMA=no-cache
 MONITORING_REQUEST_UPGRADE_INSECURE_REQUESTS=1
 MONITORING_REQUEST_USER_AGENT="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36"
 MONITORING_SCHEDULE_JITTER_MAX_SECONDS=10
+MONITORING_BROWSER_PROFILE_DIRECTORY=app/monitoring-browser-profiles
+MONITORING_BROWSER_SETTLE_SECONDS=10
 MONITORING_DOWNTIME_SCREENSHOT_DISK=public
 MONITORING_DOWNTIME_SCREENSHOT_DIRECTORY=downtime-screenshots
 MONITORING_LATEST_SERVICE_SCREENSHOT_DIRECTORY=service-screenshots

@@ -90,8 +90,9 @@ new #[Title('User guide')] class extends Component {
                 <flux:heading size="lg">{{ __('Service management') }}</flux:heading>
                 <flux:subheading class="mt-2">{{ __('Admin only') }}</flux:subheading>
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
-                    <p>{{ __('Services represent the URLs you want to monitor. Each service includes a name, URL, polling interval, optional extra request headers, and an optional expectation that can be plain text or a regex pattern.') }}</p>
-                    <p>{{ __('A service is considered down whenever the URL does not respond with HTTP 200, or when a configured text or regex expectation fails to match the response body.') }}</p>
+                    <p>{{ __('Services represent the URLs you want to monitor. Each service includes a name, URL, polling interval, a monitoring method, optional extra request headers, and an optional expectation that can be plain text or a regex pattern.') }}</p>
+                    <p>{{ __('A service is considered down whenever the URL does not respond with HTTP 200, or when a configured text or regex expectation fails to match the response body. Browser-session monitoring still applies those expectation checks against the rendered page content.') }}</p>
+                    <p>{{ __('Browser-session checks now reuse a persistent per-service browser profile so cookies and related session state can survive between runs, which may help with softer Cloudflare-style verification flows.') }}</p>
                     <p>{{ __('To reduce false positives, the monitor confirms a failed result before the service changes state. The attempt count is still recorded with the downtime entry for integrations that need it.') }}</p>
                     <p>{{ __('The monitor also sends a browser-like default request profile and can add a small amount of schedule jitter so Cloudflare-style protection is less likely to mistake routine checks for bot traffic.') }}</p>
                     <p>{{ __('Additional request headers can still be stored per service when a monitored endpoint needs custom authentication or routing metadata during the health check.') }}</p>
@@ -116,7 +117,7 @@ new #[Title('User guide')] class extends Component {
                 <flux:heading size="lg">{{ __('Template management') }}</flux:heading>
                 <flux:subheading class="mt-2">{{ __('Admin only') }}</flux:subheading>
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
-                    <p>{{ __('Templates are reusable service blueprints. They store the same service settings you would normally configure on the Services page except for the URL, so you can reuse intervals, expectations, additional headers, SSL expiry defaults, and routing assignments across new services.') }}</p>
+                    <p>{{ __('Templates are reusable service blueprints. They store the same service settings you would normally configure on the Services page except for the URL, so you can reuse intervals, monitoring methods, expectations, additional headers, SSL expiry defaults, and routing assignments across new services.') }}</p>
                     <p>{{ __('Each template has its own template name plus a default service name that is copied into the service form when the template is used.') }}</p>
                     <p>{{ __('You can create templates directly from the Templates page or save one from an existing service by choosing Save as template from the service details.') }}</p>
                     <p>{{ __('When you choose Create service on a template, the app opens the Services page with the template values prefilled. Add the URL, review the fields, and save when you are ready.') }}</p>
@@ -180,7 +181,7 @@ new #[Title('User guide')] class extends Component {
                 <div class="mt-4 space-y-3 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
                     <p>{{ __('The application now exposes a REST API under `/api/v1`, authenticated with bearer tokens generated from the API Keys page.') }}</p>
                     <p>{{ __('Read routes and write routes each require the matching API key permissions, and expired or revoked keys stop working immediately. The current REST API now includes service-template endpoints, downtime history endpoints, and also allows new services to start from a saved template.') }}</p>
-                    <p>{{ __('Service and template payloads now support `additional_headers` and `ssl_expiry_notifications_enabled`, while recipient payloads also support `additional_headers` for outbound webhook customization.') }}</p>
+                    <p>{{ __('Service and template payloads now support `monitoring_method`, `additional_headers`, and `ssl_expiry_notifications_enabled`, while recipient payloads also support `additional_headers` for outbound webhook customization.') }}</p>
                     <p>{{ __('Service responses now include uptime and downtime context, plus the latest stored screenshot and any failed response headers. Dedicated downtime-history endpoints expose incident timelines, screenshots, failed response headers, attempt counts, and Dave summaries when available.') }}</p>
                     <p>{{ __('Use the API Documentation page for the full endpoint reference and the API Playground page to test those endpoints against the current environment.') }}</p>
                 </div>

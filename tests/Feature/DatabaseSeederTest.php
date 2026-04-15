@@ -59,7 +59,9 @@ class DatabaseSeederTest extends TestCase
             $operationsInbox->groups()->orderBy('recipient_groups.name')->pluck('recipient_groups.id')->all(),
         );
         $this->assertSame([$productionGroup->id], $marketingSite->groups()->where('service_groups.name', 'Production')->pluck('service_groups.id')->all());
+        $this->assertSame(Service::MONITOR_HTTP, $marketingSite->monitoring_method);
         $this->assertSame(Service::EXPECT_TEXT, $marketingSite->expect_type);
+        $this->assertSame(Service::MONITOR_HTTP, $marketingTemplate->monitoringMethod());
         $this->assertSame('Marketing Site', $marketingTemplate->serviceName());
         $this->assertFalse(AiAssistantSetting::current()->is_enabled);
         $this->assertContains(ApiKeyPermissions::permission('services', 'read'), ApiKeyPermissions::all());

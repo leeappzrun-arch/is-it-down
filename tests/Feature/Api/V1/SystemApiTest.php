@@ -229,6 +229,7 @@ class SystemApiTest extends TestCase
         $service = Service::factory()->create([
             'name' => 'Marketing Site',
             'url' => 'https://example.com/status',
+            'monitoring_method' => Service::MONITOR_BROWSER,
             'expect_type' => Service::EXPECT_TEXT,
             'expect_value' => 'Healthy',
             'last_response_headers' => [
@@ -251,6 +252,7 @@ class SystemApiTest extends TestCase
             'configuration' => [
                 'name' => 'Marketing Site Template',
                 'interval_seconds' => Service::INTERVAL_3_MINUTES,
+                'monitoring_method' => Service::MONITOR_BROWSER,
                 'expect_type' => Service::EXPECT_TEXT,
                 'expect_value' => 'Healthy',
                 'additional_headers' => [
@@ -267,6 +269,7 @@ class SystemApiTest extends TestCase
             ->getJson('/api/v1/services?search=Marketing&status=down&service_group_id='.$serviceGroup->id.'&recipient_group_id='.$recipientGroup->id.'&recipient_id='.$recipient->id)
             ->assertOk()
             ->assertJsonPath('data.0.name', 'Marketing Site')
+            ->assertJsonPath('data.0.monitoring_method', Service::MONITOR_BROWSER)
             ->assertJsonPath('data.0.last_response_headers.0.name', 'Content-Type')
             ->assertJsonPath('data.0.latest_screenshot_url', Storage::disk('public')->url('service-screenshots/service-1.png'));
 
@@ -294,6 +297,7 @@ class SystemApiTest extends TestCase
         $createResponse->assertCreated();
         $createdServiceId = $createResponse->json('data.id');
         $createResponse->assertJsonPath('data.interval_seconds', Service::INTERVAL_3_MINUTES);
+        $createResponse->assertJsonPath('data.monitoring_method', Service::MONITOR_BROWSER);
         $createResponse->assertJsonPath('data.expect_type', Service::EXPECT_TEXT);
         $createResponse->assertJsonPath('data.additional_headers.0.name', 'X-Monitor');
         $createResponse->assertJsonPath('data.ssl_expiry_notifications_enabled', true);
@@ -303,6 +307,7 @@ class SystemApiTest extends TestCase
                 'name' => 'API Service',
                 'url' => 'https://example.com/api',
                 'interval_seconds' => 300,
+                'monitoring_method' => Service::MONITOR_HTTP,
                 'expect_type' => 'none',
                 'expect_value' => '',
                 'additional_headers' => [
@@ -315,6 +320,7 @@ class SystemApiTest extends TestCase
             ])
             ->assertOk()
             ->assertJsonPath('data.interval_seconds', 300)
+            ->assertJsonPath('data.monitoring_method', Service::MONITOR_HTTP)
             ->assertJsonPath('data.additional_headers.0.name', 'X-Environment')
             ->assertJsonPath('data.ssl_expiry_notifications_enabled', true);
 
@@ -335,6 +341,7 @@ class SystemApiTest extends TestCase
             'configuration' => [
                 'name' => 'Marketing Site',
                 'interval_seconds' => Service::INTERVAL_1_MINUTE,
+                'monitoring_method' => Service::MONITOR_BROWSER,
                 'expect_type' => Service::EXPECT_TEXT,
                 'expect_value' => 'Healthy',
                 'additional_headers' => [
@@ -379,6 +386,7 @@ class SystemApiTest extends TestCase
                 'name' => 'API service template',
                 'service_name' => 'Billing API',
                 'interval_seconds' => Service::INTERVAL_5_MINUTES,
+                'monitoring_method' => Service::MONITOR_BROWSER,
                 'expect_type' => Service::EXPECT_REGEX,
                 'expect_value' => '/healthy/i',
                 'additional_headers' => [
@@ -393,6 +401,7 @@ class SystemApiTest extends TestCase
         $createResponse->assertCreated();
         $createdTemplateId = $createResponse->json('data.id');
         $createResponse->assertJsonPath('data.service_name', 'Billing API');
+        $createResponse->assertJsonPath('data.monitoring_method', Service::MONITOR_BROWSER);
         $createResponse->assertJsonPath('data.additional_headers.0.name', 'X-Environment');
         $createResponse->assertJsonPath('data.ssl_expiry_notifications_enabled', true);
 
@@ -406,6 +415,7 @@ class SystemApiTest extends TestCase
                 'name' => 'API service template',
                 'service_name' => 'Billing API',
                 'interval_seconds' => Service::INTERVAL_10_MINUTES,
+                'monitoring_method' => Service::MONITOR_HTTP,
                 'expect_type' => Service::EXPECT_NONE,
                 'expect_value' => '',
                 'additional_headers' => [],
@@ -416,6 +426,7 @@ class SystemApiTest extends TestCase
             ])
             ->assertOk()
             ->assertJsonPath('data.interval_seconds', Service::INTERVAL_10_MINUTES)
+            ->assertJsonPath('data.monitoring_method', Service::MONITOR_HTTP)
             ->assertJsonPath('data.additional_headers_count', 0)
             ->assertJsonPath('data.ssl_expiry_notifications_enabled', false);
 

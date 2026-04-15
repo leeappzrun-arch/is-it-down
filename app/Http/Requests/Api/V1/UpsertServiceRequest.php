@@ -35,6 +35,7 @@ class UpsertServiceRequest extends FormRequest
 
         $this->merge([
             'intervalSeconds' => $this->input('interval_seconds', $templateDefaults['intervalSeconds'] ?? $this->input('intervalSeconds', Service::INTERVAL_1_MINUTE)),
+            'monitoringMethod' => $this->input('monitoring_method', $templateDefaults['monitoringMethod'] ?? $this->input('monitoringMethod', Service::MONITOR_HTTP)),
             'expectType' => $this->input('expect_type', $templateDefaults['expectType'] ?? $this->input('expectType', Service::EXPECT_NONE)),
             'expectValue' => $this->input('expect_value', $templateDefaults['expectValue'] ?? $this->input('expectValue', '')),
             'additionalHeaders' => ServiceData::normalizeAdditionalHeaders($this->input('additional_headers', $templateDefaults['additionalHeaders'] ?? $this->input('additionalHeaders', []))),

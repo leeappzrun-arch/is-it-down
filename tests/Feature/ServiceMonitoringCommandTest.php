@@ -9,6 +9,7 @@ use App\Models\Recipient;
 use App\Models\Service;
 use App\Models\ServiceDowntime;
 use App\Models\User;
+use App\Support\Monitoring\BrowserPageMonitor;
 use App\Support\Monitoring\OutageAnalyzer;
 use App\Support\Monitoring\SslCertificateInspectionResult;
 use App\Support\Monitoring\SslCertificateInspector;
@@ -560,6 +561,44 @@ class ServiceMonitoringCommandTest extends TestCase
         ]);
 
         $this->artisan('monitor:services')->assertSuccessful();
+    }
+
+    public function test_monitoring_command_can_use_browser_monitoring_with_expectations(): void
+    {
+        Http::preventStrayRequests();
+
+        $checkedAt = CarbonImmutable::parse('2026-04-04 11:35:00');
+
+        $this->travelTo($checkedAt);
+
+        $service = Service::factory()->create([
+            'name' => 'Browser-only Site',
+            'url' => 'https://browser.example.com/status',
+            'monitoring_method' => Service::MONITOR_BROWSER,
+            'expect_type' => Service::EXPECT_TEXT,
+            'expect_value' => 'All systems operational',
+            'next_check_at' => $checkedAt->subSecond(),
+        ]);
+
+        $this->mock(BrowserPageMonitor::class, function (MockInterface $mock) use ($service): void {
+            $mock->shouldReceive('fetch')->once()->with(\Mockery::on(
+                fn (Service $candidate): bool => $candidate->is($service)
+            ))->andReturn([
+                'status' => 200,
+                'body' => '<main><h1>All systems operational</h1></main>',
+                'headers' => [
+                    ['name' => 'Content-Type', 'value' => 'text/html; charset=UTF-8'],
+                ],
+            ]);
+        });
+
+        $this->artisan('monitor:services')->assertSuccessful();
+
+        $service->refresh();
+
+        $this->assertSame(Service::STATUS_UP, $service->current_status);
+        $this->assertSame('Received an HTTP 200 response and the expected text was present.', $service->last_check_reason);
+        $this->assertSame(200, $service->last_response_code);
     }
 
     public function test_monitoring_command_sends_ssl_expiry_warning_emails_at_most_once_per_day(): void

@@ -3,7 +3,7 @@
 namespace Tests\Unit;
 
 use App\Support\Monitoring\WebsiteScreenshotter;
-use PHPUnit\Framework\TestCase;
+use Tests\TestCase;
 
 class WebsiteScreenshotterTest extends TestCase
 {
